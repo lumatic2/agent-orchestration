@@ -6,3 +6,7 @@ adapters/*.build
 adapters/*.tmp
 *.tmp
 tmp_*
+
+# Queue — track meta/briefs/results, ignore temp files
+queue/**/result.md
+!queue/.gitkeep

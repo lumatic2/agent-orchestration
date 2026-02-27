@@ -115,6 +115,56 @@ When a task requires tools without CLI/API (Figma, Midjourney, Gamma, Suno, Klin
 2. Handoff to user: Figma specs for UI screens, Midjourney prompts for app imagery
 3. After user creates designs: continue with frontend implementation
 
+### Session Start Protocol
+
+Every new session, run as your **first action**:
+
+```bash
+bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh --boot
+```
+
+If pending/stale tasks exist, **handle them before accepting new work**:
+1. Stale dispatched → re-dispatch with `--resume`
+2. Queued (rate-limited) → retry with `--resume`
+3. Pending → dispatch normally
+4. Only after queue is clear → accept new tasks from user
+
+### Self-Execution Guard
+
+Before writing code yourself, check these thresholds:
+
+| Condition | Action |
+|---|---|
+| **4+ files** to modify | STOP → dispatch to Codex |
+| **50+ lines** of code to write | STOP → dispatch to Codex |
+| **100+ lines** of docs to analyze | STOP → dispatch to Gemini |
+
+**Allowed self-execution** (Claude Code directly):
+- 1-3 file small edits
+- Orchestration scripts/configs
+- SHARED_MEMORY.md updates
+- Queue management (`--boot`, `--status`, `--resume`, `--complete`)
+
+### Queue-First Workflow
+
+All dispatches go through the persistent queue:
+
+```bash
+# Normal dispatch (auto-creates queue entry)
+bash orchestrate.sh codex "task" task-name
+
+# Check queue
+bash orchestrate.sh --status
+
+# Resume failed/pending tasks
+bash orchestrate.sh --resume
+
+# Manually complete
+bash orchestrate.sh --complete T001 "summary"
+```
+
+Queue entries persist across sessions in `~/Desktop/agent-orchestration/queue/`.
+
 ### Reference Files
 
 - Full routing table: `~/Desktop/agent-orchestration/ROUTING_TABLE.md`

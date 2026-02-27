@@ -5,6 +5,24 @@
 
 ---
 
+## Step -1: Check the Queue
+
+Before evaluating any new task, scan the persistent queue:
+
+```bash
+bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh --boot
+```
+
+**Priority order:**
+1. **Stale dispatched** → re-dispatch with `--resume` (session crashed mid-task)
+2. **Queued** → retry with `--resume` (previously rate-limited)
+3. **Pending** → dispatch normally
+4. **New tasks** → only after queue is empty or all items are completed
+
+This ensures no work is lost across sessions. The queue is the source of truth for in-flight tasks.
+
+---
+
 ## Step 0: Do I Need Orchestration?
 
 Before delegating, ask these questions in order:
