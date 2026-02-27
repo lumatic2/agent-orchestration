@@ -13,7 +13,7 @@
 
 ## Recent Decisions
 
-_No entries yet. Updated after task completions._
+- **2026-02-27**: E2E orchestration test passed. Gemini researched (argparse recommended) → Codex generated code → Claude verified. Full pipeline working. Note: Gemini `--sandbox` removed (requires Docker).
 
 ## Conventions
 
