@@ -1,0 +1,94 @@
+# ============================================================
+# Agent Orchestration Config
+# ============================================================
+# All model names, flags, and paths are defined HERE.
+# When an agent updates, edit THIS file only — not the scripts.
+# ============================================================
+
+# --- Version Compatibility ---
+compatibility:
+  codex_min: "1.0.0"
+  gemini_min: "1.0.0"
+  claude_min: "1.0.0"
+
+# --- Model Tiers ---
+models:
+  codex:
+    heavy: "gpt-5.3-codex"        # Complex coding, refactoring, debugging
+    light: "gpt-5.3-codex-spark"  # Quick edits, formatting, boilerplate
+    mini: "gpt-5-codex-mini"      # Cheap, simple file transforms
+  gemini:
+    heavy: "gemini-2.5-pro"       # Deep analysis (max 100/day on Pro plan)
+    default: "gemini-2.5-flash"   # Research, summarization (300/day)
+    light: "gemini-2.5-flash-lite" # Bulk tasks, translation, classification
+  claude:
+    heavy: "opus"                 # Orchestration judgment only
+    mid: "sonnet"                 # Code review, code generation (subagent)
+    light: "haiku"                # Exploration, classification (subagent)
+
+# --- CLI Flags ---
+flags:
+  codex: "--full-auto --sandbox danger-full-access"
+  gemini: "--yolo --sandbox"
+  claude: "--dangerously-skip-permissions"
+
+# --- Paths (auto-detected by sync.sh via OS) ---
+paths:
+  windows:
+    base: "/c/Users/1"
+    claude_config: "/c/Users/1/.claude"
+    codex_config: "/c/Users/1/.codex"
+    gemini_config: "/c/Users/1/.gemini"
+  macos:
+    base: "$HOME"
+    claude_config: "$HOME/.claude"
+    codex_config: "$HOME/.codex"
+    gemini_config: "$HOME/.gemini"
+
+# --- Usage Limits (reference) ---
+limits:
+  claude_max_20x:
+    window: "5h rolling"
+    opus_per_window: 180
+    sonnet_per_window: 900
+    haiku_per_window: 2700
+  chatgpt_pro:
+    window: "5h rolling + weekly"
+    codex_note: "Most generous, use for heavy work"
+  gemini_pro:
+    daily_requests: 1500
+    rpm: 120
+    pro_prompts_day: 100
+    flash_prompts_day: 300
+
+# --- Fallback Chains ---
+fallback:
+  code_generation:
+    - agent: codex
+      model_key: heavy
+    - agent: claude_subagent
+      model_key: mid
+    - agent: gemini
+      model_key: default
+    - action: queue_and_wait
+
+  research:
+    - agent: gemini
+      model_key: default
+    - agent: claude_subagent
+      model_key: light
+    - agent: codex
+      model_key: heavy
+    - action: queue_and_wait
+
+  orchestration:
+    - agent: claude
+      model_key: heavy
+    - agent: claude
+      model_key: mid
+    - action: pause_and_notify
+
+# --- Rate Limit Thresholds ---
+thresholds:
+  warn_at: 0.7    # 70% consumed → warning
+  switch_at: 0.9  # 90% consumed → auto-switch to lighter model

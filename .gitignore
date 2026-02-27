@@ -1,0 +1,7 @@
+logs/
+archive/
+adapters/*.deploy
+adapters/*.bak
+adapters/*.build
+adapters/*.tmp
+*.tmp
