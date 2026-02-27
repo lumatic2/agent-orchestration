@@ -68,6 +68,42 @@ Before delegating, ask these questions in order:
 | **Data analysis** | Claude Code | Sonnet | Direct execution |
 | **Notion operations** | Claude Code | Sonnet | Has MCP/script access |
 
+## Interactive Workflow: 브레인스토밍 / 레퍼런스 리서치
+
+브레인스토밍과 레퍼런스 리서치는 단순 위임(fire-and-forget)이 아니라,
+**수집은 위임, 판단은 사용자** 패턴으로 진행한다.
+
+```
+1. [위임] Gemini에게 대량 수집 요청
+   → "웹사이트 레퍼런스 20개 찾아줘", "SaaS 랜딩 트렌드 조사"
+
+2. [보고] Claude Code가 결과를 정리하여 사용자에게 선택지 제시
+   → 표, 요약, 비교 형태
+
+3. [판단] 사용자가 방향 선택
+   → "3번, 7번이 좋아", "미니멀 스타일로 가자"
+
+4. [위임] 선택 기반으로 Gemini에게 심화 리서치 요청
+   → "선택한 3개 사이트의 레이아웃 구조 분석해줘"
+
+5. [판단] 사용자가 최종 결정
+
+6. [위임] 결정 사항을 Codex에게 구현 위임
+```
+
+| 단계 | 누가 | 모드 |
+|---|---|---|
+| 자료 수집 | Gemini (위임) | 비대화형 |
+| 선별/방향 결정 | 사용자 + Claude Code | 대화형 |
+| 심화 리서치 | Gemini (위임) | 비대화형 |
+| 최종 결정 | 사용자 | 대화형 |
+| 구현 | Codex (위임) | 비대화형 |
+
+**핵심 원칙:**
+- 수집/분석은 위임 가능하지만, 방향 결정은 반드시 사용자가 한다.
+- Claude Code(Opus)는 결과 요약 + 선택지 제시만 하여 토큰 절약.
+- 한 번에 끝내려 하지 말고, 수집→선별→심화→결정의 반복 루프를 돈다.
+
 ## Fallback Rules
 
 When an agent hits rate limits:

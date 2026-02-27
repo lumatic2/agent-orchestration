@@ -1093,6 +1093,123 @@ def _cmd_read_content(args):
     print("\n".join(lines))
 
 
+def _cmd_list_blocks(args):
+    page_id = _extract_notion_id(args.notion_target)
+    if not page_id:
+        print("Invalid notion page URL/id.", file=sys.stderr)
+        sys.exit(2)
+
+    block_entries = get_blocks_recursive(page_id)
+
+    if args.json:
+        print(json.dumps(
+            [{"id": e["block"].get("id"), "type": e["block"].get("type"), "depth": e["depth"],
+              "text": _block_to_text(e["block"], 0) or ""} for e in block_entries],
+            ensure_ascii=False, indent=2,
+        ))
+        return
+
+    for i, entry in enumerate(block_entries):
+        block = entry["block"]
+        bid = block.get("id", "")
+        btype = block.get("type", "")
+        depth = entry["depth"]
+        indent = "  " * depth
+        text = _block_to_text(block, 0) or ""
+        # Truncate long text for display
+        preview = text[:80].replace("\n", " ")
+        if len(text) > 80:
+            preview += "..."
+        print(f"{i}\t{bid}\t{indent}{btype}\t{preview}")
+
+
+def _cmd_insert_after(args):
+    block_id = _extract_notion_id(args.block_id)
+    if not block_id:
+        print("Invalid block id.", file=sys.stderr)
+        sys.exit(2)
+
+    if args.content and args.content_file:
+        print("Provide only one of --content or --content-file.", file=sys.stderr)
+        sys.exit(2)
+    if not args.content and not args.content_file:
+        print("Provide one of --content or --content-file.", file=sys.stderr)
+        sys.exit(2)
+
+    content = args.content
+    if args.content_file:
+        with open(args.content_file, "r", encoding="utf-8") as f:
+            content = f.read()
+
+    children = _content_to_blocks(content)
+
+    # Get the block's parent to insert after it
+    block_info = _request("GET", f"/blocks/{block_id}")
+    parent = block_info.get("parent") or {}
+    parent_id = parent.get("page_id") or parent.get("block_id")
+    if not parent_id:
+        print("Could not determine parent of block.", file=sys.stderr)
+        sys.exit(1)
+
+    res = _request("PATCH", f"/blocks/{parent_id}/children", {
+        "children": children,
+        "after": block_id,
+    })
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+    else:
+        print(f"inserted\t{len(children)} block(s) after {block_id}")
+
+
+def _cmd_delete_block(args):
+    block_id = _extract_notion_id(args.block_id)
+    if not block_id:
+        print("Invalid block id.", file=sys.stderr)
+        sys.exit(2)
+    delete_block(block_id)
+    print(f"deleted\t{block_id}")
+
+
+def _cmd_update_block(args):
+    block_id = _extract_notion_id(args.block_id)
+    if not block_id:
+        print("Invalid block id.", file=sys.stderr)
+        sys.exit(2)
+
+    # Get current block to know its type
+    block_info = _request("GET", f"/blocks/{block_id}")
+    btype = block_info.get("type")
+    if not btype:
+        print("Could not determine block type.", file=sys.stderr)
+        sys.exit(1)
+
+    new_text = args.text
+    rich_text = _rt(new_text)
+
+    # Build update payload based on block type
+    supported_types = {
+        "paragraph", "heading_1", "heading_2", "heading_3",
+        "bulleted_list_item", "numbered_list_item", "quote",
+        "callout", "toggle", "to_do",
+    }
+    if btype == "code":
+        payload = {btype: {"rich_text": rich_text}}
+        if args.language:
+            payload[btype]["language"] = args.language
+    elif btype in supported_types:
+        payload = {btype: {"rich_text": rich_text}}
+    else:
+        print(f"Updating block type '{btype}' is not supported.", file=sys.stderr)
+        print(f"Supported: {', '.join(sorted(supported_types | {'code'}))}", file=sys.stderr)
+        sys.exit(1)
+
+    res = _request("PATCH", f"/blocks/{block_id}", payload)
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+    else:
+        print(f"updated\t{block_id}")
+
+
 def _cmd_replace_content(args):
     if args.content and args.content_file:
         print("Provide only one of --content or --content-file.", file=sys.stderr)
@@ -1178,6 +1295,29 @@ def main(argv: list[str]) -> int:
     p_rc.add_argument("notion_target", help="Notion page URL or page id")
     p_rc.add_argument("--json", action="store_true")
     p_rc.set_defaults(func=_cmd_read_content)
+
+    p_lb = sub.add_parser("list-blocks", help="List all blocks in a page with their IDs")
+    p_lb.add_argument("notion_target", help="Notion page URL or page id")
+    p_lb.add_argument("--json", action="store_true")
+    p_lb.set_defaults(func=_cmd_list_blocks)
+
+    p_ia = sub.add_parser("insert-after", help="Insert content after a specific block")
+    p_ia.add_argument("block_id", help="Block ID to insert after")
+    p_ia.add_argument("--content")
+    p_ia.add_argument("--content-file", help="Read content from a UTF-8 text file")
+    p_ia.add_argument("--json", action="store_true")
+    p_ia.set_defaults(func=_cmd_insert_after)
+
+    p_db_del = sub.add_parser("delete-block", help="Delete a specific block by ID")
+    p_db_del.add_argument("block_id", help="Block ID to delete")
+    p_db_del.set_defaults(func=_cmd_delete_block)
+
+    p_ub = sub.add_parser("update-block", help="Update a block's text content")
+    p_ub.add_argument("block_id", help="Block ID to update")
+    p_ub.add_argument("--text", required=True, help="New text content (supports **bold**, *italic*, `code`)")
+    p_ub.add_argument("--language", help="Language for code blocks")
+    p_ub.add_argument("--json", action="store_true")
+    p_ub.set_defaults(func=_cmd_update_block)
 
     p_rp = sub.add_parser("replace-content", help="Replace all content of a Notion page")
     p_rp.add_argument("notion_target", help="Notion page URL or page id")
