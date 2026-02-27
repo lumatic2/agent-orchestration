@@ -128,6 +128,10 @@ SETTINGS_EOF
   else
     echo "[SKIP] Claude settings.json already exists — verify guard hook manually"
   fi
+
+  # Deploy notion_db.py to home directory
+  cp "$REPO_DIR/scripts/notion_db.py" "$BASE_DIR/notion_db.py"
+  echo "[OK] notion_db.py → $BASE_DIR/notion_db.py"
 }
 
 deploy_codex() {
