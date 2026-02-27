@@ -29,7 +29,7 @@ models:
 # --- CLI Flags ---
 flags:
   codex: "--full-auto --sandbox danger-full-access"
-  gemini: "--yolo --sandbox"
+  gemini: "--yolo"  # --sandbox removed (requires Docker)
   claude: "--dangerously-skip-permissions"
 
 # --- Paths (auto-detected by sync.sh via OS) ---

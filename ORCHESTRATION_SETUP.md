@@ -85,17 +85,20 @@ codex exec \
 ```bash
 gemini \
   --yolo \
-  --sandbox \
   -m gemini-2.5-flash \
   -p "Task description here"
 ```
 
 ### Via orchestrate.sh (with fallback)
 ```bash
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh codex "task"
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh codex-spark "quick task"
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini "research task"
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini-pro "deep analysis"
+# Basic dispatch (3rd arg = task name for logs)
+bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh codex "task" my-task
+bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh codex-spark "quick task" fix-typo
+bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini "research task" lib-compare
+bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini-pro "deep analysis" arch-review
+
+# Auto-generate task brief
+bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh --brief "goal" "src/auth/" "no extra deps"
 ```
 
 ---
@@ -151,7 +154,7 @@ Orchestration: Claude (Opus) → Claude (Sonnet) → PAUSE
 |---|---|---|
 | Claude Code | Auto-approve + safety hooks | `--dangerously-skip-permissions` |
 | Codex | Full auto + full access | `--full-auto --sandbox danger-full-access` |
-| Gemini | YOLO + sandbox | `--yolo --sandbox` |
+| Gemini | YOLO (no sandbox — requires Docker) | `--yolo` |
 
 Safety hook (`guard.sh`) blocks: `rm -rf /`, `git push --force`, `.env` access, destructive SQL.
 
@@ -190,3 +193,28 @@ models:
 ```
 
 Then run `bash scripts/sync.sh` to redeploy.
+
+---
+
+## Multi-Terminal Parallel Operation
+
+You can run multiple terminals for parallel work, but with discipline:
+
+```
+Terminal 1: claude --dangerously-skip-permissions   ← ONLY orchestrator (Opus)
+Terminal 2: codex exec --full-auto ...              ← Direct Codex (no Claude overhead)
+Terminal 3: gemini --yolo -p ...                    ← Direct Gemini (no Claude overhead)
+```
+
+### Rules
+- **Only 1 Claude Code orchestrator session.** Multiple Opus sessions drain the 5h window fast.
+- **Direct CLI calls in other terminals.** Codex/Gemini don't need Claude as intermediary.
+- **Never touch the same files** from different terminals simultaneously.
+- **Gemini is the bottleneck.** 1,500 req/day shared across all terminals.
+
+### Safe parallel pattern
+```
+Terminal 1 (Claude): orchestrate + delegate to Codex (src/frontend/)
+Terminal 2 (Codex direct): codex exec "work on src/backend/" --full-auto
+Terminal 3 (Gemini direct): gemini --yolo -p "research question"
+```
