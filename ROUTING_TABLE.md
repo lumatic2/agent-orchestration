@@ -1,11 +1,53 @@
 # Routing Table
 
-> Defines which agent + model handles each task type.
-> The orchestrator (Claude Code) references this to delegate work.
+> Defines when to orchestrate, which agents to use, and how to route tasks.
+> The orchestrator (Claude Code) references this before every task.
 
 ---
 
-## Task → Agent → Model
+## Step 0: Do I Need Orchestration?
+
+Before delegating, ask these questions in order:
+
+```
+1. Can this be done in under 5 minutes with 1-3 files?
+   → YES: Claude Code alone. Stop here.
+
+2. Is this purely research / document analysis, no code changes?
+   → YES: Gemini alone. Stop here.
+
+3. Is this heavy code work (5+ files, test loops, scaffolding)
+   with no research needed?
+   → YES: Codex alone. Stop here.
+
+4. Does this need research AND code changes?
+   → Research is small + code is small: Claude + Gemini
+   → Research is small + code is heavy: Claude + Codex
+   → Research is deep + code is heavy: Full orchestration
+
+5. Am I near Claude usage limits?
+   → YES: Send to Codex alone or Gemini alone.
+```
+
+## Decision Matrix
+
+| Task Characteristics | Agent Config | Example |
+|---|---|---|
+| Single line fix, typo, config change | **Claude alone** | Fix import path |
+| Write one function, small edit | **Claude alone** | Add validation to form |
+| Code review (small diff) | **Claude alone** | Review a PR with 3 files |
+| Data analysis, Notion operations | **Claude alone** | Analyze CSV, update Notion |
+| Tech research, doc summary | **Gemini alone** | Compare React vs Svelte |
+| API doc analysis, long doc reading | **Gemini alone** | Summarize 50-page spec |
+| Large refactor (5+ files) | **Codex alone** | Refactor auth module |
+| New project scaffolding | **Codex alone** | Create Next.js boilerplate |
+| Error fix loop (test→fix→repeat) | **Codex alone** | Fix failing CI pipeline |
+| Research then apply to code (small) | **Claude + Gemini** | Best practice → update config |
+| Analyze codebase then modify (heavy) | **Claude + Codex** | Audit → refactor pattern |
+| Research + large implementation | **Full orchestration** | Evaluate lib → build feature |
+| Multiple projects in parallel | **Full orchestration** | Frontend + backend simultaneously |
+
+## Task → Agent → Model (when orchestrating)
 
 | Task Type | Agent | Model | Reason |
 |---|---|---|---|

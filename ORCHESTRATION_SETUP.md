@@ -52,7 +52,32 @@ Claude Code (Opus) ─── Orchestrator: planning + judgment + delegation
 
 ---
 
-## Routing Table
+## When to Orchestrate (Decision Flow)
+
+Not every task needs orchestration. Ask in order:
+
+```
+1. Under 5 min, 1-3 files?         → Claude alone
+2. Pure research, no code?          → Gemini alone
+3. Heavy code, no research?         → Codex alone
+4. Research + small code?           → Claude + Gemini
+5. Analysis + heavy code?           → Claude + Codex
+6. Research + heavy code?           → Full orchestration (all 3)
+7. Near Claude usage limit?         → Codex or Gemini alone
+```
+
+### Quick Reference
+
+| Situation | Use |
+|---|---|
+| Typo fix, config change, small function | Claude alone |
+| Tech comparison, doc summary, API research | Gemini alone |
+| Large refactor, scaffolding, test-fix loops | Codex alone |
+| Best practice lookup → apply to code | Claude + Gemini |
+| Codebase audit → refactor | Claude + Codex |
+| Evaluate library → build full feature | All three |
+
+## Routing Table (when orchestrating)
 
 | Task | Agent | Model |
 |---|---|---|
