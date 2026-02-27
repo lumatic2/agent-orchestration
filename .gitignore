@@ -5,3 +5,4 @@ adapters/*.bak
 adapters/*.build
 adapters/*.tmp
 *.tmp
+tmp_*
