@@ -104,6 +104,26 @@ Before delegating, ask these questions in order:
 - Claude Code(Opus)는 결과 요약 + 선택지 제시만 하여 토큰 절약.
 - 한 번에 끝내려 하지 말고, 수집→선별→심화→결정의 반복 루프를 돈다.
 
+## Large Document Handling
+
+대용량 파일(50+ 페이지, 20MB+ PPT, 이미지 다수)은 Opus가 직접 읽지 않는다.
+
+```
+1. Claude Code가 파일 유형과 크기 판단
+2. Gemini에게 위임: "이 문서 읽고 핵심 요약 + 구조 분석해줘"
+3. Gemini가 요약본 반환 (50페이지 → 1-2페이지)
+4. Claude Code(Opus)는 요약본만 읽고 판단/지시
+```
+
+| 문서 유형 | 최적 에이전트 | 이유 |
+|---|---|---|
+| 텍스트/PDF (50+ 페이지) | Gemini (Flash) | 1M 컨텍스트, 문서 분석 특화, 저렴 |
+| 이미지/스크린샷 분석 | Claude Code → Gemini | Claude가 간단히 보고 필요시 Gemini 심화 |
+| PPT/대용량 바이너리 | Gemini (Flash) | 대용량 처리에 유리 |
+| 코드베이스 전체 분석 | Claude subagent (Haiku) | Glob/Grep으로 탐색, 저렴 |
+
+**원칙: Opus는 요약본만 읽는다. 원본 분석은 항상 위임.**
+
 ## Fallback Rules
 
 When an agent hits rate limits:
