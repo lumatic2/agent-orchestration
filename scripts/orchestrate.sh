@@ -81,7 +81,6 @@ run_gemini() {
   local result
   result=$(gemini \
     --yolo \
-    --sandbox \
     -m "$model" \
     -p "$TASK" 2>&1) || true
 
