@@ -50,9 +50,36 @@ bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini-pro "deep analy
 - Gemini default: gemini-2.5-flash (research, 300/day)
 - Gemini heavy: gemini-2.5-pro (deep analysis, max 100/day — use sparingly)
 
+### Handoff: Tools You Can't Control Directly
+
+When a task requires tools without CLI/API (Figma, Midjourney, Gamma, Suno, Kling, etc.), generate a **handoff document** — actionable instructions the user can execute in that tool.
+
+**When to generate handoffs:**
+- User's project needs images, UI design, video, music, or presentations
+- A coding task has design dependencies (e.g., "build this app" implies UI)
+- User explicitly asks about a Tier 3 tool
+
+**How to generate:**
+1. Read the relevant template from `~/Desktop/agent-orchestration/templates/handoff_*.md`
+2. Fill it with specific, actionable details for the current task
+3. Present it to the user as a clear next step
+
+**Available handoff templates:**
+- `handoff_figma.md` — UI/UX design specs, component structure, design tokens
+- `handoff_midjourney.md` — Image prompts with exact parameters
+- `handoff_gamma.md` — Presentation slide structure and content
+- `handoff_suno.md` — Music prompts with genre/mood/duration
+- `handoff_kling.md` — Video prompts with scene breakdown
+
+**Example flow for "build a healthcare app":**
+1. You handle: architecture, backend code (via Codex), API design
+2. Handoff to user: Figma specs for UI screens, Midjourney prompts for app imagery
+3. After user creates designs: continue with frontend implementation
+
 ### Reference Files
 
 - Full routing table: `~/Desktop/agent-orchestration/ROUTING_TABLE.md`
 - Shared memory: `~/Desktop/agent-orchestration/SHARED_MEMORY.md`
 - Shared principles: `~/Desktop/agent-orchestration/SHARED_PRINCIPLES.md`
 - Config (models/flags): `~/Desktop/agent-orchestration/agent_config.yaml`
+- Handoff templates: `~/Desktop/agent-orchestration/templates/handoff_*.md`
