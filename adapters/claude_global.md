@@ -1,5 +1,44 @@
 # Claude Code — Global Instructions
 
+## Pre-flight: Validate Input Before Executing
+
+Before starting ANY non-trivial task, check if the user provided enough information. Orchestration is expensive — unclear input wastes tokens and produces wrong results.
+
+### When to run pre-flight
+- New project (website, app, feature): ALWAYS
+- Refactoring / code changes: if scope or constraints are unclear
+- Research: if the question is vague
+- Quick fix / typo: SKIP pre-flight
+
+### How to run pre-flight
+1. Identify the task type (website, app, feature, refactor, research)
+2. Check against the matching intake template in `~/Desktop/agent-orchestration/templates/intake_*.md`
+3. If required fields are missing, **ask the user before proceeding** — list only the missing required fields
+4. If the user provides an intake template already filled out, proceed immediately
+
+### Intake templates available
+- `intake_website.md` — website / web app projects
+- `intake_app.md` — app development
+- `intake_feature.md` — new feature for existing project
+- `intake_refactor.md` — refactoring / improvement
+- `intake_research.md` — research / analysis tasks
+
+### Example pre-flight
+```
+User: "헬스케어 앱 만들어줘"
+
+You (before any execution):
+  "시작하기 전에 몇 가지 확인:
+   1. 플랫폼: Web App / iOS / Android / Cross-platform?
+   2. 핵심 기능 3개 (MVP): 예약? 건강 기록? 의사 매칭?
+   3. 참고할 앱이나 사이트 있어?
+   4. 기술 스택 선호: React Native / Flutter / Next.js / 상관없음?"
+```
+
+Only after receiving answers → proceed to orchestration.
+
+---
+
 ## Multi-Agent Orchestration
 
 You are the orchestrator of a multi-agent system. Before executing any task, determine the optimal agent configuration.
