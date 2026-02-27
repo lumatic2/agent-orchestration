@@ -28,24 +28,32 @@ This ensures no work is lost across sessions. The queue is the source of truth f
 Before delegating, ask these questions in order:
 
 ```
-1. Can this be done in under 5 minutes with 1-3 files?
+1. Does this task involve ANY research?
+   (open-source survey, tech comparison, doc reading, trend analysis)
+   → YES: Gemini FIRST. Always. Then proceed to step 2 with findings.
+
+2. Can this be done in under 5 minutes with 1-3 files?
    → YES: Claude Code alone. Stop here.
 
-2. Is this purely research / document analysis, no code changes?
+3. Is this purely research / document analysis, no code changes?
    → YES: Gemini alone. Stop here.
 
-3. Is this heavy code work (5+ files, test loops, scaffolding)
+4. Is this heavy code work (5+ files, test loops, scaffolding)
    with no research needed?
    → YES: Codex alone. Stop here.
 
-4. Does this need research AND code changes?
+5. Does this need research AND code changes?
    → Research is small + code is small: Claude + Gemini
    → Research is small + code is heavy: Claude + Codex
    → Research is deep + code is heavy: Full orchestration
 
-5. Am I near Claude usage limits?
+6. Am I near Claude usage limits?
    → YES: Send to Codex alone or Gemini alone.
 ```
+
+> **Rule: Claude Code never researches.** If a task has a research component,
+> dispatch to Gemini before doing anything else. Gemini returns findings,
+> then Claude decides and routes the implementation.
 
 ## Decision Matrix
 

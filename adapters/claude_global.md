@@ -129,6 +129,20 @@ If pending/stale tasks exist, **handle them before accepting new work**:
 3. Pending → dispatch normally
 4. Only after queue is clear → accept new tasks from user
 
+### Research-First Rule
+
+**Any task involving research MUST go to Gemini first.** Do NOT research yourself.
+
+| Research type | Action |
+|---|---|
+| Open-source / GitHub repo survey | `orchestrate.sh gemini` |
+| Tech comparison (A vs B) | `orchestrate.sh gemini` |
+| Doc/spec reading (API docs, RFC, etc.) | `orchestrate.sh gemini` |
+| Trend/best practice investigation | `orchestrate.sh gemini` |
+| Deep analysis (architecture audit) | `orchestrate.sh gemini-pro` |
+
+**Even if you "already know" the answer** — delegate. Gemini has 1M context and 1,500 req/day. Your tokens are expensive; Gemini's are cheap. The only exception is answering a direct factual question from the user that requires no web search or document reading.
+
 ### Self-Execution Guard
 
 Before writing code yourself, check these thresholds:
@@ -138,12 +152,14 @@ Before writing code yourself, check these thresholds:
 | **4+ files** to modify | STOP → dispatch to Codex |
 | **50+ lines** of code to write | STOP → dispatch to Codex |
 | **100+ lines** of docs to analyze | STOP → dispatch to Gemini |
+| **Any research needed** | STOP → dispatch to Gemini first |
 
 **Allowed self-execution** (Claude Code directly):
 - 1-3 file small edits
 - Orchestration scripts/configs
 - SHARED_MEMORY.md updates
 - Queue management (`--boot`, `--status`, `--resume`, `--complete`)
+- Direct factual answers (no web search needed)
 
 ### Queue-First Workflow
 

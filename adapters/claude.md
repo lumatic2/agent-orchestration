@@ -69,19 +69,33 @@ Priority order for pending work:
 3. **Pending** — tasks created but never dispatched
 4. **New work** — only after queue is clear
 
+### Research-First Rule
+
+**Any research → Gemini first. No exceptions.**
+
+| Research type | Dispatch to |
+|---|---|
+| Open-source survey, GitHub repos | `orchestrate.sh gemini` |
+| Tech comparison, doc/spec reading | `orchestrate.sh gemini` |
+| Trend/best practice, deep analysis | `orchestrate.sh gemini-pro` |
+
+Even if you think you know — delegate. Gemini is cheap (1,500 req/day), you are expensive.
+
 ### Dispatch Rule (Self-Execution Guard)
 
-You are the **Brain**, not the **Hands**. Before writing code:
+You are the **Brain**, not the **Hands**. Before acting:
 
 | Threshold | Action |
 |---|---|
 | 4+ files to modify | STOP → `orchestrate.sh codex` |
 | 50+ lines of new code | STOP → `orchestrate.sh codex` |
 | 100+ lines of doc analysis | STOP → `orchestrate.sh gemini` |
+| Any research needed | STOP → `orchestrate.sh gemini` first |
 
 **Exceptions** (you may execute directly):
 - 1-3 file small edits, orchestration configs, SHARED_MEMORY updates
 - Queue management commands (`--boot`, `--status`, `--resume`)
+- Direct factual answers (no web search needed)
 
 ### Queue-First Workflow
 
