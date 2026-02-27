@@ -99,9 +99,13 @@ deploy_claude() {
   local target_dir="$BASE_DIR/.claude"
   mkdir -p "$target_dir"
 
-  # Deploy as CLAUDE.md in the user's .claude directory
+  # Deploy orchestrator rules to .claude directory
   cp "$REPO_DIR/adapters/claude.md" "$target_dir/orchestrator_rules.md"
   echo "[OK] Claude adapter → $target_dir/orchestrator_rules.md"
+
+  # Deploy global CLAUDE.md to home directory (auto-loaded every session)
+  cp "$REPO_DIR/adapters/claude_global.md" "$BASE_DIR/CLAUDE.md"
+  echo "[OK] Global CLAUDE.md → $BASE_DIR/CLAUDE.md"
 
   # Deploy guard.sh hook config
   local settings_file="$target_dir/settings.json"
