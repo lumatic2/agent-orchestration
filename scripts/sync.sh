@@ -125,7 +125,12 @@ deploy_claude() {
     "PreToolUse": [
       {
         "matcher": "Bash",
-        "command": "bash $guard_path \"\$TOOL_INPUT\""
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash $guard_path \"\$TOOL_INPUT\""
+          }
+        ]
       }
     ]
   }
