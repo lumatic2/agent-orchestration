@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Mock gemini CLI for testing
+# Control behavior via MOCK_GEMINI_BEHAVIOR env var
+
+BEHAVIOR="${MOCK_GEMINI_BEHAVIOR:-success}"
+
+case "$BEHAVIOR" in
+  success)
+    echo "Research findings: Analysis complete."
+    echo "Key insights: The architecture follows standard patterns."
+    echo "Recommendation: Proceed with implementation."
+    exit 0
+    ;;
+  rate_limit)
+    echo "Error: 429 Too Many Requests - quota exceeded"
+    exit 1
+    ;;
+  resource_exhausted)
+    echo "Error: resource exhausted for model gemini-2.5-flash"
+    exit 1
+    ;;
+  error)
+    echo "Error: Internal server error"
+    exit 1
+    ;;
+  empty)
+    echo ""
+    exit 0
+    ;;
+  *)
+    echo "Unknown mock behavior: $BEHAVIOR"
+    exit 1
+    ;;
+esac

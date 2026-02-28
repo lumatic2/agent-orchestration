@@ -40,10 +40,13 @@ next_task_id() {
   local max=0
   for dir in "$QUEUE_DIR"/T[0-9][0-9][0-9]_*/; do
     [ -d "$dir" ] || continue
-    local num="${dir##*/}"          # T001_name/
-    num="${num%%_*}"                # T001
-    num="${num#T}"                  # 001
-    num=$((10#$num))               # 1
+    local dirname
+    dirname="$(basename "$dir")"   # T001_name
+    local tag="${dirname%%_*}"     # T001
+    local digits="${tag#T}"        # 001
+    # Strip leading zeros safely
+    digits="${digits#0}"; digits="${digits#0}"
+    local num="${digits:-0}"
     [ "$num" -gt "$max" ] && max="$num"
   done
   printf "T%03d" $((max + 1))
@@ -132,6 +135,153 @@ read_meta_field() {
 read_meta_field_raw() {
   local meta="$1" field="$2"
   grep -o "\"$field\": *[^,}]*" "$meta" 2>/dev/null | sed 's/.*: *//' | tr -d '"' || echo ""
+}
+
+# ============================================================
+# Agent Functions (defined before subcommands so --resume can use them)
+# ============================================================
+
+# --- Rate limit detection ---
+is_rate_limited() {
+  local output="$1"
+  if echo "$output" | grep -qEi "rate.?limit|429|quota|exceeded|too.?many.?requests|resource.?exhausted"; then
+    return 0
+  fi
+  return 1
+}
+
+# --- Parse Codex JSON result → extract final message ---
+parse_codex_result() {
+  local raw="$1"
+  # Extract the last agent_message text from JSONL
+  local parsed
+  parsed=$(echo "$raw" \
+    | grep '"type":"agent_message"' \
+    | tail -1 \
+    | sed 's/.*"text":"\([^"]*\)".*/\1/' 2>/dev/null) || true
+
+  if [ -n "$parsed" ]; then
+    echo ""
+    echo "--- Codex Summary ---"
+    echo "$parsed"
+  fi
+
+  # Extract token usage
+  local usage
+  usage=$(echo "$raw" \
+    | grep '"type":"turn.completed"' \
+    | tail -1 \
+    | grep -o '"usage":{[^}]*}' 2>/dev/null) || true
+
+  if [ -n "$usage" ]; then
+    echo ""
+    echo "--- Token Usage ---"
+    echo "$usage"
+  fi
+}
+
+# --- Run Codex ---
+run_codex() {
+  local model="${1:-gpt-5.3-codex}"
+  local log_file="$LOG_DIR/codex_${TASK_NAME}_${TIMESTAMP}.json"
+
+  echo "[DISPATCH] Codex ($model) — task: $TASK_NAME"
+
+  # Update queue status to dispatched
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
+
+  # Write directly to file to avoid shell variable truncation
+  codex exec \
+    --full-auto \
+    --sandbox danger-full-access \
+    -m "$model" \
+    "$TASK" \
+    --json > "$log_file" 2>&1 || true
+
+  local result
+  result=$(cat "$log_file")
+
+  if is_rate_limited "$result"; then
+    echo "[RATE_LIMIT] Codex hit rate limit"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
+    return 1
+  fi
+
+  # Success — update queue
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
+
+  parse_codex_result "$result"
+  return 0
+}
+
+# --- Run Gemini ---
+run_gemini() {
+  local model="${1:-gemini-2.5-flash}"
+  local log_file="$LOG_DIR/gemini_${TASK_NAME}_${TIMESTAMP}.txt"
+
+  echo "[DISPATCH] Gemini ($model) — task: $TASK_NAME"
+
+  # Update queue status to dispatched
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
+
+  # Write directly to file to avoid shell variable truncation
+  gemini \
+    --yolo \
+    -m "$model" \
+    -p "$TASK" > "$log_file" 2>&1 || true
+
+  local result
+  result=$(cat "$log_file")
+
+  if is_rate_limited "$result"; then
+    echo "[RATE_LIMIT] Gemini hit rate limit"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
+    return 1
+  fi
+
+  # Success — update queue
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
+
+  # Strip YOLO noise lines, show clean output
+  echo ""
+  echo "--- Gemini Result ---"
+  echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$"
+  return 0
+}
+
+# --- Fallback logic ---
+run_with_fallback_code() {
+  echo "[INFO] Attempting code task with fallback chain..."
+
+  if run_codex "gpt-5.3-codex"; then return 0; fi
+
+  echo "[FALLBACK] Trying Gemini Flash..."
+  if run_gemini "gemini-2.5-flash"; then return 0; fi
+
+  echo "[QUEUED] All agents rate-limited. Task queued for retry."
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "all_agents_rate_limited"
+  return 1
+}
+
+run_with_fallback_research() {
+  echo "[INFO] Attempting research task with fallback chain..."
+
+  if run_gemini "gemini-2.5-flash"; then return 0; fi
+
+  echo "[FALLBACK] Trying Codex..."
+  if run_codex "gpt-5.3-codex"; then return 0; fi
+
+  echo "[QUEUED] All agents rate-limited. Task queued for retry."
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "all_agents_rate_limited"
+  return 1
 }
 
 # ============================================================
@@ -233,18 +383,17 @@ do_resume() {
 
       update_meta_status "$dir" "dispatched"
 
+      local exit_code=0
       case "$agent" in
-        codex)       run_codex "gpt-5.3-codex" ;;
-        codex-spark) run_codex "gpt-5.3-codex-spark" ;;
-        gemini)      run_gemini "gemini-2.5-flash" ;;
-        gemini-pro)  run_gemini "gemini-2.5-pro" ;;
+        codex)       run_codex "gpt-5.3-codex" || exit_code=$? ;;
+        codex-spark) run_codex "gpt-5.3-codex-spark" || exit_code=$? ;;
+        gemini)      run_gemini "gemini-2.5-flash" || exit_code=$? ;;
+        gemini-pro)  run_gemini "gemini-2.5-pro" || exit_code=$? ;;
         *)
           echo "[ERROR] Unknown agent in queue: $agent"
           exit 1
           ;;
       esac
-
-      local exit_code=$?
       if [ "$exit_code" -eq 0 ]; then
         update_meta_status "$dir" "completed"
         echo "[DONE] $id completed."
@@ -342,147 +491,6 @@ QUEUE_TASK_ID=$(next_task_id)
 create_queue_entry "$QUEUE_TASK_ID" "$TASK_NAME" "$AGENT" "$TASK"
 QUEUE_TASK_DIR="$QUEUE_DIR/${QUEUE_TASK_ID}_${TASK_NAME}"
 echo "[QUEUE] Created $QUEUE_TASK_ID ($TASK_NAME)"
-
-# --- Rate limit detection ---
-is_rate_limited() {
-  local output="$1"
-  if echo "$output" | grep -qEi "rate.?limit|429|quota|exceeded|too.?many.?requests|resource.?exhausted"; then
-    return 0
-  fi
-  return 1
-}
-
-# --- Parse Codex JSON result → extract final message ---
-parse_codex_result() {
-  local raw="$1"
-  # Extract the last agent_message text from JSONL
-  local parsed
-  parsed=$(echo "$raw" \
-    | grep '"type":"agent_message"' \
-    | tail -1 \
-    | sed 's/.*"text":"\([^"]*\)".*/\1/' 2>/dev/null) || true
-
-  if [ -n "$parsed" ]; then
-    echo ""
-    echo "--- Codex Summary ---"
-    echo "$parsed"
-  fi
-
-  # Extract token usage
-  local usage
-  usage=$(echo "$raw" \
-    | grep '"type":"turn.completed"' \
-    | tail -1 \
-    | grep -o '"usage":{[^}]*}' 2>/dev/null) || true
-
-  if [ -n "$usage" ]; then
-    echo ""
-    echo "--- Token Usage ---"
-    echo "$usage"
-  fi
-}
-
-# --- Run Codex ---
-run_codex() {
-  local model="${1:-gpt-5.3-codex}"
-  local log_file="$LOG_DIR/codex_${TASK_NAME}_${TIMESTAMP}.json"
-
-  echo "[DISPATCH] Codex ($model) — task: $TASK_NAME"
-
-  # Update queue status to dispatched
-  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
-
-  local result
-  result=$(codex exec \
-    --full-auto \
-    --sandbox danger-full-access \
-    -m "$model" \
-    "$TASK" \
-    --json 2>&1) || true
-
-  echo "$result" > "$log_file"
-
-  if is_rate_limited "$result"; then
-    echo "[RATE_LIMIT] Codex hit rate limit"
-    [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
-    [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
-    return 1
-  fi
-
-  # Success — update queue
-  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
-
-  parse_codex_result "$result"
-  return 0
-}
-
-# --- Run Gemini ---
-run_gemini() {
-  local model="${1:-gemini-2.5-flash}"
-  local log_file="$LOG_DIR/gemini_${TASK_NAME}_${TIMESTAMP}.txt"
-
-  echo "[DISPATCH] Gemini ($model) — task: $TASK_NAME"
-
-  # Update queue status to dispatched
-  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
-
-  local result
-  result=$(gemini \
-    --yolo \
-    -m "$model" \
-    -p "$TASK" 2>&1) || true
-
-  echo "$result" > "$log_file"
-
-  if is_rate_limited "$result"; then
-    echo "[RATE_LIMIT] Gemini hit rate limit"
-    [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
-    [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
-    return 1
-  fi
-
-  # Success — update queue
-  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
-
-  # Strip YOLO noise lines, show clean output
-  echo ""
-  echo "--- Gemini Result ---"
-  echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$"
-  return 0
-}
-
-# --- Fallback logic ---
-run_with_fallback_code() {
-  echo "[INFO] Attempting code task with fallback chain..."
-
-  if run_codex "gpt-5.3-codex"; then return 0; fi
-
-  echo "[FALLBACK] Trying Gemini Flash..."
-  if run_gemini "gemini-2.5-flash"; then return 0; fi
-
-  echo "[QUEUED] All agents rate-limited. Task queued for retry."
-  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "all_agents_rate_limited"
-  return 1
-}
-
-run_with_fallback_research() {
-  echo "[INFO] Attempting research task with fallback chain..."
-
-  if run_gemini "gemini-2.5-flash"; then return 0; fi
-
-  echo "[FALLBACK] Trying Codex..."
-  if run_codex "gpt-5.3-codex"; then return 0; fi
-
-  echo "[QUEUED] All agents rate-limited. Task queued for retry."
-  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "all_agents_rate_limited"
-  return 1
-}
 
 # --- Main dispatch ---
 case "$AGENT" in
