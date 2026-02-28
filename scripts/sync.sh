@@ -61,33 +61,40 @@ check_agent() {
 inject_shared() {
   local adapter_file="$1"
   local tmp_file="${adapter_file}.tmp"
-  local principles_content
-  local memory_content
+  local principles_path="$REPO_DIR/SHARED_PRINCIPLES.md"
+  local memory_path="$REPO_DIR/SHARED_MEMORY.md"
 
-  principles_content=$(cat "$REPO_DIR/SHARED_PRINCIPLES.md")
-  memory_content=$(cat "$REPO_DIR/SHARED_MEMORY.md")
-
-  # Replace the placeholder sections
-  awk -v principles="$principles_content" -v memory="$memory_content" '
+  # Replace the placeholder sections.
+  # macOS /usr/bin/awk (BSD awk) doesn't accept multi-line strings passed via -v,
+  # so pass file paths and print file contents from inside awk instead.
+  awk -v principles_file="$principles_path" -v memory_file="$memory_path" '
+    function print_file(f, line) {
+      while ((getline line < f) > 0) print line
+      close(f)
+    }
     /<!-- BEGIN SHARED_PRINCIPLES -->/{
-      print $0
-      print principles
-      skip=1; next
+      print
+      print_file(principles_file)
+      in_block=1
+      next
     }
     /<!-- END SHARED_PRINCIPLES -->/{
-      print $0
-      skip=0; next
+      in_block=0
+      print
+      next
     }
     /<!-- BEGIN SHARED_MEMORY -->/{
-      print $0
-      print memory
-      skip=1; next
+      print
+      print_file(memory_file)
+      in_block=1
+      next
     }
     /<!-- END SHARED_MEMORY -->/{
-      print $0
-      skip=0; next
+      in_block=0
+      print
+      next
     }
-    !skip { print }
+    !in_block { print }
   ' "$adapter_file" > "$tmp_file"
 
   mv "$tmp_file" "$adapter_file"

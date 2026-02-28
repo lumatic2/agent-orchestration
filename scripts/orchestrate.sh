@@ -31,6 +31,15 @@ mkdir -p "$LOG_DIR" "$QUEUE_DIR"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 ISO_NOW=$(date +%Y-%m-%dT%H:%M:%S%z 2>/dev/null || date +%Y-%m-%dT%H:%M:%S)
 
+# Cross-platform sed -i wrapper (macOS BSD sed requires -i '')
+sedi() {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    sed -i '' "$@"
+  else
+    sed -i "$@"
+  fi
+}
+
 # ============================================================
 # Queue Helper Functions
 # ============================================================
@@ -88,31 +97,31 @@ update_meta_status() {
   [ -f "$meta" ] || return 1
 
   # Update status
-  sed -i "s/\"status\": *\"[^\"]*\"/\"status\": \"$new_status\"/" "$meta"
+  sedi "s/\"status\": *\"[^\"]*\"/\"status\": \"$new_status\"/" "$meta"
 
   # Update timestamp fields based on status
   case "$new_status" in
     dispatched)
-      sed -i "s/\"dispatched\": *[^,]*/\"dispatched\": \"$ISO_NOW\"/" "$meta"
+      sedi "s/\"dispatched\": *[^,]*/\"dispatched\": \"$ISO_NOW\"/" "$meta"
       ;;
     completed|failed)
-      sed -i "s/\"completed\": *[^,]*/\"completed\": \"$ISO_NOW\"/" "$meta"
+      sedi "s/\"completed\": *[^,]*/\"completed\": \"$ISO_NOW\"/" "$meta"
       ;;
     queued)
       # Increment retry_count
       local count
       count=$(grep -o '"retry_count": *[0-9]*' "$meta" | grep -o '[0-9]*')
       count=$((count + 1))
-      sed -i "s/\"retry_count\": *[0-9]*/\"retry_count\": $count/" "$meta"
+      sedi "s/\"retry_count\": *[0-9]*/\"retry_count\": $count/" "$meta"
       if [ -n "$extra_value" ]; then
-        sed -i "s/\"queued_reason\": *[^,}]*/\"queued_reason\": \"$extra_value\"/" "$meta"
+        sedi "s/\"queued_reason\": *[^,}]*/\"queued_reason\": \"$extra_value\"/" "$meta"
       fi
       ;;
   esac
 
   # Set extra field if provided (e.g., exit_code, log_file)
   if [ -n "$extra_field" ] && [ "$new_status" != "queued" ]; then
-    sed -i "s/\"$extra_field\": *[^,}]*/\"$extra_field\": \"$extra_value\"/" "$meta"
+    sedi "s/\"$extra_field\": *[^,}]*/\"$extra_field\": \"$extra_value\"/" "$meta"
   fi
 
   local task_id
@@ -189,7 +198,7 @@ run_codex() {
 
   # Update queue status to dispatched
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
 
   # Write directly to file to avoid shell variable truncation
   codex exec \
@@ -205,13 +214,13 @@ run_codex() {
   if is_rate_limited "$result"; then
     echo "[RATE_LIMIT] Codex hit rate limit"
     [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
-    [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
     return 1
   fi
 
   # Success — update queue
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
   [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
 
   parse_codex_result "$result"
@@ -227,7 +236,7 @@ run_gemini() {
 
   # Update queue status to dispatched
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
 
   # Write directly to file to avoid shell variable truncation
   gemini \
@@ -241,13 +250,13 @@ run_gemini() {
   if is_rate_limited "$result"; then
     echo "[RATE_LIMIT] Gemini hit rate limit"
     [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
-    [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
     return 1
   fi
 
   # Success — update queue
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
-  [ -d "${QUEUE_TASK_DIR:-}" ] && sed -i "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
   [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
 
   # Strip YOLO noise lines, show clean output
