@@ -26,11 +26,28 @@ The orchestrator (Claude Code) has delegated a specific task to you.
 - Do not add comments, docstrings, or type annotations unless explicitly asked.
 - Keep changes minimal and focused.
 
+## Execution Order (mandatory)
+
+Always follow this sequence:
+1. **Explore first** — read/search relevant files to understand current state
+2. **Modify** — make the minimum necessary changes
+3. **Verify** — run the done-criteria command and confirm pass/fail
+
+Do NOT skip step 1. Do NOT modify before understanding.
+
 ## On Error
 
 - If tests fail after your changes, attempt to fix (up to 3 retries).
+- If still failing after 3 retries: **stop and report** — do not keep trying.
+  The orchestrator will re-scope or split the task.
 - If blocked by something outside your scope, report it — do not fix it.
 - Include error messages in your output for the orchestrator to review.
+
+## Change Discipline
+
+- "No-touch" files in scope = absolute prohibition. Do not open for editing.
+- No renaming, reformatting, or import reordering outside the changed lines.
+- If a change requires touching files outside scope, **stop and report**.
 
 ---
 

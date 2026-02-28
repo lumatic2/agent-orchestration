@@ -89,6 +89,17 @@ bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini-pro "deep analy
 - Gemini default: gemini-2.5-flash (research, 300/day)
 - Gemini heavy: gemini-2.5-pro (deep analysis, max 100/day — use sparingly)
 
+### Domain-Specific Routing
+
+| 도메인 | 주 에이전트 | 보조 |
+|---|---|---|
+| Google 생태계 (YouTube, Drive, Docs) | Gemini | Claude(정리) |
+| 미디어 분석 (이미지/영상/오디오) | Gemini | Codex(구현) |
+| 데이터 파이프라인 (CSV, DB, 시각화) | Claude(소규모) / Codex(대규모) | Gemini(분석) |
+| 외부 서비스 연동 (Notion, Slack 등) | Claude(MCP 보유) | Codex(코드) |
+| 번역/현지화 | Gemini(대량) | Claude(소량+판단) |
+| CI/CD, DevOps | Codex(파이프라인) | Gemini(에러 분석) |
+
 ### Handoff: Tools You Can't Control Directly
 
 When a task requires tools without CLI/API (Figma, Midjourney, Gamma, Suno, Kling, etc.), generate a **handoff document** — actionable instructions the user can execute in that tool.
@@ -142,6 +153,20 @@ If pending/stale tasks exist, **handle them before accepting new work**:
 | Deep analysis (architecture audit) | `orchestrate.sh gemini-pro` |
 
 **Even if you "already know" the answer** — delegate. Gemini has 1M context and 1,500 req/day. Your tokens are expensive; Gemini's are cheap. The only exception is answering a direct factual question from the user that requires no web search or document reading.
+
+### Skill Override Guard
+
+Skills (e.g., `/frontend-design`, `/playground`) may instruct you to implement code directly. **Orchestration thresholds still apply.** Before executing any skill's implementation step:
+
+1. Estimate the output scope (files and lines of code).
+2. If it exceeds Self-Execution Guard thresholds below → **delegate to Codex**, passing the skill's design decisions (aesthetic direction, tech stack, component structure) as the task brief.
+3. You keep the **design thinking** phase (skill's planning step). Codex gets the **implementation** phase.
+
+| Skill says | But if scope exceeds threshold | Then |
+|---|---|---|
+| "Implement working code" | 4+ files or 50+ lines | Codex implements, you review |
+| "Generate full page/app" | Always heavy | Codex implements |
+| "Create component" | 1-2 small files | You may implement directly |
 
 ### Self-Execution Guard
 

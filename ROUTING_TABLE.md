@@ -73,6 +73,17 @@ Before delegating, ask these questions in order:
 | Research + large implementation | **Full orchestration** | Evaluate lib → build feature |
 | Multiple projects in parallel | **Full orchestration** | Frontend + backend simultaneously |
 
+## Domain-Specific Routing
+
+| 작업 도메인 | 주 에이전트 | 보조 | 이유 |
+|---|---|---|---|
+| Google 생태계 (YouTube, Drive, Docs) | Gemini | Claude(정리) | Google API 네이티브, 1M 컨텍스트, 영상 자막 분석 |
+| 미디어 분석 (이미지/영상/오디오) | Gemini | Codex(구현) | 멀티모달 입력 처리 → 분석 결과로 코드 생성 |
+| 데이터 파이프라인 (CSV, DB, 시각화) | Claude(소규모) / Codex(대규모) | Gemini(분석) | 스크립트 크기에 따라 분기 |
+| 외부 서비스 연동 (Notion, Slack 등) | Claude(MCP 보유) | Codex(코드) | Claude만 MCP 도구 직접 사용 가능 |
+| 번역/현지화 | Codex CLI/gpt-5(대량) | Gemini(검색 필요 시) | ChatGPT Pro 쿼터 활용, 검색 불필요 |
+| CI/CD, DevOps | Codex(파이프라인) | Gemini(에러 분석) | 에러 로그 분석 = 리서치 |
+
 ## Task → Agent → Model (when orchestrating)
 
 | Task Type | Agent | Model | Reason |
@@ -88,11 +99,54 @@ Before delegating, ask these questions in order:
 | **Quick edits** | Codex | codex-spark | 15x faster, saves quota |
 | **Boilerplate** | Codex | codex-spark | Simple generation |
 | **Code review (diff)** | Claude subagent | Sonnet | Quality judgment on small diff |
-| **Research / docs** | Gemini | 2.5 Flash | 1M context, cheap |
+| **Document writing** | Codex CLI | gpt-5.2 | 웹 검색 불필요, ChatGPT Pro 쿼터 활용 |
+| **Summarization** | Codex CLI | gpt-5.2 | 텍스트 처리, 검색 불필요 |
+| **Data processing** | Codex CLI | gpt-5.1 | 가공/변환, 코딩 모델 불필요 |
+| **Translation (bulk)** | Codex CLI | gpt-5 | 대량 텍스트, 경량 모델 |
+| **Research (web search)** | Gemini | 2.5 Flash | 웹 검색 필요한 리서치 |
 | **Deep analysis** | Gemini | 2.5 Pro | Max 100/day, use sparingly |
-| **Bulk transform** | Gemini | 2.5 Flash-Lite | Lowest cost |
 | **Data analysis** | Claude Code | Sonnet | Direct execution |
 | **Notion operations** | Claude Code | Sonnet | Has MCP/script access |
+
+> **라우팅 기준**: 웹 검색 필요 → Gemini / 웹 검색 불필요 → Codex CLI (ChatGPT 모델)
+> Codex CLI에서 `-m gpt-5.2` 등으로 ChatGPT 모델 지정 가능. 코딩 모델(codex)은 코딩에만 사용.
+
+## Codex 모델 선택 가이드
+
+코딩 작업을 Codex에 위임할 때, 리스크/규모에 따라 모델을 선택:
+
+| 등급 | 모델 | 사용 조건 |
+|---|---|---|
+| **Heavy** | gpt-5.3-codex | 대규모 리팩터/마이그레이션, 모노레포 동시 수정, 보안/결제/인증 영역, 테스트 빈약한 코드베이스 |
+| **Default** | gpt-5.3-codex | 중간 규모 기능 추가/버그 수정, 컴포넌트 1-3개, API 1-2개 수준 |
+| **Light** | codex-spark | 코드베이스 탐색, 설정값 확인, 오타/문구 수정, 문서 정리, TODO 목록화 |
+
+**판단 기준**: "실패했을 때 비용"이 큰 작업 → Heavy, 그 외 → Default or Light
+
+## Codex 운영 룰
+
+1. **실패 시 모델 업그레이드보다 태스크 분할 우선** — 태스크를 더 쪼개고 done-criteria를 구체화
+2. **탐색 → 수정 → 테스트 순서 강제** — task_brief에 Execution Order 항상 포함
+3. **변경 금지 영역 명시** — No-touch 필드로 불필요한 리포맷/리네이밍 방지
+
+## Gemini 운영 룰
+
+1. **리서치 결과는 글머리 기호 위주** — 에세이/산문 금지. 표와 bullet points로 구조화.
+2. **코딩 관련 리서치 → Tactical Map 모드** — 리서치 결과를 Codex가 바로 실행할 수 있는 구조(파일별 변경사항 + 검증 커맨드)로 출력. Orchestrator가 task_brief에 바로 붙여 넣기 가능.
+3. **Flash가 기본, Pro는 예외적** — "교차 검증 + 추론 필요"할 때만 Pro. 대부분 Flash로 충분.
+4. **코드 직접 작성보다 Tactical Map 우선** — Gemini가 코드를 쓰는 것보다 실행 계획을 작성하여 Codex에 넘기는 것이 품질과 효율 모두 우수.
+
+## Trigger System 활용 (Orchestrator → Agent)
+
+Orchestrator(Claude Code)가 에이전트에게 task_brief를 보낼 때, 트리거 번호를 프롬프트 앞에 붙여 출력 형식을 제어할 수 있다.
+
+| 트리거 | 용도 | 예시 |
+|---|---|---|
+| **"2"** | 웹 검색 리서치 | `"2 React vs Svelte 비교"` → 소스 포함 검색 결과 |
+| **"4"** | 비교 분석 | `"4 Next.js vs Remix"` → 표/bullet 형태만 |
+| **"5"** | 결론 우선 | `"5 이 아키텍처의 위험 요소"` → 결론→근거→리스크 |
+
+활용 시점: 단순 리서치가 아닌, 특정 포맷이 필요할 때 트리거로 출력을 제어.
 
 ## Interactive Workflow: 브레인스토밍 / 레퍼런스 리서치
 
@@ -167,3 +221,57 @@ To prevent file conflicts during parallel execution:
 - Assign each worker a **non-overlapping directory** or file set.
 - If overlap is unavoidable, run workers **sequentially**, not in parallel.
 - The orchestrator must verify no scope overlap before dispatching parallel tasks.
+
+---
+
+## Task Coverage Map
+
+이 오케스트레이션 시스템이 수행할 수 있는 작업의 전체 범위.
+
+### 직접 수행 (자동화)
+
+| 카테고리 | 예시 | 주 에이전트 |
+|---|---|---|
+| 웹 개발 | 랜딩페이지, SaaS, 대시보드, 포트폴리오 | Codex(구현) + Gemini(리서치) |
+| 앱 개발 | React Native, Flutter, Next.js 풀스택 | Codex(코드) + Gemini(기술조사) |
+| 스크립트/자동화 | Python 스크립트, 배치 처리, 크롤러 | Claude(소규모) / Codex(대규모) |
+| 리팩토링 | 코드 구조 개선, 패턴 변경, 마이그레이션 | Codex(실행) + Claude(판단) |
+| 리서치/분석 | 기술 비교, 트렌드 조사, 문서 요약 | Gemini(수집) + Claude(정리) |
+| 데이터 파이프라인 | CSV 처리, DB 쿼리, 시각화 스크립트 | Claude(소규모) / Codex(대규모) |
+| CI/CD, DevOps | GitHub Actions, Docker, 배포 파이프라인 | Codex(파이프라인) + Gemini(에러분석) |
+| 코드 리뷰 | PR 리뷰, diff 분석, 보안 점검 | Claude(Sonnet subagent) |
+| 번역/현지화 | 다국어 텍스트, i18n 파일 | Gemini(대량) + Claude(소량) |
+| 외부 서비스 연동 | Notion, Slack 조회/작성 | Claude(MCP 직접) |
+| Google 생태계 | YouTube 자막 분석, Drive 문서, Docs | Gemini(네이티브) |
+| 대용량 문서 처리 | 50+ 페이지 PDF, PPT, 스펙 문서 | Gemini(분석) → Claude(요약) |
+
+### 반자동 (Handoff — 사용자 실행 필요)
+
+오케스트레이션이 구체적 지시서를 생성하고, 사용자가 해당 도구에서 실행.
+
+| 카테고리 | 도구 | 오케스트레이션 역할 |
+|---|---|---|
+| UI/UX 디자인 | Figma | 디자인 스펙, 컴포넌트 구조, 토큰 정의 |
+| 이미지 생성 | Midjourney | 프롬프트 + 파라미터(--ar, --v 등) |
+| 프레젠테이션 | Gamma | 슬라이드 구조, 콘텐츠, 레이아웃 |
+| 음악 생성 | Suno | 장르/무드/길이 프롬프트 |
+| 영상 생성 | Kling | 씬 분해, 카메라 지시 |
+
+### 조합 워크플로우 예시
+
+| 프로젝트 | 흐름 |
+|---|---|
+| SaaS 랜딩페이지 | Gemini(레퍼런스 조사) → 사용자(방향 선택) → Codex(코드 구현) → Figma handoff(디자인) → Midjourney handoff(히어로 이미지) |
+| 사업 보고서 | Gemini(시장 데이터 수집) → Claude(구조화/분석) → Gamma handoff(발표 자료) |
+| 모바일 앱 | Gemini(기술 스택 비교) → 사용자(선택) → Codex(스캐폴딩+구현) → Figma handoff(UI) |
+| 데이터 분석 | Claude(소규모 스크립트) or Codex(대규모 파이프라인) → Gemini(결과 해석) |
+| 오픈소스 기여 | Gemini(이슈/코드 분석) → Codex(구현) → Claude(PR 리뷰+커밋) |
+
+### 현재 미지원
+
+| 영역 | 이유 | 대안 |
+|---|---|---|
+| 실시간 협업 (Figma 직접 조작) | API/CLI 없음 | Handoff 문서 |
+| 모바일 실기기 테스트 | 물리 디바이스 필요 | 에뮬레이터 스크립트까지 |
+| 결제/인증 실서비스 연동 | 실 credentials 위험 | 코드 + 설정 가이드 |
+| 디자인 에셋 직접 생성 | Midjourney/DALL-E CLI 없음 | 프롬프트 Handoff |

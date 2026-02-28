@@ -385,10 +385,13 @@ do_resume() {
 
       local exit_code=0
       case "$agent" in
-        codex)       run_codex "gpt-5.3-codex" || exit_code=$? ;;
-        codex-spark) run_codex "gpt-5.3-codex-spark" || exit_code=$? ;;
-        gemini)      run_gemini "gemini-2.5-flash" || exit_code=$? ;;
-        gemini-pro)  run_gemini "gemini-2.5-pro" || exit_code=$? ;;
+        codex)         run_codex "gpt-5.3-codex" || exit_code=$? ;;
+        codex-spark)   run_codex "gpt-5.3-codex-spark" || exit_code=$? ;;
+        chatgpt)       run_codex "gpt-5.2" || exit_code=$? ;;
+        chatgpt-mini)  run_codex "gpt-5.1" || exit_code=$? ;;
+        chatgpt-light) run_codex "gpt-5" || exit_code=$? ;;
+        gemini)        run_gemini "gemini-2.5-flash" || exit_code=$? ;;
+        gemini-pro)    run_gemini "gemini-2.5-pro" || exit_code=$? ;;
         *)
           echo "[ERROR] Unknown agent in queue: $agent"
           exit 1
@@ -506,6 +509,15 @@ case "$AGENT" in
   gemini-pro)
     run_gemini "gemini-2.5-pro" || run_with_fallback_research
     ;;
+  chatgpt)
+    run_codex "gpt-5.2" || run_with_fallback_research
+    ;;
+  chatgpt-mini)
+    run_codex "gpt-5.1" || run_with_fallback_research
+    ;;
+  chatgpt-light)
+    run_codex "gpt-5" || run_with_fallback_research
+    ;;
   codex-fallback)
     run_with_fallback_code
     ;;
@@ -514,7 +526,7 @@ case "$AGENT" in
     ;;
   *)
     echo "[ERROR] Unknown agent: $AGENT"
-    echo "Available: codex, codex-spark, gemini, gemini-pro, codex-fallback, gemini-fallback"
+    echo "Available: codex, codex-spark, chatgpt, chatgpt-mini, chatgpt-light, gemini, gemini-pro"
     echo "Options:   --boot, --status, --resume, --complete <ID> <summary>"
     echo "           --brief <goal> <scope> <constraints>"
     exit 1

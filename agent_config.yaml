@@ -17,10 +17,14 @@ models:
     heavy: "gpt-5.3-codex"        # Complex coding, refactoring, debugging
     light: "gpt-5.3-codex-spark"  # Quick edits, formatting, boilerplate
     mini: "gpt-5-codex-mini"      # Cheap, simple file transforms
+  chatgpt:                         # Non-coding tasks via codex CLI (-m flag)
+    heavy: "gpt-5.2"              # Document writing, summarization, analysis
+    default: "gpt-5.1"            # Data processing, translation, general tasks
+    light: "gpt-5"                # Bulk translation, simple transforms
   gemini:
     heavy: "gemini-2.5-pro"       # Deep analysis (max 100/day on Pro plan)
-    default: "gemini-2.5-flash"   # Research, summarization (300/day)
-    light: "gemini-2.5-flash-lite" # Bulk tasks, translation, classification
+    default: "gemini-2.5-flash"   # Web search, research requiring live data
+    light: "gemini-2.5-flash-lite" # Lightweight search tasks
   claude:
     heavy: "opus"                 # Orchestration judgment only
     mid: "sonnet"                 # Code review, code generation (subagent)
@@ -79,6 +83,13 @@ fallback:
       model_key: light
     - agent: codex
       model_key: heavy
+    - action: queue_and_wait
+
+  general:                           # Non-coding tasks (writing, data, translation)
+    - agent: codex
+      model_key: chatgpt.heavy       # o3
+    - agent: gemini
+      model_key: default
     - action: queue_and_wait
 
   orchestration:

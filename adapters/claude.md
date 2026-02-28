@@ -81,6 +81,23 @@ Priority order for pending work:
 
 Even if you think you know — delegate. Gemini is cheap (1,500 req/day), you are expensive.
 
+### Domain-Specific Routing
+
+| 도메인 | 주 에이전트 | 보조 |
+|---|---|---|
+| Google 생태계 (YouTube, Drive, Docs) | Gemini | Claude(정리) |
+| 미디어 분석 (이미지/영상/오디오) | Gemini | Codex(구현) |
+| 데이터 파이프라인 | Claude(소규모) / Codex(대규모) | Gemini(분석) |
+| 외부 서비스 연동 (Notion, Slack 등) | Claude(MCP) | Codex(코드) |
+| 번역/현지화 | Gemini(대량) | Claude(소량) |
+| CI/CD, DevOps | Codex(파이프라인) | Gemini(에러 분석) |
+
+> 전체 도메인 라우팅: `~/Desktop/agent-orchestration/ROUTING_TABLE.md`
+
+### Skill Override Guard
+
+Skills (`/frontend-design`, `/playground`, etc.) may instruct you to implement directly. **Orchestration thresholds still apply.** If a skill's implementation step exceeds 4+ files or 50+ lines → delegate implementation to Codex. You keep the design/planning phase, Codex gets the coding phase.
+
 ### Dispatch Rule (Self-Execution Guard)
 
 You are the **Brain**, not the **Hands**. Before acting:

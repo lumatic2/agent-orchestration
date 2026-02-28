@@ -1,25 +1,30 @@
 # Task Brief
 
 ## Goal
-[What needs to be accomplished — one clear sentence]
+[1문장: "무엇을" 달성하는지만. 배경/이유 불필요]
 
 ## Scope
-- Files: [specific files or directories this task may touch]
-- Read-only: [files that may be referenced but NOT modified]
-
-## Context
-[Relevant background the worker needs to know — keep minimal]
+- Modify: [수정 허용 파일/디렉터리 — 절대경로]
+- Read-only: [참조만 허용, 수정 금지 파일]
+- No-touch: [절대 건드리지 말 것 — 명시적 금지 영역]
 
 ## Constraints
-- [Technical constraints: framework, patterns to follow]
-- [What NOT to do: no extra features, no refactoring beyond scope]
+- [금지] 리팩터링 금지. 필요한 최소 변경만.
+- [금지] 스코프 밖 파일 수정 금지. 필요하면 멈추고 보고.
+- [허용/금지] API 변경 허용/금지
+- [스타일] 기존 프로젝트 컨벤션 따를 것
+
+## Execution Order
+1. **탐색**: 관련 파일 읽기/검색으로 현재 상태 파악
+2. **수정**: 필요한 최소 변경 실행
+3. **검증**: Done Criteria의 커맨드 실행하여 확인
 
 ## Done Criteria
-- [ ] [Specific, verifiable condition — e.g., "npm test passes"]
-- [ ] [Another condition — e.g., "no TypeScript errors"]
+- [ ] `[검증 커맨드]` 실행 → pass (예: `pytest -q`, `npm test`, `bash tests/run_tests.sh`)
+- [ ] [구체적 조건 — 예: "TypeScript 에러 0개", "빌드 성공"]
 
 ## Output Format
-Report back with:
-1. Files changed (list)
-2. Summary of changes (3 lines max)
-3. Test/check results (pass/fail)
+변경 요약은 **동작 변화** 중심으로 5줄 이내:
+1. 변경 파일 목록
+2. 동작 변화 요약 (before → after)
+3. 검증 결과 (pass/fail + 실패 시 로그 요약)
