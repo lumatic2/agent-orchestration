@@ -73,7 +73,11 @@ def _request(
     body: dict | None = None,
     params: dict | None = None,
 ):
-    token = _env("NOTION_TOKEN")
+    tokens = _candidate_tokens()
+    if not tokens:
+        print("Missing env var: PERSONAL_NOTION_TOKEN, COMPANY_NOTION_TOKEN, or NOTION_TOKEN", file=sys.stderr)
+        sys.exit(2)
+    token = tokens[0]
     notion_version = os.getenv("NOTION_VERSION") or DEFAULT_NOTION_VERSION
 
     url = f"{NOTION_API_BASE}{path}"
