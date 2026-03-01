@@ -1,8 +1,10 @@
 import argparse
 import json
+import mimetypes
 import os
 import sys
 import textwrap
+import uuid
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -376,6 +378,298 @@ def search_databases(query: str, page_size: int = 10):
         "filter": {"value": "database", "property": "object"},
     }
     return _request("POST", "/search", body)
+
+
+def search_all(
+    query: str,
+    filter_type: str | None = None,
+    sort_direction: str = "descending",
+    sort_timestamp: str = "last_edited_time",
+    page_size: int = 20,
+):
+    """Search pages and/or databases. filter_type: 'page' | 'database' | None (both)."""
+    body: dict = {"query": query, "page_size": page_size}
+    if filter_type in ("page", "database"):
+        body["filter"] = {"value": filter_type, "property": "object"}
+    body["sort"] = {"direction": sort_direction, "timestamp": sort_timestamp}
+    return _request("POST", "/search", body)
+
+
+def update_page(
+    page_id: str,
+    title: str | None = None,
+    icon_emoji: str | None = None,
+    icon_url: str | None = None,
+    cover_url: str | None = None,
+    archived: bool | None = None,
+    extra_properties: dict | None = None,
+):
+    """PATCH /pages/{page_id} — update title, icon, cover, or arbitrary properties."""
+    payload: dict = {}
+
+    if title is not None:
+        payload.setdefault("properties", {})["title"] = {
+            "title": [{"type": "text", "text": {"content": title}}]
+        }
+
+    if extra_properties:
+        payload.setdefault("properties", {}).update(extra_properties)
+
+    if icon_emoji is not None:
+        payload["icon"] = {"type": "emoji", "emoji": icon_emoji}
+    elif icon_url is not None:
+        payload["icon"] = {"type": "external", "external": {"url": icon_url}}
+
+    if cover_url is not None:
+        payload["cover"] = {"type": "external", "external": {"url": cover_url}}
+
+    if archived is not None:
+        payload["archived"] = archived
+
+    if not payload:
+        raise ValueError("Nothing to update. Provide at least one of: --title, --icon-emoji, --icon-url, --cover-url")
+
+    return _request("PATCH", f"/pages/{page_id}", payload)
+
+
+# ── Database ──────────────────────────────────────────────────────────────────
+
+def create_database(
+    parent_page_id: str,
+    title: str,
+    properties: dict | None = None,
+    icon_emoji: str | None = None,
+    cover_url: str | None = None,
+):
+    """POST /databases — create a new inline database under a page."""
+    payload: dict = {
+        "parent": {"type": "page_id", "page_id": parent_page_id},
+        "title": [{"type": "text", "text": {"content": title}}],
+        "properties": properties or {"Name": {"title": {}}},
+        "is_inline": True,
+    }
+    if icon_emoji:
+        payload["icon"] = {"type": "emoji", "emoji": icon_emoji}
+    if cover_url:
+        payload["cover"] = {"type": "external", "external": {"url": cover_url}}
+    return _request("POST", "/databases", payload)
+
+
+def update_database(
+    database_id: str,
+    title: str | None = None,
+    icon_emoji: str | None = None,
+    icon_url: str | None = None,
+    cover_url: str | None = None,
+):
+    """PATCH /databases/{id} — update title, icon, or cover of a database."""
+    payload: dict = {}
+    if title is not None:
+        payload["title"] = [{"type": "text", "text": {"content": title}}]
+    if icon_emoji is not None:
+        payload["icon"] = {"type": "emoji", "emoji": icon_emoji}
+    elif icon_url is not None:
+        payload["icon"] = {"type": "external", "external": {"url": icon_url}}
+    if cover_url is not None:
+        payload["cover"] = {"type": "external", "external": {"url": cover_url}}
+    if not payload:
+        raise ValueError("Nothing to update.")
+    return _request("PATCH", f"/databases/{database_id}", payload)
+
+
+# ── Users ─────────────────────────────────────────────────────────────────────
+
+def get_users(page_size: int = 100):
+    """GET /users — list all workspace users."""
+    return _request("GET", "/users", params={"page_size": page_size})
+
+
+def get_me():
+    """GET /users/me — retrieve the bot user for the current token."""
+    return _request("GET", "/users/me")
+
+
+# ── Comments ──────────────────────────────────────────────────────────────────
+
+def add_comment(page_id: str, text: str):
+    """POST /comments — add a comment to a page."""
+    return _request("POST", "/comments", {
+        "parent": {"page_id": page_id},
+        "rich_text": [{"type": "text", "text": {"content": text}}],
+    })
+
+
+def get_comments(block_id: str, page_size: int = 20):
+    """GET /comments — retrieve comments for a block or page."""
+    return _request("GET", "/comments", params={"block_id": block_id, "page_size": page_size})
+
+
+# ── File uploads ─────────────────────────────────────────────────────────────
+
+FILE_UPLOAD_NOTION_VERSION = "2025-09-03"
+
+_BLOCK_TYPE_BY_MIME: dict[str, str] = {
+    "image/": "image",
+    "video/": "video",
+    "audio/": "audio",
+    "application/pdf": "pdf",
+}
+
+def _guess_block_type(filename: str, content_type: str) -> str:
+    for prefix, btype in _BLOCK_TYPE_BY_MIME.items():
+        if content_type.startswith(prefix):
+            return btype
+    return "file"
+
+
+def _build_multipart(file_path: str, field_name: str = "file") -> tuple[bytes, str]:
+    """Build a multipart/form-data body for a single file field."""
+    boundary = uuid.uuid4().hex
+    filename = os.path.basename(file_path)
+    content_type, _ = mimetypes.guess_type(file_path)
+    content_type = content_type or "application/octet-stream"
+
+    with open(file_path, "rb") as f:
+        file_data = f.read()
+
+    parts = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{field_name}"; filename="{filename}"\r\n'
+        f"Content-Type: {content_type}\r\n\r\n"
+    ).encode("utf-8") + file_data + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+    return parts, f"multipart/form-data; boundary={boundary}"
+
+
+def _request_upload(path: str, body: bytes, content_type: str):
+    """Raw HTTP POST for multipart file uploads (uses 2025-09-03 version)."""
+    tokens = _candidate_tokens()
+    token = tokens[0]
+    url = f"{NOTION_API_BASE}{path}"
+    req = urllib.request.Request(url, data=body, method="POST")
+    req.add_header("Authorization", f"Bearer {token}")
+    req.add_header("Notion-Version", FILE_UPLOAD_NOTION_VERSION)
+    req.add_header("Content-Type", content_type)
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            raw = resp.read().decode("utf-8")
+            return json.loads(raw) if raw else {}
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace")
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            payload = {"raw": raw}
+        raise NotionApiError(status=e.code, reason=str(e.reason), payload=payload)
+
+
+def create_file_upload(filename: str, content_type: str) -> dict:
+    """POST /v1/file_uploads — initialize a file upload, returns {id, status, ...}."""
+    return _request(
+        "POST",
+        "/file_uploads",
+        {"filename": filename, "content_type": content_type},
+    )
+
+
+def send_file_upload(file_upload_id: str, file_path: str) -> dict:
+    """POST /v1/file_uploads/{id}/send — upload file bytes as multipart form."""
+    body, ct = _build_multipart(file_path)
+    return _request_upload(f"/file_uploads/{file_upload_id}/send", body, ct)
+
+
+def attach_file_upload_to_page(
+    page_id: str,
+    file_upload_id: str,
+    block_type: str,
+    filename: str,
+) -> dict:
+    """Append a file_upload block to a page."""
+    block: dict = {
+        "object": "block",
+        "type": block_type,
+        block_type: {
+            "type": "file_upload",
+            "file_upload": {"id": file_upload_id},
+        },
+    }
+    if block_type == "file":
+        block[block_type]["name"] = filename
+    return _request("PATCH", f"/blocks/{page_id}/children", {"children": [block]})
+
+
+def upload_file(page_id: str, file_path: str, block_type: str | None = None) -> dict:
+    """
+    Full 3-step file upload:
+      1. create_file_upload  2. send_file_upload  3. attach_file_upload_to_page
+    Returns the append-children response.
+    """
+    filename = os.path.basename(file_path)
+    content_type, _ = mimetypes.guess_type(file_path)
+    content_type = content_type or "application/octet-stream"
+
+    btype = block_type or _guess_block_type(filename, content_type)
+
+    # Step 1
+    upload = create_file_upload(filename, content_type)
+    upload_id = upload.get("id")
+    if not upload_id:
+        raise RuntimeError(f"Failed to create file upload: {upload}")
+
+    # Step 2
+    send_file_upload(upload_id, file_path)
+
+    # Step 3
+    return attach_file_upload_to_page(page_id, upload_id, btype, filename)
+
+
+# ── Block move ────────────────────────────────────────────────────────────────
+
+_BLOCK_READ_ONLY_KEYS = {
+    "id", "object", "created_time", "last_edited_time",
+    "created_by", "last_edited_by", "has_children", "archived", "in_trash",
+}
+
+def _block_to_append_payload(block: dict) -> dict | None:
+    """Strip read-only fields and return a block payload suitable for appending."""
+    btype = block.get("type")
+    if not btype:
+        return None
+    payload = {"object": "block", "type": btype}
+    content = block.get(btype)
+    if content is None:
+        return None
+    # Strip any read-only sub-keys
+    if isinstance(content, dict):
+        content = {k: v for k, v in content.items() if k not in _BLOCK_READ_ONLY_KEYS}
+    payload[btype] = content
+    return payload
+
+
+def move_block(block_id: str, target_parent_id: str, after_block_id: str | None = None):
+    """
+    Move a block by copying it to target_parent and deleting the original.
+    ⚠ child_page blocks cannot be moved — deleting them archives the page.
+    """
+    block = _request("GET", f"/blocks/{block_id}")
+    btype = block.get("type")
+    if btype == "child_page":
+        raise ValueError(
+            f"Block {block_id} is a child_page — moving it via API would archive the page. "
+            "Use the Notion UI to drag it instead."
+        )
+
+    payload_block = _block_to_append_payload(block)
+    if payload_block is None:
+        raise ValueError(f"Cannot convert block type '{btype}' to append payload.")
+
+    append_body: dict = {"children": [payload_block]}
+    if after_block_id:
+        append_body["after"] = after_block_id
+
+    result = _request("PATCH", f"/blocks/{target_parent_id}/children", append_body)
+    delete_block(block_id)
+    return result
 
 
 def _find_title_property_name(database: dict) -> str:
@@ -1200,6 +1494,11 @@ def _cmd_update_block(args):
         payload = {btype: {"rich_text": rich_text}}
         if args.language:
             payload[btype]["language"] = args.language
+    elif btype == "to_do" and args.checked is not None:
+        # --checked / --no-checked without --text
+        payload = {"to_do": {"checked": args.checked}}
+        if new_text:
+            payload["to_do"]["rich_text"] = rich_text
     elif btype in supported_types:
         payload = {btype: {"rich_text": rich_text}}
     else:
@@ -1212,6 +1511,238 @@ def _cmd_update_block(args):
         print(json.dumps(res, ensure_ascii=False, indent=2))
     else:
         print(f"updated\t{block_id}")
+
+
+def _cmd_create_db(args):
+    parent_id = _extract_notion_id(args.parent_page_id)
+    if not parent_id:
+        print("Invalid parent page id or URL.", file=sys.stderr)
+        sys.exit(2)
+
+    # Parse --property NAME:TYPE pairs
+    properties: dict = {}
+    for spec in (args.property or []):
+        if ":" in spec:
+            name, ptype = spec.split(":", 1)
+            properties[name.strip()] = {ptype.strip(): {}}
+        else:
+            properties[spec.strip()] = {"rich_text": {}}
+
+    res = create_database(
+        parent_id,
+        title=args.title,
+        properties=properties or None,
+        icon_emoji=args.icon_emoji or None,
+        cover_url=args.cover_url or None,
+    )
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+    else:
+        db_id = res.get("id", "")
+        print(f"created\tdb\t{db_id}\t{args.title}")
+
+
+def _cmd_update_db(args):
+    db_id = _extract_notion_id(args.database_id)
+    if not db_id:
+        print("Invalid database id or URL.", file=sys.stderr)
+        sys.exit(2)
+
+    res = update_database(
+        db_id,
+        title=args.title or None,
+        icon_emoji=args.icon_emoji or None,
+        icon_url=args.icon_url or None,
+        cover_url=args.cover_url or None,
+    )
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+    else:
+        updated = []
+        if args.title:     updated.append(f"title={args.title!r}")
+        if args.icon_emoji: updated.append(f"icon={args.icon_emoji}")
+        if args.icon_url:  updated.append(f"icon_url={args.icon_url}")
+        if args.cover_url: updated.append(f"cover={args.cover_url}")
+        print(f"updated\tdb\t{db_id}\t{', '.join(updated)}")
+
+
+def _cmd_users(args):
+    if args.me:
+        res = get_me()
+        if args.json:
+            print(json.dumps(res, ensure_ascii=False, indent=2))
+        else:
+            uid = res.get("id", "")
+            name = res.get("name", "")
+            utype = res.get("type", "")
+            print(f"{uid}\t{utype}\t{name}")
+        return
+
+    res = get_users(page_size=args.limit)
+    results = res.get("results") or []
+    if args.json:
+        print(json.dumps(results, ensure_ascii=False, indent=2))
+        return
+    for u in results:
+        uid  = u.get("id", "")
+        name = u.get("name", "")
+        utype = u.get("type", "")
+        email = (u.get("person") or {}).get("email", "")
+        print(f"{uid}\t{utype}\t{name}\t{email}")
+
+
+def _cmd_comments(args):
+    if args.add:
+        page_id = _extract_notion_id(args.target)
+        if not page_id:
+            print("Invalid page id or URL.", file=sys.stderr)
+            sys.exit(2)
+        res = add_comment(page_id, args.add)
+        if args.json:
+            print(json.dumps(res, ensure_ascii=False, indent=2))
+        else:
+            print(f"commented\t{page_id}")
+        return
+
+    block_id = _extract_notion_id(args.target)
+    if not block_id:
+        print("Invalid block/page id or URL.", file=sys.stderr)
+        sys.exit(2)
+    res = get_comments(block_id, page_size=args.limit)
+    results = res.get("results") or []
+    if args.json:
+        print(json.dumps(results, ensure_ascii=False, indent=2))
+        return
+    for c in results:
+        cid = c.get("id", "")
+        created = c.get("created_time", "")[:10]
+        author = ((c.get("created_by") or {}).get("name") or "unknown")
+        text = _first_plain_text(c.get("rich_text") or [])
+        print(f"{cid}\t{created}\t{author}\t{text}")
+
+
+def _cmd_upload_file(args):
+    page_id = _extract_notion_id(args.page_id)
+    if not page_id:
+        print("Invalid page id or URL.", file=sys.stderr)
+        sys.exit(2)
+
+    if not os.path.isfile(args.file):
+        print(f"File not found: {args.file}", file=sys.stderr)
+        sys.exit(2)
+
+    filename = os.path.basename(args.file)
+    file_size = os.path.getsize(args.file)
+    print(f"Uploading {filename} ({file_size:,} bytes)...")
+
+    try:
+        res = upload_file(page_id, args.file, block_type=args.block_type or None)
+    except NotionApiError as e:
+        print(str(e), file=sys.stderr)
+        print(json.dumps(e.payload, ensure_ascii=False, indent=2), file=sys.stderr)
+        sys.exit(1)
+
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+    else:
+        new_blocks = res.get("results") or []
+        new_id = new_blocks[0].get("id", "") if new_blocks else ""
+        print(f"uploaded\t{filename}\t→ block {new_id} on page {page_id}")
+
+
+def _cmd_move_block(args):
+    block_id = _extract_notion_id(args.block_id)
+    if not block_id:
+        print("Invalid block id.", file=sys.stderr)
+        sys.exit(2)
+    target_id = _extract_notion_id(args.target_parent)
+    if not target_id:
+        print("Invalid target parent id or URL.", file=sys.stderr)
+        sys.exit(2)
+    after_id = _extract_notion_id(args.after) if args.after else None
+
+    try:
+        res = move_block(block_id, target_id, after_block_id=after_id)
+    except ValueError as e:
+        print(str(e), file=sys.stderr)
+        sys.exit(1)
+
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+    else:
+        dest = f"after {after_id}" if after_id else f"end of {target_id}"
+        print(f"moved\t{block_id}\t→ {dest}")
+
+
+def _cmd_update_page(args):
+    page_id = _extract_notion_id(args.page_id)
+    if not page_id:
+        print("Invalid page id or URL.", file=sys.stderr)
+        sys.exit(2)
+
+    res = update_page(
+        page_id,
+        title=args.title or None,
+        icon_emoji=args.icon_emoji or None,
+        icon_url=args.icon_url or None,
+        cover_url=args.cover_url or None,
+        archived=args.archived if args.archived else None,
+    )
+    if args.json:
+        print(json.dumps(res, ensure_ascii=False, indent=2))
+    else:
+        updated = []
+        if args.title:
+            updated.append(f"title={args.title!r}")
+        if args.icon_emoji:
+            updated.append(f"icon={args.icon_emoji}")
+        if args.icon_url:
+            updated.append(f"icon_url={args.icon_url}")
+        if args.cover_url:
+            updated.append(f"cover={args.cover_url}")
+        if args.archived:
+            updated.append("archived=true")
+        print(f"updated\t{page_id}\t{', '.join(updated)}")
+
+
+def _cmd_search(args):
+    filter_type = args.type if args.type in ("page", "database") else None
+    sort_dir = "ascending" if args.oldest else "descending"
+    sort_ts = "created_time" if args.sort_by == "created" else "last_edited_time"
+
+    res = search_all(
+        query=args.query,
+        filter_type=filter_type,
+        sort_direction=sort_dir,
+        sort_timestamp=sort_ts,
+        page_size=args.limit,
+    )
+
+    results = res.get("results") or []
+    if args.json:
+        print(json.dumps(results, ensure_ascii=False, indent=2))
+        return
+
+    for obj in results:
+        obj_type = obj.get("object")          # "page" or "database"
+        obj_id   = obj.get("id", "")
+        edited   = obj.get("last_edited_time", "")[:10]
+        url      = obj.get("url", "")
+
+        if obj_type == "database":
+            title = _first_plain_text(obj.get("title") or [])
+            print(f"[db]\t{obj_id}\t{edited}\t{title}")
+        else:
+            props = obj.get("properties") or {}
+            # find title property
+            title = ""
+            for prop in props.values():
+                if (prop or {}).get("type") == "title":
+                    title = _first_plain_text(prop.get("title") or [])
+                    break
+            parent = obj.get("parent") or {}
+            parent_type = parent.get("type", "")
+            print(f"[page]\t{obj_id}\t{edited}\t{title or '(untitled)'}\t({parent_type})")
 
 
 def _cmd_replace_content(args):
@@ -1316,12 +1847,83 @@ def main(argv: list[str]) -> int:
     p_db_del.add_argument("block_id", help="Block ID to delete")
     p_db_del.set_defaults(func=_cmd_delete_block)
 
-    p_ub = sub.add_parser("update-block", help="Update a block's text content")
+    p_ub = sub.add_parser("update-block", help="Update a block's text content or to-do state")
     p_ub.add_argument("block_id", help="Block ID to update")
-    p_ub.add_argument("--text", required=True, help="New text content (supports **bold**, *italic*, `code`)")
+    p_ub.add_argument("--text", default="", help="New text content (supports **bold**, *italic*, `code`)")
     p_ub.add_argument("--language", help="Language for code blocks")
+    p_ub.add_argument("--checked", dest="checked", action="store_true", default=None,
+                      help="Mark to-do block as checked")
+    p_ub.add_argument("--no-checked", dest="checked", action="store_false",
+                      help="Mark to-do block as unchecked")
     p_ub.add_argument("--json", action="store_true")
-    p_ub.set_defaults(func=_cmd_update_block)
+    p_ub.set_defaults(func=_cmd_update_block, checked=None)
+
+    p_cdb = sub.add_parser("create-db", help="Create a new inline database under a page")
+    p_cdb.add_argument("--parent-page-id", required=True, help="Parent page URL or ID")
+    p_cdb.add_argument("--title", required=True, help="Database title")
+    p_cdb.add_argument("--property", action="append", metavar="NAME:TYPE",
+                       help="Add a property (e.g. Status:select, Date:date). Repeatable.")
+    p_cdb.add_argument("--icon-emoji", help="Emoji icon")
+    p_cdb.add_argument("--cover-url", help="Cover image URL")
+    p_cdb.add_argument("--json", action="store_true")
+    p_cdb.set_defaults(func=_cmd_create_db)
+
+    p_udb = sub.add_parser("update-db", help="Update database title, icon, or cover")
+    p_udb.add_argument("database_id", help="Database URL or ID")
+    p_udb.add_argument("--title", help="New title")
+    p_udb.add_argument("--icon-emoji", help="Emoji icon")
+    p_udb.add_argument("--icon-url", help="External image URL for icon")
+    p_udb.add_argument("--cover-url", help="Cover image URL")
+    p_udb.add_argument("--json", action="store_true")
+    p_udb.set_defaults(func=_cmd_update_db)
+
+    p_usr = sub.add_parser("users", help="List workspace users or show current bot user")
+    p_usr.add_argument("--me", action="store_true", help="Show the bot user for current token")
+    p_usr.add_argument("--limit", type=int, default=100)
+    p_usr.add_argument("--json", action="store_true")
+    p_usr.set_defaults(func=_cmd_users)
+
+    p_cmt = sub.add_parser("comments", help="Add or list comments on a page/block")
+    p_cmt.add_argument("target", help="Page or block URL/ID")
+    p_cmt.add_argument("--add", metavar="TEXT", help="Add a new comment with this text")
+    p_cmt.add_argument("--limit", type=int, default=20)
+    p_cmt.add_argument("--json", action="store_true")
+    p_cmt.set_defaults(func=_cmd_comments)
+
+    p_uf = sub.add_parser("upload-file", help="Upload a local file to a Notion page (image/video/audio/pdf/file)")
+    p_uf.add_argument("page_id", help="Target page URL or ID")
+    p_uf.add_argument("--file", required=True, help="Path to the local file to upload")
+    p_uf.add_argument("--block-type", choices=["image", "video", "audio", "pdf", "file"],
+                      help="Force a specific block type (default: auto-detect from file extension)")
+    p_uf.add_argument("--json", action="store_true")
+    p_uf.set_defaults(func=_cmd_upload_file)
+
+    p_mv = sub.add_parser("move-block", help="Move a block to a different parent page/block")
+    p_mv.add_argument("block_id", help="Block ID to move")
+    p_mv.add_argument("target_parent", help="Target parent page or block URL/ID")
+    p_mv.add_argument("--after", metavar="BLOCK_ID",
+                      help="Insert after this block in the target (default: append to end)")
+    p_mv.add_argument("--json", action="store_true")
+    p_mv.set_defaults(func=_cmd_move_block)
+
+    p_up = sub.add_parser("update-page", help="Update page title, icon, or cover")
+    p_up.add_argument("page_id", help="Page URL or page ID")
+    p_up.add_argument("--title", help="New page title")
+    p_up.add_argument("--icon-emoji", help="Emoji icon (e.g. 🧠)")
+    p_up.add_argument("--icon-url", help="External image URL for icon")
+    p_up.add_argument("--cover-url", help="External image URL for cover")
+    p_up.add_argument("--archived", action="store_true", help="Archive (trash) the page")
+    p_up.add_argument("--json", action="store_true")
+    p_up.set_defaults(func=_cmd_update_page)
+
+    p_s = sub.add_parser("search", help="Search pages and databases by title")
+    p_s.add_argument("query", help="Search query string")
+    p_s.add_argument("--type", choices=["page", "database"], help="Filter by object type (default: both)")
+    p_s.add_argument("--sort-by", choices=["edited", "created"], default="edited", help="Sort by last_edited_time or created_time (default: edited)")
+    p_s.add_argument("--oldest", action="store_true", help="Sort ascending (oldest first)")
+    p_s.add_argument("--limit", type=int, default=20)
+    p_s.add_argument("--json", action="store_true")
+    p_s.set_defaults(func=_cmd_search)
 
     p_rp = sub.add_parser("replace-content", help="Replace all content of a Notion page")
     p_rp.add_argument("notion_target", help="Notion page URL or page id")
