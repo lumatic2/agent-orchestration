@@ -29,7 +29,8 @@ ACTIVITY_LOG="$QUEUE_DIR/activity.jsonl"
 mkdir -p "$LOG_DIR" "$QUEUE_DIR"
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-ISO_NOW=$(date +%Y-%m-%dT%H:%M:%S%z 2>/dev/null || date +%Y-%m-%dT%H:%M:%S)
+# Dynamic timestamp — call now_iso() each time to avoid all timestamps being identical
+now_iso() { date +%Y-%m-%dT%H:%M:%S%z 2>/dev/null || date +%Y-%m-%dT%H:%M:%S; }
 
 # Cross-platform sed -i wrapper (macOS BSD sed requires -i '')
 sedi() {
@@ -102,10 +103,10 @@ update_meta_status() {
   # Update timestamp fields based on status
   case "$new_status" in
     dispatched)
-      sedi "s/\"dispatched\": *[^,]*/\"dispatched\": \"$ISO_NOW\"/" "$meta"
+      sedi "s/\"dispatched\": *[^,]*/\"dispatched\": \"$(now_iso)\"/" "$meta"
       ;;
     completed|failed)
-      sedi "s/\"completed\": *[^,]*/\"completed\": \"$ISO_NOW\"/" "$meta"
+      sedi "s/\"completed\": *[^,]*/\"completed\": \"$(now_iso)\"/" "$meta"
       ;;
     queued)
       # Increment retry_count
@@ -132,7 +133,7 @@ update_meta_status() {
 # Append to activity.jsonl
 log_activity() {
   local id="$1" event="$2" detail="${3:-}"
-  echo "{\"ts\":\"$ISO_NOW\",\"id\":\"$id\",\"event\":\"$event\",\"detail\":\"$detail\"}" >> "$ACTIVITY_LOG"
+  echo "{\"ts\":\"$(now_iso)\",\"id\":\"$id\",\"event\":\"$event\",\"detail\":\"$detail\"}" >> "$ACTIVITY_LOG"
 }
 
 # Read status from meta.json
@@ -189,11 +190,32 @@ parse_codex_result() {
   fi
 }
 
+# --- Inter-dispatch rate guard (per agent) ---
+# Ensures minimum 3s gap between consecutive dispatches to same agent family
+dispatch_guard() {
+  local agent_family="$1"  # "codex" or "gemini"
+  local min_gap=3
+  local stamp_file="$QUEUE_DIR/.last_dispatch_${agent_family}"
+  if [ -f "$stamp_file" ]; then
+    local last_ts now_ts elapsed
+    last_ts=$(cat "$stamp_file")
+    now_ts=$(date +%s)
+    elapsed=$((now_ts - last_ts))
+    if [ "$elapsed" -lt "$min_gap" ]; then
+      local wait_sec=$((min_gap - elapsed))
+      echo "[GUARD] Waiting ${wait_sec}s before next ${agent_family} dispatch (rate limit prevention)"
+      sleep "$wait_sec"
+    fi
+  fi
+  date +%s > "$stamp_file"
+}
+
 # --- Run Codex ---
 run_codex() {
   local model="${1:-gpt-5.3-codex}"
   local log_file="$LOG_DIR/codex_${TASK_NAME}_${TIMESTAMP}.json"
 
+  dispatch_guard "codex"
   echo "[DISPATCH] Codex ($model) — task: $TASK_NAME"
 
   # Update queue status to dispatched
@@ -232,6 +254,7 @@ run_gemini() {
   local model="${1:-gemini-2.5-flash}"
   local log_file="$LOG_DIR/gemini_${TASK_NAME}_${TIMESTAMP}.txt"
 
+  dispatch_guard "gemini"
   echo "[DISPATCH] Gemini ($model) — task: $TASK_NAME"
 
   # Update queue status to dispatched
@@ -406,8 +429,8 @@ do_resume() {
           exit 1
           ;;
       esac
+      # run_codex/run_gemini already record completed internally — only handle failure here
       if [ "$exit_code" -eq 0 ]; then
-        update_meta_status "$dir" "completed"
         echo "[DONE] $id completed."
       else
         update_meta_status "$dir" "queued" "queued_reason" "rate_limited"
