@@ -1,0 +1,14 @@
+{
+  "id": "T010",
+  "name": "food-pages-completion",
+  "status": "completed",
+  "agent": "gemini",
+  "model": "gemini-2.5-flash",
+  "created": "2026-02-28T11:17:32+0900",
+  "dispatched": "2026-02-28T11:17:32+0900",
+  "completed": "2026-02-28T11:17:32+0900",
+  "exit_code": null,
+  "log_file": "/c/Users/1/Desktop/agent-orchestration/logs/gemini_food-pages-completion_20260228_111732.txt",
+  "retry_count": 0,
+  "queued_reason": null
+}

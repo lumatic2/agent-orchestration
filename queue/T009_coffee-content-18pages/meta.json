@@ -1,0 +1,14 @@
+{
+  "id": "T009",
+  "name": "coffee-content-18pages",
+  "status": "completed",
+  "agent": "gemini-pro",
+  "model": "gemini-2.5-pro",
+  "created": "2026-02-28T11:16:32+0900",
+  "dispatched": "2026-02-28T11:16:32+0900",
+  "completed": "2026-02-28T11:16:32+0900",
+  "exit_code": null,
+  "log_file": "/c/Users/1/Desktop/agent-orchestration/logs/gemini_coffee-content-18pages_20260228_111632.txt",
+  "retry_count": 0,
+  "queued_reason": null
+}

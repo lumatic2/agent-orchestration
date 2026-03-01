@@ -1,0 +1,14 @@
+{
+  "id": "T011",
+  "name": "notion-batch-script",
+  "status": "completed",
+  "agent": "codex-spark",
+  "model": "gpt-5.3-codex-spark",
+  "created": "2026-02-28T11:18:13+0900",
+  "dispatched": "2026-02-28T11:18:13+0900",
+  "completed": "2026-02-28T11:18:13+0900",
+  "exit_code": null,
+  "log_file": "/c/Users/1/Desktop/agent-orchestration/logs/codex_notion-batch-script_20260228_111813.json",
+  "retry_count": 0,
+  "queued_reason": null
+}

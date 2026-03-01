@@ -1,0 +1,14 @@
+{
+  "id": "T002",
+  "name": "routing_analysis_v2",
+  "status": "completed",
+  "agent": "gemini",
+  "model": "gemini-2.5-flash",
+  "created": "2026-02-28T09:24:21+0900",
+  "dispatched": "2026-02-28T09:24:21+0900",
+  "completed": "2026-02-28T09:24:21+0900",
+  "exit_code": null,
+  "log_file": "/c/Users/1/Desktop/agent-orchestration/logs/gemini_routing_analysis_v2_20260228_092421.txt",
+  "retry_count": 0,
+  "queued_reason": null
+}

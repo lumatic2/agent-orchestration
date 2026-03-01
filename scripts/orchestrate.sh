@@ -65,6 +65,7 @@ next_task_id() {
 # Create queue entry: create_queue_entry <id> <name> <agent> <task_content>
 create_queue_entry() {
   local id="$1" name="$2" agent="$3" task_content="$4"
+  local ISO_NOW; ISO_NOW=$(now_iso)
   local dir="$QUEUE_DIR/${id}_${name}"
   mkdir -p "$dir"
 
@@ -222,13 +223,29 @@ run_codex() {
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
   [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
 
+  # Detect project working directory from brief (line: "프로젝트 위치" or "Project:" or "## Directory")
+  local work_dir=""
+  if [ -n "${QUEUE_TASK_DIR:-}" ] && [ -f "${QUEUE_TASK_DIR}/brief.md" ]; then
+    local detected
+    detected=$(grep -Eo '(C:/|/c/)[^\s]+' "${QUEUE_TASK_DIR}/brief.md" | head -1 | tr -d '\r')
+    if [ -n "$detected" ] && [ -d "$detected" ]; then
+      work_dir="$detected"
+      echo "[INFO] Codex working dir: $work_dir"
+    fi
+  fi
+
+  # Build codex command args
+  local codex_args=(
+    exec
+    --dangerously-bypass-approvals-and-sandbox
+    --skip-git-repo-check
+    -m "$model"
+    --json
+  )
+  [ -n "$work_dir" ] && codex_args+=(-C "$work_dir")
+
   # Write directly to file to avoid shell variable truncation
-  codex exec \
-    --full-auto \
-    --sandbox danger-full-access \
-    -m "$model" \
-    "$TASK" \
-    --json > "$log_file" 2>&1 || true
+  codex "${codex_args[@]}" "$TASK" > "$log_file" 2>&1 || true
 
   local result
   result=$(cat "$log_file")

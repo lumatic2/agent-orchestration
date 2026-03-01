@@ -1,0 +1,14 @@
+{
+  "id": "T014",
+  "name": "dental-market-size",
+  "status": "completed",
+  "agent": "gemini",
+  "model": "gemini-2.5-flash",
+  "created": "2026-03-01T11:20:18+0900",
+  "dispatched": "2026-03-01T11:20:18+0900",
+  "completed": "2026-03-01T11:20:18+0900",
+  "exit_code": null,
+  "log_file": "/c/Users/1/Desktop/agent-orchestration/logs/gemini_dental-market-size_20260301_112018.txt",
+  "retry_count": 0,
+  "queued_reason": null
+}

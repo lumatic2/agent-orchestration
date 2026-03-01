@@ -1,0 +1,14 @@
+{
+  "id": "T013",
+  "name": "dental-competitor",
+  "status": "completed",
+  "agent": "gemini",
+  "model": "gemini-2.5-flash",
+  "created": "2026-03-01T11:20:10+0900",
+  "dispatched": "2026-03-01T11:20:10+0900",
+  "completed": "2026-03-01T11:20:10+0900",
+  "exit_code": null,
+  "log_file": "/c/Users/1/Desktop/agent-orchestration/logs/gemini_dental-competitor_20260301_112010.txt",
+  "retry_count": 0,
+  "queued_reason": null
+}

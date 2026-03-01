@@ -1,0 +1,14 @@
+{
+  "id": "T012",
+  "name": "dentist-pain-points",
+  "status": "completed",
+  "agent": "gemini",
+  "model": "gemini-2.5-flash",
+  "created": "2026-03-01T11:06:33+0900",
+  "dispatched": "2026-03-01T11:06:33+0900",
+  "completed": "2026-03-01T11:06:33+0900",
+  "exit_code": null,
+  "log_file": "/c/Users/1/Desktop/agent-orchestration/logs/gemini_dentist-pain-points_20260301_110633.txt",
+  "retry_count": 0,
+  "queued_reason": null
+}

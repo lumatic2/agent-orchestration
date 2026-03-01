@@ -9,4 +9,10 @@ tmp_*
 
 # Queue — track meta/briefs/results, ignore temp files
 queue/**/result.md
+queue/.last_dispatch_*
 !queue/.gitkeep
+
+# Runtime directories
+tasks/
+briefs/
+projects/
