@@ -164,6 +164,15 @@ deploy_gemini() {
   echo "[OK] Gemini adapter → $target_dir/GEMINI.md"
 }
 
+setup_mcp() {
+  if [ -n "${GEMINI_API_KEY:-}" ]; then
+    bash "$REPO_DIR/configs/mcp_setup.sh"
+  else
+    echo "[SKIP] MCP setup skipped — set GEMINI_API_KEY to register MCP servers"
+    echo "  Run manually: GEMINI_API_KEY=your_key bash configs/mcp_setup.sh"
+  fi
+}
+
 # --- Main ---
 main() {
   local mode="${1:-sync}"
@@ -239,6 +248,11 @@ main() {
 
   # Cleanup
   rm -f "$REPO_DIR/adapters/"*.deploy "$REPO_DIR/adapters/"*.bak
+
+  # MCP setup
+  echo ""
+  echo "--- MCP Servers ---"
+  setup_mcp
 
   echo ""
   echo "========================================"
