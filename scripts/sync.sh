@@ -121,6 +121,7 @@ deploy_claude() {
   if [ ! -f "$settings_file" ]; then
     cat > "$settings_file" << SETTINGS_EOF
 {
+  "model": "sonnet",
   "hooks": {
     "PreToolUse": [
       {
@@ -131,14 +132,29 @@ deploy_claude() {
             "command": "bash $guard_path \"\$TOOL_INPUT\""
           }
         ]
+      },
+      {
+        "matcher": "WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'RULE VIOLATION: WebSearch is blocked. Delegate research to Gemini: bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini \"<query>\" <task-name>' >&2 && exit 2"
+          }
+        ]
       }
     ]
-  }
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "effortLevel": "medium"
 }
 SETTINGS_EOF
-    echo "[OK] Created Claude settings.json with guard hook"
+    echo "[OK] Created Claude settings.json with guard + WebSearch hooks"
   else
-    echo "[SKIP] Claude settings.json already exists — verify guard hook manually"
+    if ! grep -q '"WebSearch"' "$settings_file"; then
+      echo "[WARN] Claude settings.json missing WebSearch hook — add manually (see configs/settings_template.json)"
+    else
+      echo "[OK] Claude settings.json exists with WebSearch hook"
+    fi
   fi
 
   # Deploy notion_db.py to home directory
