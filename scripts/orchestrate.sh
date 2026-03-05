@@ -617,6 +617,43 @@ print(f"\n  큐 전체: {total}개 (완료 {completed_cnt} / 대기 {pending_cnt
 print("  정리: bash orchestrate.sh --clean")
 print("  주간: bash orchestrate.sh --cost week")
 print("  전체: bash orchestrate.sh --cost all")
+
+# ─── 응답 품질 요약 ───────────────────────────────────────────
+feedback_log = Path(sys.argv[1]).parent / "logs" / "feedback.jsonl"
+if feedback_log.exists() and feedback_log.stat().st_size > 0:
+    fb_records = []
+    with open(feedback_log) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                r = json.loads(line)
+                if r.get("ts", "")[:10] >= cutoff:
+                    fb_records.append(r)
+            except Exception:
+                pass
+
+    if fb_records:
+        ratings = [r["rating"] for r in fb_records]
+        avg = sum(ratings) / len(ratings)
+        low = [r for r in fb_records if r["rating"] <= 2]
+        top = [r for r in fb_records if r["rating"] == 5]
+
+        print(f"\n  [응답 품질 — {len(fb_records)}건 평가]")
+        stars = "★" * round(avg) + "☆" * (5 - round(avg))
+        print(f"  평균 {avg:.1f}점 {stars}  |  최고 {len(top)}건  |  개선필요 {len(low)}건")
+
+        # 에이전트별 평균 (낮은 것만 경고)
+        by_agent = {}
+        for r in fb_records:
+            key = r.get("expert") or r.get("agent") or "?"
+            by_agent.setdefault(key, []).append(r["rating"])
+        needs_work = [(k, sum(v)/len(v)) for k, v in by_agent.items() if sum(v)/len(v) < 3.0]
+        if needs_work:
+            print(f"  ⚠️  개선 필요: " + ", ".join(f"{k}({a:.1f}점)" for k, a in sorted(needs_work, key=lambda x: x[1])))
+
+        print(f"  상세: bash feedback.sh --stats")
 PYEOF
   exit 0
 }
