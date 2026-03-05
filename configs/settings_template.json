@@ -16,12 +16,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'RULE VIOLATION: WebSearch is blocked. Delegate research to Gemini: bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini \"<query>\" <task-name>' >&2 && exit 2"
+            "command": "echo 'RULE VIOLATION: WebSearch is blocked. Delegate research to Gemini instead: bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini \"<query>\" <task-name>' >&2 && exit 2"
           }
         ]
       }
     ]
   },
   "skipDangerousModePermissionPrompt": true,
-  "effortLevel": "medium"
+  "effortLevel": "medium",
+  "mcpServers": {
+    "notion-personal": {
+      "command": "bash",
+      "args": ["-c", "OPENAPI_MCP_HEADERS=\"{\\\"Authorization\\\": \\\"Bearer $PERSONAL_NOTION_TOKEN\\\", \\\"Notion-Version\\\": \\\"2022-06-28\\\"}\" npx -y @notionhq/notion-mcp-server"]
+    },
+    "notion-company": {
+      "command": "bash",
+      "args": ["-c", "OPENAPI_MCP_HEADERS=\"{\\\"Authorization\\\": \\\"Bearer $COMPANY_NOTION_TOKEN\\\", \\\"Notion-Version\\\": \\\"2022-06-28\\\"}\" npx -y @notionhq/notion-mcp-server"]
+    }
+  }
 }
