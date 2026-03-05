@@ -207,10 +207,14 @@ def fetch_via_gemini(law_names: list):
 중요한 조문 20~30개를 포함하고, 각 조문 번호·제목·핵심 내용을 정확하게 작성해줘.
 출처: https://www.law.go.kr/법령/{law_name}"""
 
-        result = subprocess.run(
-            ["gemini", "--yolo", "-p", prompt],
-            capture_output=True, text=True, timeout=120,
-        )
+        try:
+            result = subprocess.run(
+                ["gemini", "--yolo", "-p", prompt],
+                capture_output=True, text=True, timeout=180,
+            )
+        except subprocess.TimeoutExpired:
+            print(f"  [TIMEOUT] {law_name}: Gemini 응답 지연, 건너뜀")
+            continue
 
         if result.returncode != 0:
             print(f"  [ERROR] {law_name}: {result.stderr[:100]}")
