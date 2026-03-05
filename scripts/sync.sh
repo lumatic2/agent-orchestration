@@ -143,6 +143,20 @@ deploy_claude() {
   # Deploy notion_db.py to home directory
   cp "$REPO_DIR/scripts/notion_db.py" "$BASE_DIR/notion_db.py"
   echo "[OK] notion_db.py → $BASE_DIR/notion_db.py"
+
+  # Deploy ppt_builder.py to .claude directory
+  local claude_dir="$target_dir"
+  if [ -f "$REPO_DIR/scripts/ppt_builder.py" ]; then
+    cp "$REPO_DIR/scripts/ppt_builder.py" "$claude_dir/ppt_builder.py"
+    echo "[OK] ppt_builder.py → $claude_dir/ppt_builder.py"
+  fi
+
+  # Deploy session-logger.sh to .claude directory
+  if [ -f "$REPO_DIR/scripts/session-logger.sh" ]; then
+    cp "$REPO_DIR/scripts/session-logger.sh" "$claude_dir/session-logger.sh"
+    chmod +x "$claude_dir/session-logger.sh"
+    echo "[OK] session-logger.sh → $claude_dir/session-logger.sh"
+  fi
 }
 
 deploy_codex() {
