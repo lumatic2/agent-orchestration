@@ -4,11 +4,25 @@
 
 BEHAVIOR="${MOCK_GEMINI_BEHAVIOR:-success}"
 
+# Capture the prompt if available (assuming it's passed as an argument)
+PROMPT_ARG=""
+for arg in "$@"; do
+  if [[ "$arg" == "-p" || "$arg" == "--prompt" ]]; then
+    PROMPT_ARG="next"
+  elif [[ "$PROMPT_ARG" == "next" ]]; then
+    PROMPT_ARG="$arg"
+    break
+  fi
+done
+
 case "$BEHAVIOR" in
   success)
     echo "Research findings: Analysis complete."
     echo "Key insights: The architecture follows standard patterns."
     echo "Recommendation: Proceed with implementation."
+    if [ -n "$PROMPT_ARG" ] && [ "$PROMPT_ARG" != "next" ]; then
+      echo "Received prompt: $PROMPT_ARG"
+    fi
     exit 0
     ;;
   rate_limit)

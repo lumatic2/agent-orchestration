@@ -143,6 +143,15 @@ done
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✅ 체인 완료 (${#AGENTS[@]}단계)"
 echo ""
+
+# 품질 평가 (체인 전체 품질)
+RATING=""
+read -t 5 -p "📊 체인 품질 평가 (1-5, Enter=스킵): " RATING 2>/dev/null || true
+if [[ "$RATING" =~ ^[1-5]$ ]]; then
+  read -t 10 -p "   메모 (Enter=없음): " FB_NOTE 2>/dev/null || FB_NOTE=""
+  bash "$SCRIPT_DIR/feedback.sh" --log "chain" "$(IFS=+; echo "${AGENTS[*]}")" "$QUESTION" "$RATING" "$FB_NOTE"
+fi
+
 echo "💡 다음 단계:"
 echo "   메모리 기록:  bash memory_update.sh \"recent_decisions\" \"chain: $QUESTION\""
 if [ "$SAVE_NOTION" = false ]; then

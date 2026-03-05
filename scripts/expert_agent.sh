@@ -138,10 +138,20 @@ OUTPUT=$(cat "$_TMP"); rm -f "$_TMP"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# 품질 평가 (5초 타임아웃, Enter=스킵)
+RATING=""
+read -t 5 -p "📊 품질 평가 (1-5, Enter=스킵): " RATING 2>/dev/null || true
+if [[ "$RATING" =~ ^[1-5]$ ]]; then
+  read -t 10 -p "   메모 (Enter=없음): " FB_NOTE 2>/dev/null || FB_NOTE=""
+  bash "$SCRIPT_DIR/feedback.sh" --log "expert" "$EXPERT" "$QUESTION" "$RATING" "$FB_NOTE"
+fi
+
 echo "💡 다음 단계:"
 echo "   Notion 저장:   bash expert_agent.sh $EXPERT \"질문\" --save [--title \"제목\"]"
 echo "   메모리 기록:   bash memory_update.sh \"recent_decisions\" \"expert/$EXPERT: 내용\""
 echo "   심층 분석:     bash expert_agent.sh $EXPERT \"질문\" --pro"
+echo "   품질 통계:     bash feedback.sh --stats"
 
 if [ "$SAVE_NOTION" = true ]; then
   [ -z "$SAVE_TITLE" ] && SAVE_TITLE="$EXPERT: $(echo "$QUESTION" | cut -c1-30)"

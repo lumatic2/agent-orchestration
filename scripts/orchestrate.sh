@@ -19,7 +19,6 @@
 #   bash orchestrate.sh --cost           # today's usage per model + limits
 #   bash orchestrate.sh --clean [--dry]  # archive completed queue entries
 # ============================================================
-
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -401,7 +400,6 @@ do_status() {
   done
   exit 0
 }
-
 do_resume() {
   echo "=== Resuming oldest pending/queued task ==="
 
