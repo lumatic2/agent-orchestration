@@ -7,16 +7,20 @@
 output_dir: ~/Desktop
 
 # 테마
-theme: dark                     # dark | light
+theme: light                    # dark | light
 
-# 색상 (hex)
+# 색상 (hex) — 포트폴리오(luma3-portfolio.vercel.app) 색상 시스템 기반
 colors:
-  background_primary:   "#1A1A2E"   # 메인 배경
-  background_secondary: "#16213E"   # 보조 배경
-  accent_1: "#10B981"               # 강조색 1 (Emerald)
-  accent_2: "#059669"               # 강조색 2 (Emerald Dark)
-  text_primary:   "#FFFFFF"
-  text_secondary: "rgba(255,255,255,0.6)"
+  background_primary:   "#FFFFFF"   # 메인 배경
+  background_secondary: "#F8FAFC"   # 보조 배경 (slate-50)
+  background_card:      "#F1F5F9"   # 카드 배경 (slate-100)
+  accent_1: "#2563EB"               # 강조색 1 (blue-600)
+  accent_2: "#1E3A8A"               # 강조색 2 (blue-900)
+  accent_light: "#EFF6FF"           # 강조 배경 (blue-50)
+  text_primary:   "#1E293B"         # 본문 (slate-800)
+  text_secondary: "#475569"         # 서브 (slate-600)
+  text_muted:     "#94A3B8"         # 뮤트 (slate-400)
+  border:         "#E2E8F0"         # 구분선 (slate-200)
 
 # 타이포그래피
 font:
@@ -34,3 +38,9 @@ render:
   png_per_slide: false            # true면 슬라이드별 PNG도 저장
   cleanup_html: true              # 렌더 후 HTML 임시 파일 제거
   cleanup_js:   true              # 렌더 후 JS 스크립트 제거
+
+# 디자인 규칙 (Claude가 HTML 생성 시 참조)
+design_rules:
+  no_grid_background: true        # 격자 배경 패턴 사용 금지
+  title_slide_deco: glow          # 타이틀 슬라이드 장식: glow | none
+  card_style: bordered            # 카드 스타일: bordered | shadowed | flat
