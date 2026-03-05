@@ -157,6 +157,29 @@ deploy_claude() {
     chmod +x "$claude_dir/session-logger.sh"
     echo "[OK] session-logger.sh → $claude_dir/session-logger.sh"
   fi
+
+  # Deploy connection layer scripts (save_to_notion.sh, memory_update.sh, chain.sh)
+  for script in save_to_notion.sh memory_update.sh chain.sh knowledge_update.sh; do
+    if [ -f "$REPO_DIR/scripts/$script" ]; then
+      cp "$REPO_DIR/scripts/$script" "$SCRIPT_DIR/$script"
+      chmod +x "$SCRIPT_DIR/$script"
+      echo "[OK] $script (already in scripts/)"
+    fi
+  done
+
+  # Sync notion_pages.conf (page ID cache) — copy if src newer or dest missing
+  local notion_conf_src="$HOME/.config/agent-orchestration/notion_pages.conf"
+  local notion_conf_dst="$REPO_DIR/configs/notion_pages.conf"
+  if [ -f "$notion_conf_src" ]; then
+    cp "$notion_conf_src" "$notion_conf_dst"
+    echo "[OK] notion_pages.conf → $notion_conf_dst (for cross-device sync)"
+  fi
+  # On Windows or fresh device: restore from repo if local conf is missing
+  if [ ! -f "$notion_conf_src" ] && [ -f "$notion_conf_dst" ]; then
+    mkdir -p "$(dirname "$notion_conf_src")"
+    cp "$notion_conf_dst" "$notion_conf_src"
+    echo "[OK] notion_pages.conf ← $notion_conf_dst (restored from repo)"
+  fi
 }
 
 deploy_codex() {

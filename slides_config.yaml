@@ -48,3 +48,19 @@ design_rules:
   word_break: keep-all            # 한국어 어절 단위 줄바꿈
   no_manual_linebreaks: true      # <br> 수동 줄바꿈 금지 — CSS로만 제어
   no_emoji: true                  # 이모지 금지, SVG 아이콘 사용
+
+# 오버플로 방지 규칙 (검증된 수치)
+overflow_guard:
+  # 비대칭 레이아웃 right-panel (절대위치 + translateY(-50%)) 리스트 항목
+  right_panel_list:
+    max_items: 5
+    item_padding: "10px 0"        # 5개일 때 — 15px 사용 시 하단 클리핑 발생
+    h4_font_size: 14px
+    p_font_size:  12px
+  # 좁은 컬럼(≤320px) 내 대형 타이틀 — word-break:keep-all 환경에서 orphan 주의
+  narrow_column_title:
+    max_width_px: 320
+    safe_font_size: 44px          # 한글 6자 이하일 때 한 줄 보장
+    note: "단어 단위 줄바꿈으로 조사·접속사가 단독 orphan이 되지 않도록 문구 설계"
+  # 목차 슬라이드 숫자 일치 확인
+  toc_count_match: true           # 제목의 N가지 = 실제 항목 수와 일치시킬 것

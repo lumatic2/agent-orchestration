@@ -1,0 +1,125 @@
+#!/bin/bash
+# tax_agent.sh — 회계사 AI 에이전트
+# 사용법: bash tax_agent.sh "질문" [--planby] [--pro] [--save] [--title "제목"]
+#
+# 옵션:
+#   --planby   플랜바이 AnythingLLM 문서에서 관련 컨텍스트 검색 후 포함
+#   --pro      Gemini 2.5 Pro 사용 (심층 분석, 일 100회 제한)
+#   --save     결과를 Notion에 자동 저장 (PERSONAL_NOTION_TOKEN 필요)
+#   --title    Notion 저장 시 제목 (기본: 질문 앞 30자)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "$SCRIPT_DIR")"
+PERSONA_FILE="$REPO_DIR/agents/accountant_persona.md"
+
+QUESTION=""
+USE_PLANBY=false
+MODEL="gemini-2.5-flash"
+BACKEND="gemini"
+SAVE_NOTION=false
+SAVE_TITLE=""
+
+PREV_ARG=""
+for arg in "$@"; do
+  case "$arg" in
+    --planby) USE_PLANBY=true ;;
+    --pro)    MODEL="gemini-2.5-pro" ;;
+    --codex)  BACKEND="codex"; MODEL="gpt-5.2" ;;
+    --save)   SAVE_NOTION=true ;;
+    --title)  ;;
+    *)
+      if [ "$PREV_ARG" = "--title" ]; then
+        SAVE_TITLE="$arg"
+      elif [ -z "$QUESTION" ]; then
+        QUESTION="$arg"
+      fi
+      ;;
+  esac
+  PREV_ARG="$arg"
+done
+
+if [ -z "$QUESTION" ]; then
+  echo "사용법: bash tax_agent.sh \"질문\" [--planby] [--pro] [--save] [--title \"제목\"]"
+  echo ""
+  echo "예시:"
+  echo "  bash tax_agent.sh \"R&D 세액공제 신청 요건이 뭐야?\""
+  echo "  bash tax_agent.sh \"TIPS 정부보조금 회계처리 방법\" --planby"
+  echo "  bash tax_agent.sh \"법인세 이월결손금 공제 한도\" --pro"
+  echo "  bash tax_agent.sh \"R&D 공제 분석\" --save --title \"R&D 세액공제 검토\""
+  exit 1
+fi
+
+# Load persona
+if [ ! -f "$PERSONA_FILE" ]; then
+  echo "❌ 페르소나 파일 없음: $PERSONA_FILE"
+  exit 1
+fi
+PERSONA=$(cat "$PERSONA_FILE")
+
+# Load knowledge files
+KNOWLEDGE_DIR="$REPO_DIR/agents/knowledge"
+KNOWLEDGE=""
+for kfile in "$KNOWLEDGE_DIR/tax_core.md" "$KNOWLEDGE_DIR/tax_incentives.md" "$KNOWLEDGE_DIR/vat.md"; do
+  if [ -f "$kfile" ]; then
+    KNOWLEDGE="$KNOWLEDGE
+$(cat "$kfile")
+"
+  fi
+done
+
+# Optionally query Planby RAG
+PLANBY_CONTEXT=""
+if [ "$USE_PLANBY" = true ]; then
+  echo "🔍 플랜바이 문서 검색 중..."
+  RAW=$(bash "$SCRIPT_DIR/planby_ask.sh" "$QUESTION" 3 2>/dev/null)
+  if [ -n "$RAW" ] && echo "$RAW" | grep -q "청크"; then
+    PLANBY_CONTEXT="## 플랜바이 관련 문서 (참고용)
+$RAW
+---
+"
+  fi
+fi
+
+# Build prompt
+KNOWLEDGE_BLOCK=""
+if [ -n "$KNOWLEDGE" ]; then
+  KNOWLEDGE_BLOCK="## 핵심 세법 지식 (참고용)
+$KNOWLEDGE
+---
+
+"
+fi
+
+PROMPT="$PERSONA
+
+---
+
+${KNOWLEDGE_BLOCK}${PLANBY_CONTEXT}## 질문
+$QUESTION"
+
+echo "💼 회계사 AI 처리 중 ($BACKEND / $MODEL)..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+_TMP=$(mktemp)
+if [ "$BACKEND" = "codex" ]; then
+  codex exec -c model="$MODEL" -c 'approval_policy="never"' "$PROMPT" | tee "$_TMP"
+else
+  gemini --yolo -m "$MODEL" -p "$PROMPT" | tee "$_TMP"
+fi
+OUTPUT=$(cat "$_TMP"); rm -f "$_TMP"
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "💡 다음 단계:"
+echo "   Notion 저장:      bash tax_agent.sh \"질문\" --save [--title \"제목\"]"
+echo "   메모리 기록:      bash memory_update.sh \"recent_decisions\" \"tax: 내용\""
+echo "   심층 분석:        bash tax_agent.sh \"질문\" --pro"
+
+if [ "$SAVE_NOTION" = true ]; then
+  [ -z "$SAVE_TITLE" ] && SAVE_TITLE="세무: $(echo "$QUESTION" | cut -c1-30)"
+  bash "$SCRIPT_DIR/save_to_notion.sh" \
+    --agent tax \
+    --title "$SAVE_TITLE" \
+    --content "$OUTPUT"
+fi

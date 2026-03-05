@@ -11,9 +11,15 @@ tmp_*
 queue/T*/
 queue/activity.jsonl
 queue/activity.jsonl.bak
+queue/.last_dispatch_*
 !queue/.gitkeep
 
 # Runtime directories
 tasks/
 briefs/
 projects/
+
+# Local temp files
+tmp/
+*.posco_review
+agents/knowledge/pending/

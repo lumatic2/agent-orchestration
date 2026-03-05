@@ -83,6 +83,11 @@ Before delegating, ask these questions in order:
 | 외부 서비스 연동 (Notion, Slack 등) | Claude(MCP 보유) | Codex(코드) | Claude만 MCP 도구 직접 사용 가능 |
 | 번역/현지화 | Codex CLI/gpt-5(대량) | Gemini(검색 필요 시) | ChatGPT Pro 쿼터 활용, 검색 불필요 |
 | CI/CD, DevOps | Codex(파이프라인) | Gemini(에러 분석) | 에러 로그 분석 = 리서치 |
+| **세무/회계 질의** | tax_agent.sh | Claude(해석) | 기본=Gemini Flash / `--codex`=gpt-5.2(웹검색+출처) / `--pro`=Gemini Pro |
+| **전문직 Q&A** | expert_agent.sh | — | `doctor`/`lawyer` + 동일 플래그 지원 |
+| **콘텐츠 집필** | content_pipeline.sh | — | 기본=Gemini Flash / `--codex`=gpt-5.2(문장품질↑) |
+| **이미지 프롬프트** | image_agent.sh | — | Gemini Flash → DALL-E 3 / MJ / SD 3종 프롬프트 생성 |
+| **영상 편집** | video_edit.sh (FFmpeg) | Gemini(ai 명령) | `brew install ffmpeg` 필요, `ai` 명령은 설치 없이도 가능 |
 
 ## Task → Agent → Model (when orchestrating)
 

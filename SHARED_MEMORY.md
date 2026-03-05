@@ -10,13 +10,25 @@
 
 - **MOD**: 54-card thinking framework deck. v1=thought frameworks, v2=knowledge/memory, v3=agents/physical AI.
 - **Planby Pilot**: Business Strategy & Finance. OKR-ROI-Decision structures.
-  - 현재 작업: Planby Management Architecture v1.0 (4주 계획, 2주차 완료 · 3주차 시작 예정)
-  - **세션 인수인계 페이지** (다음 세션 시작 시 반드시 먼저 읽기): https://www.notion.so/31a85046ff5581b58b6cf4a171319da1
-  - 3주 계획 전체: https://www.notion.so/3-v2-31485046ff55803585c3eef798679f75
-  - 임원 브리핑 (5개 확인 항목): 31885046-ff55-81ca-975a-cbc72a4b1af3
-  - **다음 할 일**: 임원 인터뷰 후 레지스트리 업데이트 → Week 3 (Revenue Architecture + GTM Structure 1p씩)
-  - **핵심 발견**: Base 시나리오 10.1억 (18억의 56%) / 마진율 불일치(50% vs 22~28%) / 원가 시스템 없음
-  - **⚠️ notion_db.py 주의**: replace-content를 자식 페이지 있는 페이지에 쓰면 자식 페이지 아카이브됨. 복구: curl PATCH /v1/pages/{id} {"archived":false}
+  - **현재 상태**: 4주 계획 전체 완료. Architecture v1.0 + 4개 운영 매뉴얼 + 대표용 보고서 생성됨.
+  - **세션 인수인계 페이지**: https://www.notion.so/31a85046ff5581b58b6cf4a171319da1
+  - **Architecture v1.0**: 31a85046-ff55-816e-8414-f25e60cbdaed
+  - **대표용 보고서**: 31a85046-ff55-81bb-a57c-cb77428be930
+  - **핵심 발견**:
+    - P_parallel 실데이터: 최대 5건 (2025-09~11). Base 3건은 보수적으로 합리적.
+    - 계약금 실데이터: Won 평균 ~4,900만 (PoC 포함). 대형 커스텀 1억+은 2건.
+    - 재발주율: **9건 중 6건(66.7%)이 기존 고객** ✅ (DIPS 신청서 직접 명시, 2026-02-13)
+    - 재발주 사례: 루시드프로모 2,080만 → 1.52억 (7.3x). PoC First 구조 증거.
+    - **특허 4건 등록 확인** ✅: 10-2759071, 10-2776139, 10-2776140, 10-2797720 (모두 2025년 AI 이미지 생성 관련)
+    - TIPS 협약: 정부지원금 15억 (2024~2027). 2026년 5억 입금 예정 (2026-03-31).
+    - 투자: 500 Global 1.5억 + 카이스트창투 3.5억 = VC 5억. Series A 50~100억 미체결.
+    - 현금: ~1.97억 (2026-03-01 재무제표 기준). TIPS 5억 후 ~6.97억. 런웨이 약 8개월.
+    - 자본잠식 96%. Series A 즉시 착수 필요.
+    - 기술기여도 의무: 2026년 45.76% (TIPS R&D 매출 기술료 납부 의무).
+    - **⚠️ 매출 수정**: 공식 재무제표(세무사 2026-03-04) 기준 2025 서비스매출=2.89억. 이전 "7.8억"은 출처 불명으로 폐기.
+    - 실적 트래킹 (공식): 2023=2,510만 / 2024=4,412만 / 2025=2.89억 (서비스매출). 국고보조금 별도(2025: 3.32억)
+  - **미완성 항목**: Series A 타임라인, TIPS R&D 마일스톤 상세
+  - **⚠️ notion_db.py 주의**: replace-content를 자식 페이지 있는 페이지에 쓰면 자식 페이지 아카이브됨.
 
 ## Planby 회사 데이터 지도 (COMPANY_NOTION_TOKEN 사용)
 
@@ -55,13 +67,16 @@
 | 페이지 | ID | 상태 |
 |---|---|---|
 | 📊 재무 기반 다지기 (메인) | 31a85046ff55818f9b92eafa260805aa | ✅ 완료 |
-| 📋 세무사 체크리스트 | 31a85046ff5581298337e2c988c2c9f1 | ✅ 완료 |
+| 📋 세무사 체크리스트 | 31a85046ff5581298337e2c988c2c9f1 | ✅ 완료 (2026-03-05 R&D/고용세액공제 추가) |
 | 💰 세제 혜택 분석 | 31985046ff5581739709c5bbdaf57bc4 | ✅ 완료 |
 | ✅ 할 일 목록 | 31985046ff5581aaa386cbf9dfd24bac | ✅ 완료 |
+| 🚨 CEO 런웨이 현황 보고 | 31a85046ff5581278c06c638d1026376 | ✅ 완료 (2026-03-05 신규) |
 
 ### 핵심 발견
-- 현금 잔고 (3/5 추정): ~1.86억 / 월 소진: ~9,000만 / 런웨이: 5월 초
-- TIPS R&D 총 15억 (24.09~27.08), 1~2월 지원금 급감은 집행 타이밍 문제 가능성
+- 현금 잔고 (3/5 추정): ~1.86억 / 월 소진: ~9,000만
+- **런웨이 수정**: 5월 초 위기 → 2026-03-31 TIPS 5억 입금 후 ~6.86억 → 2026년 11~12월
+- TIPS R&D 총 15억 (24.09~27.08) / 지급 일정: 1차 2024-12(완료), 2차 2025-03(완료), **3차 5억 2026-03-31(26일 후)**, 4차 2027-03
+- 1~2월 지원금 급감 원인 확인: 각 연차 지급 예정일이 3월 말이라 1~3월이 공백 (타이밍 문제, 이상 없음)
 - 2월 급여 급증: 26.01 AI 연구 1명 신규 채용
 - 장기차입금 4.5억 (만기일 미확인)
 - MRR 사실상 0, 매출 대부분 B2B 일회성 프로젝트
@@ -73,15 +88,23 @@
 - 65개 문서 임베딩 (로컬 PDF 24개 + 개인 Drive 2개 + 회사 Drive 6개)
 - 조회 스크립트: ~/Desktop/agent-orchestration/scripts/planby_ask.sh
 
+### 확인된 B2B 파이프라인 (2026-03-05 회사 Notion 조회)
+- Won 고객사: HK건축(ARR 288만/년 Pro Yearly 2025.09~2026.09), 지안건축설계(서면계약완료 금액미기재)
+- 주요 딜: 삼성E&A 재계약(SE&A v1.0.0-RC1 개발 중), CNP동양 RFI자동화(KPI 35%), Plana 재런칭(16.5%)
+- KPI Sales Actual 전부 0 → MRR 사실상 제로
+
 ### 미완료 — 자료 수령 후 처리
 1. TIPS R&D 협약서 → 2026년 집행금액·타이밍 확인 → 런웨이 재계산
 2. 장기차입금 계약서 → 만기일·상환조건 확인
 3. 2026년 1월 지급수수료 4,489만원 내역 → 반복 여부 확인
-4. 확정 수주 계약 목록 → B2B 파이프라인 정리
-5. CEO 런웨이 현황 보고
+4. 삼성 E&A 재계약 협상 현황 파악 (계약 시 런웨이 즉시 개선)
 
 ## Recent Decisions
 
+- **2026-03-05**: 전문가 에이전트 실무 직무 기반 재편: audit/deal_advisory/valuation/wealth_tax/tax_investigation/ifrs_advisory/international_tax/forensic 8개 추가. Big4 실무 직무 분류 기준 적용.
+- **2026-03-05**: expert 에이전트 확장: economics, gov_accounting, business, commercial_law 추가. kicpa_agent 실무 특화 재작성 (시험 언어 제거)
+- **2026-03-05**: orchestration upgrade: --cost/--clean 추가, kicpa_agent.sh + law_agent.sh 신규, sync.sh notion_pages.conf 배포, 큐 52개 아카이브
+- **2026-03-05**: connection layer 구현 완료: save_to_notion.sh + memory_update.sh 추가
 - **2026-02-27**: E2E orchestration test passed. Gemini researched (argparse recommended) → Codex generated code → Claude verified. Full pipeline working. Note: Gemini `--sandbox` removed (requires Docker).
 
 ## Conventions
@@ -108,6 +131,40 @@ claude mcp add --scope user notion-company  -- npx -y @notionhq/notion-mcp-serve
 # 환경변수: PERSONAL_NOTION_TOKEN, COMPANY_NOTION_TOKEN → ~/.zshenv
 # AnythingLLM: 별도 설치 후 scripts/planby_ask.sh의 API key 재생성 필요
 ```
+
+## 에이전트 확장 (2026-03-05)
+
+### 이미지 생성 에이전트
+- 스크립트: `scripts/image_agent.sh "요청" [--type 로고|캐릭터|마케팅|콘셉트] [--ratio 1:1|16:9|3:4]`
+- 페르소나: `agents/image_persona.md`
+- DALL-E 3 / Midjourney / SD 프롬프트 동시 생성 → ChatGPT 핸드오프
+- Ollama SD 모델 설치 시 자동으로 직접 생성 전환
+
+### 전문직 AI 에이전트
+- 범용 스크립트: `scripts/expert_agent.sh [doctor|lawyer|tax] "질문" [--pro]`
+- 페르소나 폴더: `agents/experts/` (doctor.md, lawyer.md)
+- 새 전문가 추가: `agents/experts/[이름].md` 생성만 하면 자동 인식
+- `bash expert_agent.sh list` 로 목록 확인
+
+### 영상 편집 자동화 (FFmpeg)
+- 스크립트: `scripts/video_edit.sh [trim|merge|resize|gif|thumb|audio|speed|caption|ai]`
+- FFmpeg 없어도 `ai "질문"` 으로 명령어 생성 가능
+- 설치: `brew install ffmpeg`
+
+### 콘텐츠 파이프라인 (소설/책/논문)
+- 스크립트: `scripts/content_pipeline.sh [init|write|compile|status|list]`
+- 페르소나: `agents/content_persona.md`
+- 인테이크: `templates/intake_content.md`
+- 프로젝트 저장 위치: `~/Desktop/content-projects/[프로젝트명]/`
+- 추가 비용 없음 (Gemini Flash 사용)
+
+### 회계사 AI 에이전트
+- 스크립트: `scripts/tax_agent.sh "질문" [--planby] [--pro]`
+- 페르소나: `agents/accountant_persona.md` (조특법 R&D/고용세액공제, TIPS 회계처리 전문)
+- 인테이크: `templates/intake_accounting.md`
+- `--planby`: AnythingLLM 플랜바이 문서 컨텍스트 포함
+- `--pro`: Gemini 2.5 Pro 사용 (심층 분석)
+- 추가 비용 없음 (Gemini Pro 구독 내)
 
 ## Known Issues
 
