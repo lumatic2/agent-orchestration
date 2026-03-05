@@ -44,3 +44,7 @@ design_rules:
   no_grid_background: true        # 격자 배경 패턴 사용 금지
   title_slide_deco: glow          # 타이틀 슬라이드 장식: glow | none
   card_style: bordered            # 카드 스타일: bordered | shadowed | flat
+  text_wrap_balance: true         # h1~h3에 text-wrap:balance 적용 (자동 균형 줄바꿈)
+  word_break: keep-all            # 한국어 어절 단위 줄바꿈
+  no_manual_linebreaks: true      # <br> 수동 줄바꿈 금지 — CSS로만 제어
+  no_emoji: true                  # 이모지 금지, SVG 아이콘 사용
