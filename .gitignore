@@ -7,9 +7,10 @@ adapters/*.tmp
 *.tmp
 tmp_*
 
-# Queue — track meta/briefs/results, ignore temp files
-queue/**/result.md
-queue/.last_dispatch_*
+# Queue — task history는 로컬에만 보관
+queue/T*/
+queue/activity.jsonl
+queue/activity.jsonl.bak
 !queue/.gitkeep
 
 # Runtime directories

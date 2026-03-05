@@ -26,12 +26,10 @@
   "effortLevel": "medium",
   "mcpServers": {
     "notion-personal": {
-      "command": "bash",
-      "args": ["-c", "OPENAPI_MCP_HEADERS=\"{\\\"Authorization\\\": \\\"Bearer $PERSONAL_NOTION_TOKEN\\\", \\\"Notion-Version\\\": \\\"2022-06-28\\\"}\" npx -y @notionhq/notion-mcp-server"]
+      "command": "/PATH/TO/.claude/notion-personal-mcp.sh"
     },
     "notion-company": {
-      "command": "bash",
-      "args": ["-c", "OPENAPI_MCP_HEADERS=\"{\\\"Authorization\\\": \\\"Bearer $COMPANY_NOTION_TOKEN\\\", \\\"Notion-Version\\\": \\\"2022-06-28\\\"}\" npx -y @notionhq/notion-mcp-server"]
+      "command": "/PATH/TO/.claude/notion-company-mcp.sh"
     }
   }
 }
