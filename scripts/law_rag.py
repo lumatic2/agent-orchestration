@@ -2,21 +2,26 @@
 law_rag.py — 법령·회계기준 로컬 RAG (ChromaDB + Gemini 합성)
 
 사용법:
-  # 1. 기존 knowledge 파일로 즉시 인덱싱 (API key 불필요)
+  # 1. knowledge 파일 시드 인덱싱 (API key 불필요, 즉시 사용 가능)
   python3 law_rag.py --seed
 
-  # 2. 법령 질의 (Gemini가 검색 결과로 답변 합성)
-  python3 law_rag.py --ask "소득세법상 원천징수 세율은?"
-  python3 law_rag.py --ask "R&D 세액공제 요건" --law 조특법
+  # 2. Gemini로 법령 조문 검색 → 인덱싱 (API key 불필요)
+  python3 law_rag.py --fetch "소득세법"
+  python3 law_rag.py --fetch "소득세법,법인세법,부가가치세법"
 
-  # 3. 인덱싱 현황
+  # 3. PDF 파일 인덱싱 (검증된 법령집·기준서 PDF)
+  python3 law_rag.py --pdf 소득세법.pdf
+  python3 law_rag.py --pdf K-IFRS_1101.pdf --law "K-IFRS 1101호"
+
+  # 4. 법령 질의 (ChromaDB 검색 + Gemini 합성 답변)
+  python3 law_rag.py --ask "소득세법상 원천징수 세율은?"
+  python3 law_rag.py --ask "R&D 세액공제 요건" --law 조특
+
+  # 5. 인덱싱 현황
   python3 law_rag.py --list
 
-  # 4. 법제처 API로 법령 전문 인덱싱 (LAW_API_OC 필요)
+  # 6. 법제처 API 인덱싱 (LAW_API_OC 필요)
   python3 law_rag.py --index --query "소득세법,법인세법"
-
-  # 5. 개정 확인
-  python3 law_rag.py --update
 
 환경변수:
   LAW_API_OC   — 법제처 API 인증키 (--index, --update 전용)
@@ -169,6 +174,141 @@ def chunk_text(text: str, size: int = 1000, overlap: int = 100) -> list:
     return chunks
 
 
+# ── Gemini 검색 → 인덱싱 ────────────────────────────────────
+def fetch_via_gemini(law_names: list):
+    """Gemini로 법령 조문 검색 → ChromaDB 인덱싱 (API key 불필요)"""
+    collection = get_db()
+
+    for law_name in law_names:
+        law_name = law_name.strip()
+        if not law_name:
+            continue
+
+        prefix = f"gemini_{re.sub(r'[^가-힣a-zA-Z0-9_]', '_', law_name)}"
+
+        existing = collection.get(ids=[f"{prefix}_0"])
+        if existing["ids"]:
+            print(f"  ⏭ 이미 인덱싱됨: {law_name}")
+            continue
+
+        print(f"  🔍 Gemini 검색 중: {law_name}...")
+        prompt = f"""한국 국가법령정보센터(law.go.kr)의 {law_name} 내용을 검색하여 핵심 조문을 정리해줘.
+
+다음 형식으로 답변해줘 (각 조문을 ### 헤더로 구분):
+
+## {law_name} 핵심 조문
+
+### 제1조 (목적)
+[조문 내용]
+
+### 제XX조 (제목)
+[조문 내용]
+
+중요한 조문 20~30개를 포함하고, 각 조문 번호·제목·핵심 내용을 정확하게 작성해줘.
+출처: https://www.law.go.kr/법령/{law_name}"""
+
+        result = subprocess.run(
+            ["gemini", "--yolo", "-p", prompt],
+            capture_output=True, text=True, timeout=120,
+        )
+
+        if result.returncode != 0:
+            print(f"  [ERROR] {law_name}: {result.stderr[:100]}")
+            continue
+
+        content = result.stdout.strip()
+        # YOLO 헤더 제거
+        content = "\n".join(
+            l for l in content.split("\n")
+            if not l.startswith("YOLO") and not l.startswith("Loaded")
+        ).strip()
+
+        # ### 섹션 단위 분할
+        sections = re.split(r"\n(?=### )", content)
+        added = 0
+        for i, section in enumerate(sections):
+            if len(section.strip()) < 30:
+                continue
+            title_m = re.match(r"###\s+(.+)", section.strip())
+            title = title_m.group(1).strip() if title_m else law_name
+
+            collection.add(
+                documents=[section.strip()[:2000]],
+                metadatas=[{
+                    "source":      prefix,
+                    "law_name":    law_name,
+                    "title":       title,
+                    "type":        "gemini_fetch",
+                }],
+                ids=[f"{prefix}_{i}"],
+            )
+            added += 1
+
+        print(f"  ✅ {law_name}: {added}개 섹션 인덱싱")
+        time.sleep(1)  # Gemini 부하 방지
+
+    print(f"\nDB 총 청크: {collection.count()}개")
+
+
+# ── PDF 인덱싱 ───────────────────────────────────────────────
+def index_pdf(pdf_path: str, law_name: str = ""):
+    """PDF 파일 텍스트 추출 → ChromaDB 인덱싱"""
+    try:
+        import pypdf
+    except ImportError:
+        print("[ERROR] pypdf 필요: .venv-law/bin/pip install pypdf")
+        sys.exit(1)
+
+    collection = get_db()
+    path = Path(pdf_path)
+
+    if not path.exists():
+        print(f"[ERROR] 파일 없음: {pdf_path}")
+        sys.exit(1)
+
+    source_name = law_name or path.stem
+    prefix = f"pdf_{re.sub(r'[^가-힣a-zA-Z0-9_]', '_', path.stem)}"
+
+    existing = collection.get(ids=[f"{prefix}_p0_0"])
+    if existing["ids"]:
+        print(f"⏭ 이미 인덱싱됨: {path.name}")
+        print("  재인덱싱하려면 먼저 해당 항목을 삭제하세요.")
+        return
+
+    print(f"📄 PDF 인덱싱: {path.name}")
+    reader = pypdf.PdfReader(str(path))
+    total_pages = len(reader.pages)
+    print(f"   페이지: {total_pages}개")
+
+    indexed = 0
+    for page_num, page in enumerate(reader.pages):
+        text = page.extract_text() or ""
+        text = text.strip()
+        if len(text) < 50:
+            continue
+
+        for j, chunk in enumerate(chunk_text(text, size=800, overlap=80)):
+            chunk_id = f"{prefix}_p{page_num}_{j}"
+            collection.add(
+                documents=[chunk],
+                metadatas=[{
+                    "source":      prefix,
+                    "source_file": path.name,
+                    "law_name":    source_name,
+                    "title":       f"{source_name} p.{page_num + 1}",
+                    "type":        "pdf",
+                    "page":        page_num + 1,
+                }],
+                ids=[chunk_id],
+            )
+            indexed += 1
+
+        if (page_num + 1) % 10 == 0:
+            print(f"   진행: {page_num + 1}/{total_pages}페이지...")
+
+    print(f"✅ 완료: {indexed}개 청크  |  DB 총 {collection.count()}개")
+
+
 def index_laws(queries: list):
     """법제처 API → ChromaDB (LAW_API_OC 필요)"""
     collection = get_db()
@@ -317,9 +457,15 @@ def list_indexed():
         kind = meta.get("type", "?")
         sources.setdefault(kind, set()).add(src)
 
+    TYPE_LABELS = {
+        "knowledge":     "knowledge 파일",
+        "gemini_fetch":  "Gemini 검색",
+        "pdf":           "PDF 파일",
+        "law_api":       "법제처 API",
+    }
     print(f"\n📚 인덱싱 현황 (총 {total}개 청크)\n")
     for kind, srcs in sorted(sources.items()):
-        label = "knowledge 파일" if kind == "knowledge" else "법제처 API 법령"
+        label = TYPE_LABELS.get(kind, kind)
         print(f"  [{label}] {len(srcs)}건")
         for s in sorted(srcs):
             print(f"    • {s}")
@@ -370,6 +516,10 @@ def main():
     parser = argparse.ArgumentParser(description="한국 법령·회계기준 RAG")
     parser.add_argument("--seed",   "-s", action="store_true",
                         help="knowledge/*.md 파일 인덱싱 (API key 불필요)")
+    parser.add_argument("--fetch",  "-f", type=str,
+                        help="Gemini로 법령 검색 → 인덱싱 (쉼표로 여러 법령 지정)")
+    parser.add_argument("--pdf",    "-p", type=str, metavar="FILE",
+                        help="PDF 파일 인덱싱 (경로)")
     parser.add_argument("--index",  "-i", action="store_true",
                         help="법제처 API로 법령 인덱싱 (LAW_API_OC 필요)")
     parser.add_argument("--query",  "-q", type=str,
@@ -381,7 +531,7 @@ def main():
     parser.add_argument("--list",         action="store_true", help="인덱싱 현황")
     args = parser.parse_args()
 
-    if not any([args.seed, args.index, args.ask, args.update, args.list]):
+    if not any([args.seed, args.fetch, args.pdf, args.index, args.ask, args.update, args.list]):
         parser.print_help()
         return
 
@@ -389,6 +539,11 @@ def main():
         list_indexed()
     elif args.seed:
         seed_from_knowledge()
+    elif args.fetch:
+        names = [n.strip() for n in args.fetch.split(",") if n.strip()]
+        fetch_via_gemini(names)
+    elif args.pdf:
+        index_pdf(args.pdf, law_name=args.law)
     elif args.index:
         if not LAW_API_OC:
             print("[ERROR] LAW_API_OC 환경변수 필요")

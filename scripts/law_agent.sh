@@ -10,6 +10,8 @@
 #   --law <법령>   특정 법령 한정 검색 (약어 가능: 소득세, 법인세, 부가세 등)
 #   --rag          RAG 모드 (로컬 ChromaDB 검색 + Gemini 합성)
 #   --seed         RAG 초기 인덱싱 (knowledge/*.md, API key 불필요)
+#   --fetch <법령> Gemini로 법령 조문 검색 → 인덱싱 (쉼표로 여러 법령)
+#   --pdf <경로>   PDF 파일 인덱싱 (검증된 법령집·기준서)
 #   --index        RAG 법제처 API 인덱싱 (LAW_API_OC 필요)
 #   --list         인덱싱 현황 보기
 #   --save         결과를 Notion에 저장
@@ -25,7 +27,9 @@ fi
 
 QUERY=""
 LAW_FILTER=""
-MODE="search"   # search | rag | seed | index | list
+MODE="search"   # search | rag | seed | fetch | pdf | index | list
+FETCH_TARGET=""
+PDF_PATH=""
 MODEL="gemini-2.5-flash"
 SAVE_NOTION=false
 SAVE_TITLE=""
@@ -35,6 +39,8 @@ for arg in "$@"; do
   case "$arg" in
     --rag)   MODE="rag" ;;
     --seed)  MODE="seed" ;;
+    --fetch) MODE="fetch" ;;
+    --pdf)   MODE="pdf" ;;
     --index) MODE="index" ;;
     --list)  MODE="list" ;;
     --pro)   MODEL="gemini-2.5-pro" ;;
@@ -45,6 +51,10 @@ for arg in "$@"; do
         LAW_FILTER="$arg"
       elif [ "$PREV_ARG" = "--title" ]; then
         SAVE_TITLE="$arg"
+      elif [ "$PREV_ARG" = "--fetch" ]; then
+        FETCH_TARGET="$arg"
+      elif [ "$PREV_ARG" = "--pdf" ]; then
+        PDF_PATH="$arg"
       elif [ -z "$QUERY" ]; then
         QUERY="$arg"
       fi
@@ -63,6 +73,34 @@ fi
 if [ "$MODE" = "seed" ]; then
   echo "📚 knowledge 파일 인덱싱 중..."
   "$VENV_PYTHON" "$SCRIPT_DIR/law_rag.py" --seed
+  exit 0
+fi
+
+# ── Gemini 검색 → 인덱싱 ──────────────────────────────
+if [ "$MODE" = "fetch" ]; then
+  TARGET="${FETCH_TARGET:-${QUERY:-}}"
+  if [ -z "$TARGET" ]; then
+    echo "사용법: bash law_agent.sh --fetch \"소득세법\""
+    echo "        bash law_agent.sh --fetch \"소득세법,법인세법,부가가치세법\""
+    exit 1
+  fi
+  echo "🔍 Gemini로 법령 검색 → 인덱싱: $TARGET"
+  "$VENV_PYTHON" "$SCRIPT_DIR/law_rag.py" --fetch "$TARGET"
+  exit 0
+fi
+
+# ── PDF 인덱싱 ────────────────────────────────────────
+if [ "$MODE" = "pdf" ]; then
+  if [ -z "$PDF_PATH" ]; then
+    echo "사용법: bash law_agent.sh --pdf /path/to/file.pdf [--law \"법령명\"]"
+    exit 1
+  fi
+  echo "📄 PDF 인덱싱: $PDF_PATH"
+  if [ -n "$LAW_FILTER" ]; then
+    "$VENV_PYTHON" "$SCRIPT_DIR/law_rag.py" --pdf "$PDF_PATH" --law "$LAW_FILTER"
+  else
+    "$VENV_PYTHON" "$SCRIPT_DIR/law_rag.py" --pdf "$PDF_PATH"
+  fi
   exit 0
 fi
 
@@ -90,6 +128,8 @@ if [ -z "$QUERY" ]; then
   echo "  bash law_agent.sh \"R&D 세액공제 요건\" --law 조특법 --pro"
   echo "  bash law_agent.sh \"소득세법 원천징수\" --rag       # 로컬 RAG 검색"
   echo "  bash law_agent.sh --seed                          # RAG 초기 인덱싱 (API key 불필요)"
+  echo "  bash law_agent.sh --fetch \"소득세법,법인세법\"    # Gemini 검색 → 인덱싱"
+  echo "  bash law_agent.sh --pdf 소득세법.pdf              # PDF 인덱싱"
   echo "  bash law_agent.sh --list                          # 인덱싱 현황"
   exit 1
 fi
