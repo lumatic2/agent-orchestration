@@ -100,7 +100,8 @@ JSEOF
 # ── 렌더 실행 ───────────────────────────────────────────────────────
 echo "렌더 중: $HTML_FILE → $PDF_PATH"
 
-# playwright 모듈 위치 찾기 (글로벌 npx 캐시 활용)
+# playwright 모듈 위치 찾기 (~/Desktop/node_modules 우선)
+export NODE_PATH="$HOME/Desktop/node_modules:$(node -e 'console.log(require.resolve.paths("playwright").join(":"))'  2>/dev/null || true)"
 cd "$HOME/Desktop" 2>/dev/null || true
 node "$TMP_JS"
 

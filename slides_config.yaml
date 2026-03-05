@@ -3,7 +3,8 @@
 # 이 파일을 수정하면 다음 세션부터 반영됨
 
 # 출력 경로
-output_dir: ~/Desktop           # 최종 PDF 저장 위치
+# 최종 PDF 저장 위치
+output_dir: ~/Desktop
 
 # 테마
 theme: dark                     # dark | light
@@ -12,14 +13,14 @@ theme: dark                     # dark | light
 colors:
   background_primary:   "#1A1A2E"   # 메인 배경
   background_secondary: "#16213E"   # 보조 배경
-  accent_1: "#F4A832"               # 강조색 1 (기본 오렌지)
-  accent_2: "#7C6FCD"               # 강조색 2 (기본 퍼플)
+  accent_1: "#10B981"               # 강조색 1 (Emerald)
+  accent_2: "#059669"               # 강조색 2 (Emerald Dark)
   text_primary:   "#FFFFFF"
   text_secondary: "rgba(255,255,255,0.6)"
 
 # 타이포그래피
 font:
-  family: "Noto Sans KR"          # Google Fonts 이름
+  family: "Inter"                 # Google Fonts 이름
   weights: [300, 400, 600, 700, 900]
 
 # 슬라이드 크기
