@@ -21,7 +21,8 @@ teardown_test_env
 # Test 2: pending → dispatched
 setup_test_env
 start_test "lifecycle: pending → dispatched"
-DIR=$(create_mock_queue_entry "T001" "lifecycle_test" "pending" "gemini")
+create_mock_queue_entry "T001" "lifecycle_test" "pending" "gemini"
+DIR="$MOCK_QUEUE_DIR"
 update_meta_status "$DIR" "dispatched"
 status=$(read_meta_field "$DIR/meta.json" "status")
 assert_eq "dispatched" "$status"
@@ -30,7 +31,8 @@ teardown_test_env
 # Test 3: dispatched → completed
 setup_test_env
 start_test "lifecycle: dispatched → completed"
-DIR=$(create_mock_queue_entry "T001" "lifecycle_test" "dispatched" "gemini")
+create_mock_queue_entry "T001" "lifecycle_test" "dispatched" "gemini"
+DIR="$MOCK_QUEUE_DIR"
 update_meta_status "$DIR" "completed"
 status=$(read_meta_field "$DIR/meta.json" "status")
 assert_eq "completed" "$status"
@@ -39,7 +41,8 @@ teardown_test_env
 # Test 4: pending → queued (rate limited) → retry_count increments
 setup_test_env
 start_test "lifecycle: pending → queued increments retry"
-DIR=$(create_mock_queue_entry "T001" "lifecycle_test" "pending" "codex")
+create_mock_queue_entry "T001" "lifecycle_test" "pending" "codex"
+DIR="$MOCK_QUEUE_DIR"
 update_meta_status "$DIR" "queued" "queued_reason" "rate_limited"
 update_meta_status "$DIR" "queued" "queued_reason" "rate_limited"
 retries=$(read_meta_field_raw "$DIR/meta.json" "retry_count")

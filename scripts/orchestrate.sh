@@ -18,6 +18,7 @@
 #   bash orchestrate.sh --complete T001 "summary"  # manually complete a task
 #   bash orchestrate.sh --cost           # today's usage per model + limits
 #   bash orchestrate.sh --clean [--dry]  # archive completed queue entries
+#   bash orchestrate.sh --chain "question" agent1 [agent2...] [task-name] [--save] [--pro]
 # ============================================================
 set -euo pipefail
 
@@ -702,6 +703,59 @@ do_clean() {
   exit 0
 }
 
+do_chain() {
+  # Usage: orchestrate.sh --chain "question" agent1 [agent2...] [task-name] [--save] [--pro] [--title "제목"]
+  shift  # remove --chain
+  QUESTION="${1:?Usage: orchestrate.sh --chain \"question\" agent1 [agent2...] [task-name]}"
+  shift
+
+  local AGENTS=()
+  local TASK_NAME="chain"
+  local CHAIN_FLAGS=()
+  local PREV_ARG=""
+
+  for arg in "$@"; do
+    case "$arg" in
+      --save|--pro) CHAIN_FLAGS+=("$arg") ;;
+      --title)      CHAIN_FLAGS+=("$arg") ;;
+      *)
+        if [ "$PREV_ARG" = "--title" ]; then
+          CHAIN_FLAGS+=("$arg")
+        elif [[ "$arg" == tax || "$arg" == expert:* || "$arg" == law || "$arg" == law:* ]]; then
+          AGENTS+=("$arg")
+        else
+          TASK_NAME="$arg"
+        fi
+        ;;
+    esac
+    PREV_ARG="$arg"
+  done
+
+  if [ ${#AGENTS[@]} -eq 0 ]; then
+    echo "[ERROR] --chain requires at least one agent (tax, expert:<type>, law)"
+    exit 1
+  fi
+
+  local CHAIN_ID
+  CHAIN_ID=$(next_task_id)
+  create_queue_entry "$CHAIN_ID" "$TASK_NAME" "chain" "$QUESTION"
+  local CHAIN_DIR="$QUEUE_DIR/${CHAIN_ID}_${TASK_NAME}"
+  update_meta_status "$CHAIN_DIR" "dispatched"
+  echo "[QUEUE] Created $CHAIN_ID ($TASK_NAME) — chain: ${AGENTS[*]}"
+
+  if bash "$SCRIPT_DIR/chain.sh" "$QUESTION" "${AGENTS[@]}" ${CHAIN_FLAGS[@]+"${CHAIN_FLAGS[@]}"}; then
+    update_meta_status "$CHAIN_DIR" "completed"
+    log_activity "CHAIN" "completed" "id=$CHAIN_ID agents=${AGENTS[*]}"
+    echo "[QUEUE] $CHAIN_ID completed"
+  else
+    update_meta_status "$CHAIN_DIR" "failed"
+    log_activity "CHAIN" "failed" "id=$CHAIN_ID agents=${AGENTS[*]}"
+    echo "[ERROR] Chain failed — $CHAIN_ID"
+    exit 1
+  fi
+  exit 0
+}
+
 # ============================================================
 # Handle subcommands before main dispatch
 # ============================================================
@@ -713,6 +767,7 @@ case "${1:-}" in
   --complete) shift; do_complete "$@" ;;
   --cost)     do_cost ;;
   --clean)    shift; do_clean "${1:-}" ;;
+  --chain)    do_chain "$@" ;;
 esac
 
 # --- Generate task brief from args ---
