@@ -13,7 +13,8 @@ echo "=== test_update_meta_status ==="
 setup_test_env
 
 # Create a base queue entry
-DIR=$(create_mock_queue_entry "T001" "test_task" "pending" "gemini")
+create_mock_queue_entry "T001" "test_task" "pending" "gemini"
+DIR="$MOCK_QUEUE_DIR"
 META="$DIR/meta.json"
 
 # Test 1: Update to dispatched
@@ -42,7 +43,8 @@ teardown_test_env
 
 # Test 5: queued increments retry_count
 setup_test_env
-DIR=$(create_mock_queue_entry "T002" "retry_task" "pending" "codex")
+create_mock_queue_entry "T002" "retry_task" "pending" "codex"
+DIR="$MOCK_QUEUE_DIR"
 META="$DIR/meta.json"
 
 start_test "update_meta_status: queued increments retry_count"

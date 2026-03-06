@@ -1,1 +1,0 @@
-팩터 투자 전략 서베이: SSRN, AQR, Research Affiliates 등 학술/실무 기반 자료를 참고하여 다음을 정리해줘. 1) 주요 팩터 종류 (Value, Momentum, Quality, Low Vol, Profitability 등)와 각각의 학술적 근거 및 대표 논문. 2) 팩터별 역사적 성과 (CAGR, Sharpe, MDD). 3) 멀티팩터 조합 시 상관관계 및 분산 효과. 4) 한국 주식시장에서의 팩터 유효성 (한국 소형주 특이사항 포함). 5) 최근 팩터 퇴화 논쟁 (factor decay, crowding) 현황. 실무에 바로 적용 가능한 수준으로 깊게 서베이해줘.

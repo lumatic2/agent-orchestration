@@ -14,7 +14,7 @@ export PATH="$SCRIPT_DIR/mocks:$PATH"
 export MOCK_GEMINI_BEHAVIOR=success
 output=$(bash "$TEST_TEMP_DIR/scripts/orchestrate.sh" gemini "Analyze routing" test-dispatch 2>&1)
 # Check queue entry was created
-found_dirs=$(ls -d "$QUEUE_DIR"/T*_test-dispatch 2>/dev/null | wc -l)
+found_dirs=$(ls -d "$QUEUE_DIR"/T*_test-dispatch 2>/dev/null | wc -l | xargs)
 assert_eq "1" "$found_dirs"
 teardown_test_env
 

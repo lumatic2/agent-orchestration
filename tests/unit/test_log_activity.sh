@@ -25,7 +25,7 @@ assert_contains "$result" '"event":"created"'
 # Test 3: Multiple entries append (not overwrite)
 start_test "log_activity: multiple entries append"
 log_activity "T002" "dispatched" ""
-line_count=$(wc -l < "$ACTIVITY_LOG")
+line_count=$(wc -l < "$ACTIVITY_LOG" | xargs)
 assert_eq "2" "$line_count"
 
 teardown_test_env

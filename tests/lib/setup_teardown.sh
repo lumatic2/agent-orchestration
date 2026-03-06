@@ -47,7 +47,7 @@ setup_e2e_env() {
 
 # Create a mock queue entry for testing
 create_mock_queue_entry() {
-  local id="$1" name="$2" status="${3:-pending}" agent="${4:-gemini}"
+  local id="$1" name="$2" status="${3:-pending}" agent="${4:-gemini}" brief_content="${5:-Test task brief for $name}"
   local dir="$QUEUE_DIR/${id}_${name}"
   mkdir -p "$dir"
 
@@ -68,6 +68,6 @@ create_mock_queue_entry() {
 }
 EOF
 
-  echo "Test task brief for $name" > "$dir/brief.md"
-  echo "$dir"
+  echo "$brief_content" > "$dir/brief.md"
+  MOCK_QUEUE_DIR="$dir"
 }

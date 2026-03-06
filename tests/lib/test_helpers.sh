@@ -30,6 +30,11 @@ fail() {
   [ -n "$msg" ] && echo "    → $msg"
 }
 
+log_info() {
+  local msg="$1"
+  echo "[INFO] $msg"
+}
+
 assert_eq() {
   local expected="$1" actual="$2" msg="${3:-expected '$1' got '$2'}"
   if [ "$expected" = "$actual" ]; then

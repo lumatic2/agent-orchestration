@@ -63,11 +63,12 @@ inject_shared() {
   local tmp_file="${adapter_file}.tmp"
   local principles_path="$REPO_DIR/SHARED_PRINCIPLES.md"
   local memory_path="$REPO_DIR/SHARED_MEMORY.md"
+  local orchestration_setup_path="$REPO_DIR/ORCHESTRATION_SETUP.md"
 
   # Replace the placeholder sections.
   # macOS /usr/bin/awk (BSD awk) doesn't accept multi-line strings passed via -v,
   # so pass file paths and print file contents from inside awk instead.
-  awk -v principles_file="$principles_path" -v memory_file="$memory_path" '
+  awk -v principles_file="$principles_path" -v memory_file="$memory_path" -v orchestration_setup_file="$orchestration_setup_path" '
     function print_file(f, line) {
       while ((getline line < f) > 0) print line
       close(f)
@@ -90,6 +91,17 @@ inject_shared() {
       next
     }
     /<!-- END SHARED_MEMORY -->/{
+      in_block=0
+      print
+      next
+    }
+    /<!-- BEGIN ORCHESTRATION_SETUP -->/{
+      print
+      print_file(orchestration_setup_file)
+      in_block=1
+      next
+    }
+    /<!-- END ORCHESTRATION_SETUP -->/{
       in_block=0
       print
       next
@@ -156,6 +168,29 @@ deploy_claude() {
     cp "$REPO_DIR/scripts/session-logger.sh" "$claude_dir/session-logger.sh"
     chmod +x "$claude_dir/session-logger.sh"
     echo "[OK] session-logger.sh → $claude_dir/session-logger.sh"
+  fi
+
+  # Deploy connection layer scripts (save_to_notion.sh, memory_update.sh, chain.sh)
+  for script in save_to_notion.sh memory_update.sh chain.sh knowledge_update.sh feedback.sh; do
+    if [ -f "$REPO_DIR/scripts/$script" ]; then
+      cp "$REPO_DIR/scripts/$script" "$SCRIPT_DIR/$script" || true
+      chmod +x "$SCRIPT_DIR/$script"
+      echo "[OK] $script (already in scripts/)"
+    fi
+  done
+
+  # Sync notion_pages.conf (page ID cache) — copy if src newer or dest missing
+  local notion_conf_src="$HOME/.config/agent-orchestration/notion_pages.conf"
+  local notion_conf_dst="$REPO_DIR/configs/notion_pages.conf"
+  if [ -f "$notion_conf_src" ]; then
+    cp "$notion_conf_src" "$notion_conf_dst"
+    echo "[OK] notion_pages.conf → $notion_conf_dst (for cross-device sync)"
+  fi
+  # On Windows or fresh device: restore from repo if local conf is missing
+  if [ ! -f "$notion_conf_src" ] && [ -f "$notion_conf_dst" ]; then
+    mkdir -p "$(dirname "$notion_conf_src")"
+    cp "$notion_conf_dst" "$notion_conf_src"
+    echo "[OK] notion_pages.conf ← $notion_conf_dst (restored from repo)"
   fi
 }
 

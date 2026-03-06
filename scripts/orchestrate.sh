@@ -16,8 +16,10 @@
 #   bash orchestrate.sh --status         # show all queue entries
 #   bash orchestrate.sh --resume         # re-dispatch oldest pending/queued
 #   bash orchestrate.sh --complete T001 "summary"  # manually complete a task
+#   bash orchestrate.sh --cost           # today's usage per model + limits
+#   bash orchestrate.sh --clean [--dry]  # archive completed queue entries
+#   bash orchestrate.sh --chain "question" agent1 [agent2...] [task-name] [--save] [--pro]
 # ============================================================
-
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -334,7 +336,7 @@ run_with_fallback_research() {
 }
 
 # ============================================================
-# Subcommands: --boot, --status, --resume, --complete
+# Subcommands: --boot, --status, --resume, --complete, --cost, --clean
 # ============================================================
 
 do_boot() {
@@ -397,6 +399,24 @@ do_status() {
 
     printf "%-6s %-25s %-12s %-12s %-8s\n" "$id" "$name" "$status" "$agent" "$retries"
   done
+  exit 0
+}
+
+do_set_status() {
+  local task_id="${1:?Usage: orchestrate.sh set_status <TASK_ID> <TASK_NAME> <NEW_STATUS> [EXTRA_FIELD] [EXTRA_VALUE]}"
+  local task_name="${2:?Usage: orchestrate.sh set_status <TASK_ID> <TASK_NAME> <NEW_STATUS> [EXTRA_FIELD] [EXTRA_VALUE]}"
+  local new_status="${3:?Usage: orchestrate.sh set_status <TASK_ID> <TASK_NAME> <NEW_STATUS> [EXTRA_FIELD] [EXTRA_VALUE]}"
+  local extra_field="${4:-}"
+  local extra_value="${5:-}"
+
+  local task_dir="$QUEUE_DIR/${task_id}_${task_name}"
+  if [ ! -d "$task_dir" ]; then
+    echo "[ERROR] Task directory not found: $task_dir"
+    exit 1
+  fi
+
+  update_meta_status "$task_dir" "$new_status" "$extra_field" "$extra_value"
+  echo "[STATUS_UPDATE] Task $task_id ($task_name) status set to '$new_status'."
   exit 0
 }
 
@@ -484,6 +504,277 @@ do_complete() {
   exit 1
 }
 
+do_cost() {
+  local period="${1:-today}"   # today | week | all
+  python3 - "$QUEUE_DIR" "$REPO_DIR/archive/queue" "$period" << 'PYEOF'
+import json, sys
+from pathlib import Path
+from datetime import date, timedelta
+
+queue_dir   = Path(sys.argv[1])
+archive_dir = Path(sys.argv[2])
+period      = sys.argv[3] if len(sys.argv) > 3 else "today"
+
+today = date.today()
+if period == "week":
+    cutoff = str(today - timedelta(days=7))
+    period_label = f"최근 7일 ({cutoff} ~ {today})"
+elif period == "all":
+    cutoff = "2000-01-01"
+    period_label = "전체 기간"
+else:
+    cutoff = str(today)
+    period_label = f"오늘 ({today})"
+
+LIMITS = {
+    "gemini-2.5-pro": 100,
+    "gemini-2.5-flash": 300,
+    "gemini-2.5-flash-lite": 500,
+}
+
+# 에이전트 유형 분류 (task name 기반)
+AGENT_KEYWORDS = {
+    "tax": ["tax", "세무", "법인세", "부가세", "소득세"],
+    "expert": ["expert", "audit", "valuation", "deal", "ifrs", "forensic", "wealth", "law"],
+    "content": ["content", "콘텐츠", "pipeline"],
+    "codex": ["codex", "code", "코드"],
+    "gemini": ["gemini", "research", "분석"],
+}
+
+def classify_agent(task_name, agent):
+    name_lower = (task_name or "").lower()
+    if agent in ("codex", "codex-spark"):
+        return "codex"
+    if agent in ("gemini", "gemini-pro"):
+        for kw in AGENT_KEYWORDS.get("tax", []):
+            if kw in name_lower:
+                return "tax"
+        for kw in AGENT_KEYWORDS.get("expert", []):
+            if kw in name_lower:
+                return "expert"
+        for kw in AGENT_KEYWORDS.get("content", []):
+            if kw in name_lower:
+                return "content"
+        return "gemini"
+    return agent or "unknown"
+
+model_counts  = {}   # 모델별 사용 횟수
+agent_counts  = {}   # 에이전트 유형별 사용 횟수
+total = completed_cnt = pending_cnt = 0
+
+# 활성 큐 + 아카이브 모두 스캔
+all_dirs = []
+if queue_dir.exists():
+    all_dirs += list(queue_dir.glob("T[0-9][0-9][0-9]_*/"))
+if archive_dir.exists():
+    all_dirs += list(archive_dir.glob("T[0-9][0-9][0-9]_*/"))
+
+for d_path in sorted(all_dirs):
+    meta_path = d_path / "meta.json"
+    if not meta_path.exists():
+        continue
+    try:
+        d = json.loads(meta_path.read_text())
+    except Exception:
+        continue
+
+    total += 1
+    status = d.get("status", "")
+    if status == "completed":
+        completed_cnt += 1
+    elif status in ("pending", "queued"):
+        pending_cnt += 1
+
+    completed_ts = d.get("completed") or ""
+    # completed_ts 형식: "2026-03-05T14:23:01" or "2026-03-05 14:23:01"
+    ts_date = completed_ts[:10]
+    if ts_date < cutoff:
+        continue
+    if status != "completed":
+        continue
+
+    model = d.get("model") or d.get("agent") or "unknown"
+    task_name = d.get("name") or ""
+    agent = d.get("agent") or ""
+
+    model_counts[model] = model_counts.get(model, 0) + 1
+    atype = classify_agent(task_name, agent)
+    agent_counts[atype] = agent_counts.get(atype, 0) + 1
+
+# ─── 출력 ────────────────────────────────────────────────────
+print(f"\n=== Agent Usage ({period_label}) ===\n")
+
+if not model_counts:
+    print("  (해당 기간 완료된 작업 없음)")
+else:
+    # 모델별
+    print(f"  [모델별]")
+    print(f"  {'모델':<30} {'호출':>5} {'한도':>5}  {'bar'}")
+    print(f"  {'-'*30} {'-----':>5} {'-----':>5}")
+    for model, count in sorted(model_counts.items(), key=lambda x: -x[1]):
+        limit = LIMITS.get(model)
+        limit_str = str(limit) if limit else "∞"
+        warn = ""
+        bar = ""
+        if limit:
+            pct = count / limit
+            bar_len = min(int(pct * 20), 20)
+            bar = "█" * bar_len + "░" * (20 - bar_len) + f" {pct*100:.0f}%"
+            if pct >= 0.8:
+                warn = " ⚠️"
+        print(f"  {model:<30} {count:>5} {limit_str:>5}{warn}  {bar}")
+
+    # 에이전트 유형별
+    print(f"\n  [에이전트 유형별]")
+    total_calls = sum(agent_counts.values())
+    for atype, count in sorted(agent_counts.items(), key=lambda x: -x[1]):
+        pct = count / total_calls * 100 if total_calls else 0
+        bar_len = min(int(pct / 5), 20)
+        bar = "█" * bar_len
+        print(f"  {atype:<20} {count:>4}회  {bar} {pct:.0f}%")
+
+print(f"\n  큐 전체: {total}개 (완료 {completed_cnt} / 대기 {pending_cnt})")
+print("  정리: bash orchestrate.sh --clean")
+print("  주간: bash orchestrate.sh --cost week")
+print("  전체: bash orchestrate.sh --cost all")
+
+# ─── 응답 품질 요약 ───────────────────────────────────────────
+feedback_log = Path(sys.argv[1]).parent / "logs" / "feedback.jsonl"
+if feedback_log.exists() and feedback_log.stat().st_size > 0:
+    fb_records = []
+    with open(feedback_log) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                r = json.loads(line)
+                if r.get("ts", "")[:10] >= cutoff:
+                    fb_records.append(r)
+            except Exception:
+                pass
+
+    if fb_records:
+        ratings = [r["rating"] for r in fb_records]
+        avg = sum(ratings) / len(ratings)
+        low = [r for r in fb_records if r["rating"] <= 2]
+        top = [r for r in fb_records if r["rating"] == 5]
+
+        print(f"\n  [응답 품질 — {len(fb_records)}건 평가]")
+        stars = "★" * round(avg) + "☆" * (5 - round(avg))
+        print(f"  평균 {avg:.1f}점 {stars}  |  최고 {len(top)}건  |  개선필요 {len(low)}건")
+
+        # 에이전트별 평균 (낮은 것만 경고)
+        by_agent = {}
+        for r in fb_records:
+            key = r.get("expert") or r.get("agent") or "?"
+            by_agent.setdefault(key, []).append(r["rating"])
+        needs_work = [(k, sum(v)/len(v)) for k, v in by_agent.items() if sum(v)/len(v) < 3.0]
+        if needs_work:
+            print(f"  ⚠️  개선 필요: " + ", ".join(f"{k}({a:.1f}점)" for k, a in sorted(needs_work, key=lambda x: x[1])))
+
+        print(f"  상세: bash feedback.sh --stats")
+PYEOF
+  exit 0
+}
+
+do_clean() {
+  # 완료된 큐 항목을 archive/queue/로 이동
+  local dry="${1:-}"
+  local archive_dir="$REPO_DIR/archive/queue"
+  mkdir -p "$archive_dir"
+
+  local moved=0 skipped=0
+
+  echo "=== Queue Clean ==="
+  [ "$dry" = "--dry" ] && echo "(DRY RUN — 실제 변경 없음)"
+  echo ""
+
+  for dir in "$QUEUE_DIR"/T[0-9][0-9][0-9]_*/; do
+    [ -d "$dir" ] || continue
+    local meta="$dir/meta.json"
+    [ -f "$meta" ] || continue
+
+    local status id name
+    status=$(read_meta_field "$meta" "status")
+    id=$(read_meta_field "$meta" "id")
+    name=$(read_meta_field "$meta" "name")
+
+    if [ "$status" = "completed" ]; then
+      echo "  [ARCHIVE] $id ($name)"
+      if [ "$dry" != "--dry" ]; then
+        mv "$dir" "$archive_dir/"
+      fi
+      moved=$((moved + 1))
+    else
+      skipped=$((skipped + 1))
+    fi
+  done
+
+  echo ""
+  if [ "$dry" = "--dry" ]; then
+    echo "DRY RUN 완료: ${moved}개 아카이브 예정, ${skipped}개 유지"
+  else
+    echo "완료: ${moved}개 → $archive_dir"
+    echo "     ${skipped}개 유지 (미완료)"
+    [ "$moved" -gt 0 ] && log_activity "CLEAN" "archived" "count=$moved"
+  fi
+  exit 0
+}
+
+do_chain() {
+  # Usage: orchestrate.sh --chain "question" agent1 [agent2...] [task-name] [--save] [--pro] [--title "제목"]
+  shift  # remove --chain
+  QUESTION="${1:?Usage: orchestrate.sh --chain \"question\" agent1 [agent2...] [task-name]}"
+  shift
+
+  local AGENTS=()
+  local TASK_NAME="chain"
+  local CHAIN_FLAGS=()
+  local PREV_ARG=""
+
+  for arg in "$@"; do
+    case "$arg" in
+      --save|--pro) CHAIN_FLAGS+=("$arg") ;;
+      --title)      CHAIN_FLAGS+=("$arg") ;;
+      *)
+        if [ "$PREV_ARG" = "--title" ]; then
+          CHAIN_FLAGS+=("$arg")
+        elif [[ "$arg" == tax || "$arg" == expert:* || "$arg" == law || "$arg" == law:* ]]; then
+          AGENTS+=("$arg")
+        else
+          TASK_NAME="$arg"
+        fi
+        ;;
+    esac
+    PREV_ARG="$arg"
+  done
+
+  if [ ${#AGENTS[@]} -eq 0 ]; then
+    echo "[ERROR] --chain requires at least one agent (tax, expert:<type>, law)"
+    exit 1
+  fi
+
+  local CHAIN_ID
+  CHAIN_ID=$(next_task_id)
+  create_queue_entry "$CHAIN_ID" "$TASK_NAME" "chain" "$QUESTION"
+  local CHAIN_DIR="$QUEUE_DIR/${CHAIN_ID}_${TASK_NAME}"
+  update_meta_status "$CHAIN_DIR" "dispatched"
+  echo "[QUEUE] Created $CHAIN_ID ($TASK_NAME) — chain: ${AGENTS[*]}"
+
+  if bash "$SCRIPT_DIR/chain.sh" "$QUESTION" "${AGENTS[@]}" ${CHAIN_FLAGS[@]+"${CHAIN_FLAGS[@]}"}; then
+    update_meta_status "$CHAIN_DIR" "completed"
+    log_activity "CHAIN" "completed" "id=$CHAIN_ID agents=${AGENTS[*]}"
+    echo "[QUEUE] $CHAIN_ID completed"
+  else
+    update_meta_status "$CHAIN_DIR" "failed"
+    log_activity "CHAIN" "failed" "id=$CHAIN_ID agents=${AGENTS[*]}"
+    echo "[ERROR] Chain failed — $CHAIN_ID"
+    exit 1
+  fi
+  exit 0
+}
+
 # ============================================================
 # Handle subcommands before main dispatch
 # ============================================================
@@ -493,6 +784,10 @@ case "${1:-}" in
   --status)   do_status ;;
   --resume)   do_resume ;;
   --complete) shift; do_complete "$@" ;;
+  --cost)     do_cost ;;
+  --clean)    shift; do_clean "${1:-}" ;;
+  --chain)    do_chain "$@" ;;
+  set_status) shift; do_set_status "$@" ;;
 esac
 
 # --- Generate task brief from args ---
