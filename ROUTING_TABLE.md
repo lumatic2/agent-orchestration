@@ -82,8 +82,9 @@ Before delegating, ask these questions in order:
 | Google 생태계 (YouTube, Drive, Docs) | Gemini | Claude(정리) | Google API 네이티브, 1M 컨텍스트, 영상 자막 분석 |
 | 미디어 분석 (이미지/영상/오디오) | Gemini | Codex(구현) | 멀티모달 입력 처리 → 분석 결과로 코드 생성 |
 | 데이터 파이프라인 (CSV, DB, 시각화) | Claude(소규모) / Codex(대규모) | Gemini(분석) | 스크립트 크기에 따라 분기 |
-| Notion 조사+작성 파이프라인 | Gemini(MCP 직접) | Claude(검토) | Gemini가 조사→Notion 원스톱, 토큰 절약 |
-| Notion DB 설계·복잡한 구조 | Claude(MCP) | — | DDL·판단 필요, Claude MCP가 기능 완전 |
+| Notion 조사+작성 (개인/내부용) | Gemini(MCP 직접) | — | 원스톱, 검토 없음. 사후 수정 필요 시 Claude fetch→edit |
+| Notion 외부공유·공식 문서 | Claude(MCP 직접) | — | 품질 중요 → 처음부터 Claude |
+| Notion DB 설계·복잡한 구조 | Claude(MCP) | — | DDL·판단 필요 |
 | Notion 순수 저장 (AI 불필요) | notion_db.py | — | 비용 0, bash 직접 호출 |
 | Slack 연동 | Claude(MCP 보유) | — | Slack MCP는 Claude만 |
 | 번역/현지화 | Codex CLI/gpt-5(대량) | Gemini(검색 필요 시) | ChatGPT Pro 쿼터 활용, 검색 불필요 |
@@ -253,7 +254,8 @@ To prevent file conflicts during parallel execution:
 | CI/CD, DevOps | GitHub Actions, Docker, 배포 파이프라인 | Codex(파이프라인) + Gemini(에러분석) |
 | 코드 리뷰 | PR 리뷰, diff 분석, 보안 점검 | Claude(Sonnet subagent) |
 | 번역/현지화 | 다국어 텍스트, i18n 파일 | Gemini(대량) + Claude(소량) |
-| Notion 조사+작성 | 가이드북, 리포트 자동 저장 | Gemini(MCP 직접, 원스톱) |
+| Notion 조사+작성 (개인/내부용) | 가이드북, 리서치 노트 | Gemini(MCP 직접, 검토 없음) |
+| Notion 외부공유·공식 문서 | 외부 공유, 보고서 | Claude(MCP 직접) |
 | Notion DB·복잡한 편집 | 스키마 설계, 판단 필요 작업 | Claude(MCP 직접) |
 | Notion 자동화 저장 | AI 없이 결과 저장 | notion_db.py(비용 0) |
 | Slack | 메시지 조회/작성 | Claude(MCP 직접) |

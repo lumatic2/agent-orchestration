@@ -39,6 +39,8 @@ Orchestrator가 태스크 브리프에 다음을 명시했을 때:
 1. **개인 워크스페이스만** (`notion-personal`). 회사 워크스페이스(`notion-company`)는 읽기 전용.
 2. 기존 페이지 덮어쓰기 전 현재 내용 fetch로 확인.
 3. 저장 완료 후 결과 보고: `저장됨: {page_url}`.
+4. **검토 단계 없음** — 저장 후 사용자가 필요 시 Claude Code에 수정 요청.
+   - 외부 공유·공식 문서는 처음부터 Claude Code가 담당 (Gemini에 위임하지 않음).
 
 ### 저장 불가 시 폴백
 MCP 오류 발생 시 → 결과를 텍스트로 반환 → Claude Code가 직접 저장.
