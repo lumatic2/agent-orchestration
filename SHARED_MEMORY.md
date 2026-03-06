@@ -28,6 +28,12 @@
     - **⚠️ 매출 수정**: 공식 재무제표(세무사 2026-03-04) 기준 2025 서비스매출=2.89억. 이전 "7.8억"은 출처 불명으로 폐기.
     - 실적 트래킹 (공식): 2023=2,510만 / 2024=4,412만 / 2025=2.89억 (서비스매출). 국고보조금 별도(2025: 3.32억)
   - **미완성 항목**: Series A 타임라인, TIPS R&D 마일스톤 상세
+  - **🟡 Win Rate 추정**: 55~65% (Won ~12건 / Active ~7건 / Lost ~7건 추정). B2B SaaS 평균 25~35% 상회 — 니치 특화. ⚠️ Lost 정확 건수는 고객사 DB Archived 뷰 확인 필요.
+  - **🟡 장기차입금 만기 추정**: IBK 4.5억 (연 4.2%, 연 5천만 상환). 운전자금=매년 갱신(2026년 시점 주의), 시설자금=2027~2030년. 완전상환 12년. ⚠️ 대출계약서 원본 확인 필요.
+  - **🟡 MRR 추정**: 현재 200~350만원/월. 연간 SaaS 2,000~3,000만원 = 서비스매출의 7~10%. 나머지 B2B 커스텀.
+  - **N_maint 실수 (2026-03-05 조회)**: 최소 3곳 확인 — HK건축(Pro Yearly 288만/년), 지안건축설계(서면계약완료), 한국공항공사(Pro Monthly ~33만/월, 3개월 결제 완료). 5건 가정 → 3건으로 하향 조정 고려. 삼성E&A 유지보수 계약 별도 확인 필요.
+  - **현재 활성 파이프라인 (2026-03-04 월간 전체 회의 기준)**: 넷폼알앤디 7,000만(계약직전), 위미코 PoC 1,500만+본계약 1.02억, 현대일렉트릭(BIM), 삼성전자(공장AI), 삼성물산(리모델링), LG전자(OI)
+  - **PLAD 가격 모델**: Starter 9.9만/월(마진 60%), Pro 29.9만/월(마진 47%)
   - **⚠️ notion_db.py 주의**: replace-content를 자식 페이지 있는 페이지에 쓰면 자식 페이지 아카이브됨.
 
 ## Planby 회사 데이터 지도 (COMPANY_NOTION_TOKEN 사용)
@@ -101,6 +107,8 @@
 
 ## Recent Decisions
 
+- **2026-03-05**: knowledge 8개 파일 완성 (2026-03-05): tax_core, tax_incentives, vat, inheritance_gift_tax, valuation_formulas, audit_standards, ifrs_key, commercial_law_company. 15개 에이전트 전원 knowledge 매핑 완료
+- **2026-03-05**: chain.sh 실전 검증 완료 (2026-03-05): expert:ifrs_advisory→tax 2단계 체인, K-IFRS 1020/1012 + 조특법10조 복합 분석. 컨텍스트 누적 정상, 필터링 정상
 - **2026-03-05**: 전문가 에이전트 실무 직무 기반 재편: audit/deal_advisory/valuation/wealth_tax/tax_investigation/ifrs_advisory/international_tax/forensic 8개 추가. Big4 실무 직무 분류 기준 적용.
 - **2026-03-05**: expert 에이전트 확장: economics, gov_accounting, business, commercial_law 추가. kicpa_agent 실무 특화 재작성 (시험 언어 제거)
 - **2026-03-05**: orchestration upgrade: --cost/--clean 추가, kicpa_agent.sh + law_agent.sh 신규, sync.sh notion_pages.conf 배포, 큐 52개 아카이브
@@ -169,3 +177,22 @@ claude mcp add --scope user notion-company  -- npx -y @notionhq/notion-mcp-serve
 ## Known Issues
 
 _Tracked here when agents encounter blockers._
+
+## 실전 사례: POSCO 제안서 (2026-03-06)
+
+### MCP 작업은 위임 불가 — 직접 실행 원칙
+Notion/Slack 등 MCP 도구가 필요한 작업은 Codex/Gemini에 위임 불가 (MCP 접근 권한 없음).
+위임 결정 전 체크: "이 작업에 MCP가 필요한가?" → YES면 Claude 직접 실행.
+
+### Notion API 실전 한계
+- 블록 100개/요청 한도 → 초과 시 400 에러 → `append_paragraphs`에 chunk_size=100 청킹 적용
+- `notion_db.py` 버그 수정 완료: `_looks_like_markdown` 루프 내 early return 오류
+
+### 제안서 AI 지원 패턴 (비즈니스)
+1. **익명화**: 고객사명 → "도메인 전문사" (예: 넷폼알앤디 → 건축 도메인 전문사)
+2. **현학적 표현 3계층**: 제목(추상 개념어) / 도표(기술 용어 RAG·Embedding) / 본문(평이한 언어)
+3. **수혜자 중심 리프레이밍**: "타사 납품 사례" 뉘앙스 → "귀사 전용 구조" 프레이밍
+
+### 긴 세션 컨텍스트 관리
+- `/tmp/` 파일을 버전별 중간 저장소로 활용 (posco_v5_slim.md → posco_v6.md)
+- 컨텍스트 압축 발동 전 SHARED_MEMORY 업데이트가 연속성 핵심
