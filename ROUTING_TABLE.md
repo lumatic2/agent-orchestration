@@ -62,7 +62,9 @@ Before delegating, ask these questions in order:
 | Single line fix, typo, config change | **Claude alone** | Fix import path |
 | Write one function, small edit | **Claude alone** | Add validation to form |
 | Code review (small diff) | **Claude alone** | Review a PR with 3 files |
-| Data analysis, Notion operations | **Claude alone** | Analyze CSV, update Notion |
+| Data analysis | **Claude alone** | Analyze CSV |
+| Notion: 조사+콘텐츠 생성+저장 | **Gemini alone** | 가이드북 작성 → Notion 직접 저장 |
+| Notion: DB 스키마 설계, 복잡한 편집 | **Claude alone** | DB 구조 설계, 판단 필요 작업 |
 | Tech research, doc summary | **Gemini alone** | Compare React vs Svelte |
 | API doc analysis, long doc reading | **Gemini alone** | Summarize 50-page spec |
 | Large refactor (5+ files) | **Codex alone** | Refactor auth module |
@@ -80,7 +82,10 @@ Before delegating, ask these questions in order:
 | Google 생태계 (YouTube, Drive, Docs) | Gemini | Claude(정리) | Google API 네이티브, 1M 컨텍스트, 영상 자막 분석 |
 | 미디어 분석 (이미지/영상/오디오) | Gemini | Codex(구현) | 멀티모달 입력 처리 → 분석 결과로 코드 생성 |
 | 데이터 파이프라인 (CSV, DB, 시각화) | Claude(소규모) / Codex(대규모) | Gemini(분석) | 스크립트 크기에 따라 분기 |
-| 외부 서비스 연동 (Notion, Slack 등) | Claude(MCP 보유) | Codex(코드) | Claude만 MCP 도구 직접 사용 가능 |
+| Notion 조사+작성 파이프라인 | Gemini(MCP 직접) | Claude(검토) | Gemini가 조사→Notion 원스톱, 토큰 절약 |
+| Notion DB 설계·복잡한 구조 | Claude(MCP) | — | DDL·판단 필요, Claude MCP가 기능 완전 |
+| Notion 순수 저장 (AI 불필요) | notion_db.py | — | 비용 0, bash 직접 호출 |
+| Slack 연동 | Claude(MCP 보유) | — | Slack MCP는 Claude만 |
 | 번역/현지화 | Codex CLI/gpt-5(대량) | Gemini(검색 필요 시) | ChatGPT Pro 쿼터 활용, 검색 불필요 |
 | CI/CD, DevOps | Codex(파이프라인) | Gemini(에러 분석) | 에러 로그 분석 = 리서치 |
 | **세무/회계 질의** | tax_agent.sh | Claude(해석) | 기본=Gemini Flash / `--codex`=gpt-5.2(웹검색+출처) / `--pro`=Gemini Pro |
@@ -111,7 +116,9 @@ Before delegating, ask these questions in order:
 | **Research (web search)** | Gemini | 2.5 Flash | 웹 검색 필요한 리서치 |
 | **Deep analysis** | Gemini | 2.5 Pro | Max 100/day, use sparingly |
 | **Data analysis** | Claude Code | Sonnet | Direct execution |
-| **Notion operations** | Claude Code | Sonnet | Has MCP/script access |
+| **Notion: 조사+콘텐츠+저장** | Gemini | Flash | MCP 직접 연결, 원스톱, 최저비용 |
+| **Notion: DB 설계·편집·판단** | Claude Code | Sonnet | 기능 완전, 판단력 필요 |
+| **Notion: 자동화 저장** | notion_db.py | — | AI 비용 0 |
 
 > **라우팅 기준**: 웹 검색 필요 → Gemini / 웹 검색 불필요 → Codex CLI (ChatGPT 모델)
 > Codex CLI에서 `-m gpt-5.2` 등으로 ChatGPT 모델 지정 가능. 코딩 모델(codex)은 코딩에만 사용.
@@ -246,7 +253,10 @@ To prevent file conflicts during parallel execution:
 | CI/CD, DevOps | GitHub Actions, Docker, 배포 파이프라인 | Codex(파이프라인) + Gemini(에러분석) |
 | 코드 리뷰 | PR 리뷰, diff 분석, 보안 점검 | Claude(Sonnet subagent) |
 | 번역/현지화 | 다국어 텍스트, i18n 파일 | Gemini(대량) + Claude(소량) |
-| 외부 서비스 연동 | Notion, Slack 조회/작성 | Claude(MCP 직접) |
+| Notion 조사+작성 | 가이드북, 리포트 자동 저장 | Gemini(MCP 직접, 원스톱) |
+| Notion DB·복잡한 편집 | 스키마 설계, 판단 필요 작업 | Claude(MCP 직접) |
+| Notion 자동화 저장 | AI 없이 결과 저장 | notion_db.py(비용 0) |
+| Slack | 메시지 조회/작성 | Claude(MCP 직접) |
 | Google 생태계 | YouTube 자막 분석, Drive 문서, Docs | Gemini(네이티브) |
 | 대용량 문서 처리 | 50+ 페이지 PDF, PPT, 스펙 문서 | Gemini(분석) → Claude(요약) |
 

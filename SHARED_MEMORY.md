@@ -94,6 +94,25 @@
 - 65개 문서 임베딩 (로컬 PDF 24개 + 개인 Drive 2개 + 회사 Drive 6개)
 - 조회 스크립트: ~/Desktop/agent-orchestration/scripts/planby_ask.sh
 
+### AnythingLLM 운영 규칙
+
+**워크스페이스 분리 기준**
+| 워크스페이스 | 용도 |
+|---|---|
+| Source of Truth | 최종 정책, 공식 스펙, 계약서, 운영 기준 |
+| Working Docs | 회의록, 초안, 아이디어 메모, 검토 문서 |
+| Tech / Architecture | 시스템 구조, API 설계, DB 구조, 런북 |
+| Sales / Business | 제안서, 고객 요구사항, FAQ, 가격 정책 |
+
+**문서명 규칙**: `YYYY-MM-DD_주제_vN_STATUS.md`
+- STATUS: `FINAL` / `DRAFT` / `ARCHIVE`
+- 예: `2026-03-05_Pricing_Policy_v2_FINAL.md`
+- 구버전은 삭제 말고 Archive 워크스페이스로 이동
+
+**코드 vs 문서**: 코드 자체는 AnythingLLM 대신 레포 검색. 코드 설명 문서만 업로드.
+
+컨텍스트 팩 형식 → SHARED_PRINCIPLES.md AnythingLLM Integration Rules 참조
+
 ### 확인된 B2B 파이프라인 (2026-03-05 회사 Notion 조회)
 - Won 고객사: HK건축(ARR 288만/년 Pro Yearly 2025.09~2026.09), 지안건축설계(서면계약완료 금액미기재)
 - 주요 딜: 삼성E&A 재계약(SE&A v1.0.0-RC1 개발 중), CNP동양 RFI자동화(KPI 35%), Plana 재런칭(16.5%)
@@ -107,6 +126,7 @@
 
 ## Recent Decisions
 
+- **2026-03-06**: Notion 라우팅 재설계. Gemini에 Notion MCP 연결 완료. 조사+저장 원스톱 파이프라인 활성화. 규칙: 조사+콘텐츠→Notion=Gemini, DB설계·판단=Claude, AI없는 저장=notion_db.py. ROUTING_TABLE + adapters/gemini.md 업데이트.
 - **2026-03-05**: knowledge 8개 파일 완성 (2026-03-05): tax_core, tax_incentives, vat, inheritance_gift_tax, valuation_formulas, audit_standards, ifrs_key, commercial_law_company. 15개 에이전트 전원 knowledge 매핑 완료
 - **2026-03-05**: chain.sh 실전 검증 완료 (2026-03-05): expert:ifrs_advisory→tax 2단계 체인, K-IFRS 1020/1012 + 조특법10조 복합 분석. 컨텍스트 누적 정상, 필터링 정상
 - **2026-03-05**: 전문가 에이전트 실무 직무 기반 재편: audit/deal_advisory/valuation/wealth_tax/tax_investigation/ifrs_advisory/international_tax/forensic 8개 추가. Big4 실무 직무 분류 기준 적용.
@@ -134,8 +154,17 @@ _Populated as project patterns emerge._
 ```bash
 git pull
 bash scripts/sync.sh            # settings, guard, adapters 배포
+
+# Claude Code — Notion MCP
 claude mcp add --scope user notion-personal -- npx -y @notionhq/notion-mcp-server
 claude mcp add --scope user notion-company  -- npx -y @notionhq/notion-mcp-server
+
+# Gemini CLI — Notion MCP (조사+저장 원스톱용)
+PERSONAL_NOTION_TOKEN=$(printenv PERSONAL_NOTION_TOKEN)
+gemini mcp add --scope user --trust \
+  -e "OPENAPI_MCP_HEADERS={\"Authorization\": \"Bearer ${PERSONAL_NOTION_TOKEN}\", \"Notion-Version\": \"2022-06-28\"}" \
+  notion-personal npx -y @notionhq/notion-mcp-server
+
 # 환경변수: PERSONAL_NOTION_TOKEN, COMPANY_NOTION_TOKEN → ~/.zshenv
 # AnythingLLM: 별도 설치 후 scripts/planby_ask.sh의 API key 재생성 필요
 ```
