@@ -75,6 +75,31 @@ Before delegating, ask these questions in order:
 | Research + large implementation | **Full orchestration** | Evaluate lib → build feature |
 | Multiple projects in parallel | **Full orchestration** | Frontend + backend simultaneously |
 
+## Notion 워크스페이스 식별 규칙
+
+**404 오류의 주원인: 잘못된 토큰 사용.** page_id를 받으면 아래 순서로 워크스페이스를 판별한다.
+
+### 1단계: page_id로 판별
+SHARED_MEMORY.md "Planby 회사 데이터 지도" 섹션에 등록된 ID → **회사 워크스페이스** (`notion-company`)
+그 외 모든 page_id → **개인 워크스페이스** (`notion-personal`)
+
+### 2단계: 404 발생 시 폴백
+```
+notion-personal로 시도 → 404 → notion-company로 재시도
+notion-company로 시도 → 404 → notion-personal로 재시도
+두 번 다 404 → page_id 자체가 잘못됨, 사용자에게 확인 요청
+```
+
+### 쓰기 권한 규칙 (절대 원칙)
+| 워크스페이스 | 토큰 | 읽기 | 쓰기 |
+|---|---|---|---|
+| 개인 (개인 Notion) | PERSONAL_NOTION_TOKEN | ✅ | ✅ |
+| 회사 (Planby) | COMPANY_NOTION_TOKEN | ✅ | ❌ 절대 금지 |
+
+**Gemini**: `notion-personal`만 연결됨 → 회사 워크스페이스 접근 불가 (의도적 설계)
+
+---
+
 ## Domain-Specific Routing
 
 | 작업 도메인 | 주 에이전트 | 보조 | 이유 |
