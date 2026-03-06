@@ -88,9 +88,17 @@ Even if you think you know — delegate. Gemini is cheap (1,500 req/day), you ar
 | Google 생태계 (YouTube, Drive, Docs) | Gemini | Claude(정리) |
 | 미디어 분석 (이미지/영상/오디오) | Gemini | Codex(구현) |
 | 데이터 파이프라인 | Claude(소규모) / Codex(대규모) | Gemini(분석) |
-| 외부 서비스 연동 (Notion, Slack 등) | Claude(MCP) | Codex(코드) |
+| Notion 조사+작성 (개인/내부) | Gemini(MCP 직접) | — |
+| Notion 외부공유·DB설계·판단 | Claude(MCP) | — |
+| Slack | Claude(MCP) | — |
+| 기타 외부 서비스 연동 | Claude(MCP) | Codex(코드) |
 | 번역/현지화 | Gemini(대량) | Claude(소량) |
 | CI/CD, DevOps | Codex(파이프라인) | Gemini(에러 분석) |
+
+### Notion 워크스페이스 404 대응
+- page_id 판별: SHARED_MEMORY "Planby 회사 데이터 지도" 등록 ID → `notion-company`, 그 외 → `notion-personal`
+- 404 발생 시: 반대 토큰으로 1회 재시도 → 두 번 다 404 → page_id 확인 요청
+- **회사 워크스페이스(notion-company) 쓰기 절대 금지**
 
 > 전체 도메인 라우팅: `~/Desktop/agent-orchestration/ROUTING_TABLE.md`
 
@@ -155,6 +163,7 @@ You are part of a multi-agent orchestration system. Claude Code is the orchestra
 - If information is unknown, reply only: "I don't know."
 - Be concise by default; explain only what is necessary.
 - For calculations: formula + final result only.
+- If the problem is too complex, decompose it into smaller problems. Then, address each of them sequentially.
 
 ## When Called as Worker Agent
 
@@ -191,14 +200,163 @@ If you receive a task brief (structured instruction with Goal / Scope / Constrai
 
 - **MOD**: 54-card thinking framework deck. v1=thought frameworks, v2=knowledge/memory, v3=agents/physical AI.
 - **Planby Pilot**: Business Strategy & Finance. OKR-ROI-Decision structures.
+  - **현재 상태**: 4주 계획 전체 완료. Architecture v1.0 + 4개 운영 매뉴얼 + 대표용 보고서 생성됨.
+  - **세션 인수인계 페이지**: https://www.notion.so/31a85046ff5581b58b6cf4a171319da1
+  - **Architecture v1.0**: 31a85046-ff55-816e-8414-f25e60cbdaed
+  - **대표용 보고서**: 31a85046-ff55-81bb-a57c-cb77428be930
+  - **핵심 발견**:
+    - P_parallel 실데이터: 최대 5건 (2025-09~11). Base 3건은 보수적으로 합리적.
+    - 계약금 실데이터: Won 평균 ~4,900만 (PoC 포함). 대형 커스텀 1억+은 2건.
+    - 재발주율: **9건 중 6건(66.7%)이 기존 고객** ✅ (DIPS 신청서 직접 명시, 2026-02-13)
+    - 재발주 사례: 루시드프로모 2,080만 → 1.52억 (7.3x). PoC First 구조 증거.
+    - **특허 4건 등록 확인** ✅: 10-2759071, 10-2776139, 10-2776140, 10-2797720 (모두 2025년 AI 이미지 생성 관련)
+    - TIPS 협약: 정부지원금 15억 (2024~2027). 2026년 5억 입금 예정 (2026-03-31).
+    - 투자: 500 Global 1.5억 + 카이스트창투 3.5억 = VC 5억. Series A 50~100억 미체결.
+    - 현금: ~1.97억 (2026-03-01 재무제표 기준). TIPS 5억 후 ~6.97억. 런웨이 약 8개월.
+    - 자본잠식 96%. Series A 즉시 착수 필요.
+    - 기술기여도 의무: 2026년 45.76% (TIPS R&D 매출 기술료 납부 의무).
+    - **⚠️ 매출 수정**: 공식 재무제표(세무사 2026-03-04) 기준 2025 서비스매출=2.89억. 이전 "7.8억"은 출처 불명으로 폐기.
+    - 실적 트래킹 (공식): 2023=2,510만 / 2024=4,412만 / 2025=2.89억 (서비스매출). 국고보조금 별도(2025: 3.32억)
+  - **미완성 항목**: Series A 타임라인, TIPS R&D 마일스톤 상세
+  - **⚠️ notion_db.py 주의**: replace-content를 자식 페이지 있는 페이지에 쓰면 자식 페이지 아카이브됨.
+
+## Planby 회사 데이터 지도 (COMPANY_NOTION_TOKEN 사용)
+
+### 워크스페이스 진입점
+- Wiki: d1160001-f128-419a-ac02-25d59e48db3f (연혁, 팀원, 가이드 — 재무 데이터 없음)
+- Dashboard: 2df0ef18-d41a-8011-ac83-d653081208ad (KPIs, Tasks, Squads, 미팅 기록)
+- DB 허브: af1b1893-4176-4cd9-9fe3-fe4839429277 (핵심 — 고객사/모델/프로덕트)
+- 투자사: ed34acc2-d85d-47b3-9deb-973ca8fb3767
+
+### 핵심 데이터베이스 ID
+| DB | ID | 용도 |
+|---|---|---|
+| 고객사 DB | 1ca0ef18-d41a-804b-85a9-c3021962b03f | 고객사 Tier 1-4, N_maint 추정 |
+| 담당자 DB | 2770ef18-d41a-804b-abbb-e19b27164886 | 고객사 담당자 |
+| 고객사 미팅 기록 | 1e40ef18-d41a-805e-8954-e95eff2014ce | 딜 흐름 단서 |
+| Model DB | 1cd0ef18-d41a-80de-94da-cb87bfa3af2e | Custom Engine 모델 현황 |
+| KPIs | 2df0ef18-d41a-81bf-80b4-de7c35cc3d61 | 매출/운영 KPI |
+| AI & SaaS Request | 2a00ef18-d41a-80f0-bd25-fafef0e9bbe5 | SaaS 요청 현황 |
+| Planby 계정 현황 | 2df0ef18-d41a-80f4-8f94-c05f9e798f46 | 유지보수 계약 수 추정 |
+| 통합 미팅 기록 | 30f0ef18-d41a-8169-9150-c698ce5a27a4 | 딜/운영 기록 |
+
+### 탐색 우선순위 (입력값 레지스트리 기준)
+1. 고객사 DB → 계약 건수, N_maint, Tier 분류
+2. KPIs → 매출·마진 수치
+3. Planby 계정 현황 → 유지보수 계약 수
+4. 통합 미팅 기록 → 딜 흐름·병렬 캐파 단서
+
+### 접근 방법
+- Claude Code: COMPANY_NOTION_TOKEN으로 Notion 직접 접근 가능
+- Google Drive: claude.ai 웹에서만 접근 가능 (MCP 미설치)
+- 대용량 분석 시: Gemini에 위임 (DB ID 지정해서 효율화)
+
+## Planby 재무·세무 분석 (2026-03-05 진행 중)
+
+### Notion 페이지 (개인 워크스페이스)
+| 페이지 | ID | 상태 |
+|---|---|---|
+| 📊 재무 기반 다지기 (메인) | 31a85046ff55818f9b92eafa260805aa | ✅ 완료 |
+| 📋 세무사 체크리스트 | 31a85046ff5581298337e2c988c2c9f1 | ✅ 완료 (2026-03-05 R&D/고용세액공제 추가) |
+| 💰 세제 혜택 분석 | 31985046ff5581739709c5bbdaf57bc4 | ✅ 완료 |
+| ✅ 할 일 목록 | 31985046ff5581aaa386cbf9dfd24bac | ✅ 완료 |
+| 🚨 CEO 런웨이 현황 보고 | 31a85046ff5581278c06c638d1026376 | ✅ 완료 (2026-03-05 신규) |
+
+### 핵심 발견
+- 현금 잔고 (3/5 추정): ~1.86억 / 월 소진: ~9,000만
+- **런웨이 수정**: 5월 초 위기 → 2026-03-31 TIPS 5억 입금 후 ~6.86억 → 2026년 11~12월
+- TIPS R&D 총 15억 (24.09~27.08) / 지급 일정: 1차 2024-12(완료), 2차 2025-03(완료), **3차 5억 2026-03-31(26일 후)**, 4차 2027-03
+- 1~2월 지원금 급감 원인 확인: 각 연차 지급 예정일이 3월 말이라 1~3월이 공백 (타이밍 문제, 이상 없음)
+- 2월 급여 급증: 26.01 AI 연구 1명 신규 채용
+- 장기차입금 4.5억 (만기일 미확인)
+- MRR 사실상 0, 매출 대부분 B2B 일회성 프로젝트
+- 2024 R&D 세액공제 42.85백만 이월 중
+
+### AnythingLLM 플랜바이 워크스페이스
+- API Key: planby-cb99f5222e56c3ed40d98c77e35bf001
+- Workspace Slug: 4b7216ef-9bb1-4553-a2b0-0478a73d5b03
+- 65개 문서 임베딩 (로컬 PDF 24개 + 개인 Drive 2개 + 회사 Drive 6개)
+- 조회 스크립트: ~/Desktop/agent-orchestration/scripts/planby_ask.sh
+
+### 확인된 B2B 파이프라인 (2026-03-05 회사 Notion 조회)
+- Won 고객사: HK건축(ARR 288만/년 Pro Yearly 2025.09~2026.09), 지안건축설계(서면계약완료 금액미기재)
+- 주요 딜: 삼성E&A 재계약(SE&A v1.0.0-RC1 개발 중), CNP동양 RFI자동화(KPI 35%), Plana 재런칭(16.5%)
+- KPI Sales Actual 전부 0 → MRR 사실상 제로
+
+### 미완료 — 자료 수령 후 처리
+1. TIPS R&D 협약서 → 2026년 집행금액·타이밍 확인 → 런웨이 재계산
+2. 장기차입금 계약서 → 만기일·상환조건 확인
+3. 2026년 1월 지급수수료 4,489만원 내역 → 반복 여부 확인
+4. 삼성 E&A 재계약 협상 현황 파악 (계약 시 런웨이 즉시 개선)
 
 ## Recent Decisions
 
+- **2026-03-05**: knowledge 8개 파일 완성 (2026-03-05): tax_core, tax_incentives, vat, inheritance_gift_tax, valuation_formulas, audit_standards, ifrs_key, commercial_law_company. 15개 에이전트 전원 knowledge 매핑 완료
+- **2026-03-05**: chain.sh 실전 검증 완료 (2026-03-05): expert:ifrs_advisory→tax 2단계 체인, K-IFRS 1020/1012 + 조특법10조 복합 분석. 컨텍스트 누적 정상, 필터링 정상
+- **2026-03-05**: 전문가 에이전트 실무 직무 기반 재편: audit/deal_advisory/valuation/wealth_tax/tax_investigation/ifrs_advisory/international_tax/forensic 8개 추가. Big4 실무 직무 분류 기준 적용.
+- **2026-03-05**: expert 에이전트 확장: economics, gov_accounting, business, commercial_law 추가. kicpa_agent 실무 특화 재작성 (시험 언어 제거)
+- **2026-03-05**: orchestration upgrade: --cost/--clean 추가, kicpa_agent.sh + law_agent.sh 신규, sync.sh notion_pages.conf 배포, 큐 52개 아카이브
+- **2026-03-05**: connection layer 구현 완료: save_to_notion.sh + memory_update.sh 추가
 - **2026-02-27**: E2E orchestration test passed. Gemini researched (argparse recommended) → Codex generated code → Claude verified. Full pipeline working. Note: Gemini `--sandbox` removed (requires Docker).
 
 ## Conventions
 
 _Populated as project patterns emerge._
+
+## 기기별 시스템 가용성 (2026-03-05 기준)
+
+| 시스템 | Mac mini (주) | Windows PC | 비고 |
+|---|---|---|---|
+| Claude Code + MCP | ✅ | git pull → sync.sh | notion/figma MCP 별도 등록 필요 |
+| AnythingLLM RAG | ✅ localhost:3001 | ❌ 미설치 | 기기별 별도 설치 + 문서 재업로드 |
+| Google Drive (개인) | ✅ 마운트됨 | ❓ 확인 필요 | ~/Library/CloudStorage/ |
+| Google Drive (회사) | ✅ 마운트됨 | ❓ 확인 필요 | steven.jun@planby.us |
+| Figma MCP | ✅ (재시작 필요) | ❌ | launchd + npm 설치 필요 |
+| law_search.py | ✅ | ✅ git pull 후 | Gemini CLI 필요 |
+
+### 새 기기/세션 셋업 순서
+```bash
+git pull
+bash scripts/sync.sh            # settings, guard, adapters 배포
+claude mcp add --scope user notion-personal -- npx -y @notionhq/notion-mcp-server
+claude mcp add --scope user notion-company  -- npx -y @notionhq/notion-mcp-server
+# 환경변수: PERSONAL_NOTION_TOKEN, COMPANY_NOTION_TOKEN → ~/.zshenv
+# AnythingLLM: 별도 설치 후 scripts/planby_ask.sh의 API key 재생성 필요
+```
+
+## 에이전트 확장 (2026-03-05)
+
+### 이미지 생성 에이전트
+- 스크립트: `scripts/image_agent.sh "요청" [--type 로고|캐릭터|마케팅|콘셉트] [--ratio 1:1|16:9|3:4]`
+- 페르소나: `agents/image_persona.md`
+- DALL-E 3 / Midjourney / SD 프롬프트 동시 생성 → ChatGPT 핸드오프
+- Ollama SD 모델 설치 시 자동으로 직접 생성 전환
+
+### 전문직 AI 에이전트
+- 범용 스크립트: `scripts/expert_agent.sh [doctor|lawyer|tax] "질문" [--pro]`
+- 페르소나 폴더: `agents/experts/` (doctor.md, lawyer.md)
+- 새 전문가 추가: `agents/experts/[이름].md` 생성만 하면 자동 인식
+- `bash expert_agent.sh list` 로 목록 확인
+
+### 영상 편집 자동화 (FFmpeg)
+- 스크립트: `scripts/video_edit.sh [trim|merge|resize|gif|thumb|audio|speed|caption|ai]`
+- FFmpeg 없어도 `ai "질문"` 으로 명령어 생성 가능
+- 설치: `brew install ffmpeg`
+
+### 콘텐츠 파이프라인 (소설/책/논문)
+- 스크립트: `scripts/content_pipeline.sh [init|write|compile|status|list]`
+- 페르소나: `agents/content_persona.md`
+- 인테이크: `templates/intake_content.md`
+- 프로젝트 저장 위치: `~/Desktop/content-projects/[프로젝트명]/`
+- 추가 비용 없음 (Gemini Flash 사용)
+
+### 회계사 AI 에이전트
+- 스크립트: `scripts/tax_agent.sh "질문" [--planby] [--pro]`
+- 페르소나: `agents/accountant_persona.md` (조특법 R&D/고용세액공제, TIPS 회계처리 전문)
+- 인테이크: `templates/intake_accounting.md`
+- `--planby`: AnythingLLM 플랜바이 문서 컨텍스트 포함
+- `--pro`: Gemini 2.5 Pro 사용 (심층 분석)
+- 추가 비용 없음 (Gemini Pro 구독 내)
 
 ## Known Issues
 

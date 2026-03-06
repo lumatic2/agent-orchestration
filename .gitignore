@@ -23,3 +23,13 @@ projects/
 tmp/
 *.posco_review
 agents/knowledge/pending/
+
+# Python virtual environments
+.venv*/
+venv*/
+env*/
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store

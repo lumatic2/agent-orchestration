@@ -30,13 +30,15 @@ AGENTS=()
 SAVE_NOTION=false
 SAVE_TITLE=""
 USE_PRO=false
+CAPTURE_MODE=false
 PREV_ARG=""
 
 for arg in "$@"; do
   case "$arg" in
-    --save)  SAVE_NOTION=true ;;
-    --pro)   USE_PRO=true ;;
-    --title) ;;
+    --save)    SAVE_NOTION=true ;;
+    --pro)     USE_PRO=true ;;
+    --capture) CAPTURE_MODE=true ;;
+    --title)   ;;
     *)
       if [ "$PREV_ARG" = "--title" ]; then
         SAVE_TITLE="$arg"
@@ -66,23 +68,28 @@ fi
 
 PRO_FLAG=""
 [ "$USE_PRO" = true ] && PRO_FLAG="--pro"
+AGENT_FLAGS="--capture"
+[ "$USE_PRO" = true ] && AGENT_FLAGS="--capture --pro"
+
+# capture 모드: 헤더/데코는 stderr, stdout은 응답 내용만
+_log() { [ "$CAPTURE_MODE" = true ] && echo "$*" >&2 || echo "$*"; }
 
 # ─── 체인 실행 ────────────────────────────────────────────────
 CONTEXT=""          # 누적 컨텍스트
 CHAIN_LOG=""        # 전체 결과 (Notion 저장용)
 STEP=0
 
-echo "🔗 에이전트 체인 시작"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📌 질문: $QUESTION"
-echo "📋 체인: ${AGENTS[*]}"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+_log "🔗 에이전트 체인 시작"
+_log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+_log "📌 질문: $QUESTION"
+_log "📋 체인: ${AGENTS[*]}"
+_log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+_log ""
 
 for AGENT in "${AGENTS[@]}"; do
   STEP=$((STEP + 1))
-  echo "┌─ STEP $STEP / ${#AGENTS[@]}: $AGENT"
-  echo ""
+  _log "┌─ STEP $STEP / ${#AGENTS[@]}: $AGENT"
+  _log ""
 
   # ─── 에이전트별 질문 구성 ─────────────────────────────────
   if [ -n "$CONTEXT" ]; then
@@ -101,17 +108,17 @@ $CONTEXT"
 
   case "$AGENT" in
     tax)
-      bash "$SCRIPT_DIR/tax_agent.sh" "$FULL_QUESTION" $PRO_FLAG 2>/dev/null | tee "$_TMP" ;;
+      bash "$SCRIPT_DIR/tax_agent.sh" "$FULL_QUESTION" $AGENT_FLAGS 2>/dev/null | tee "$_TMP" ;;
     expert:*)
       ETYPE="${AGENT#expert:}"
-      bash "$SCRIPT_DIR/expert_agent.sh" "$ETYPE" "$FULL_QUESTION" $PRO_FLAG 2>/dev/null | tee "$_TMP" ;;
+      bash "$SCRIPT_DIR/expert_agent.sh" "$ETYPE" "$FULL_QUESTION" $AGENT_FLAGS 2>/dev/null | tee "$_TMP" ;;
     law:*)
       LNAME="${AGENT#law:}"
       bash "$SCRIPT_DIR/law_agent.sh" "$FULL_QUESTION" --law "$LNAME" 2>/dev/null | tee "$_TMP" ;;
     law)
       bash "$SCRIPT_DIR/law_agent.sh" "$FULL_QUESTION" 2>/dev/null | tee "$_TMP" ;;
     *)
-      echo "⚠️  알 수 없는 에이전트: $AGENT (건너뜀)"
+      _log "⚠️  알 수 없는 에이전트: $AGENT (건너뜀)"
       rm -f "$_TMP"
       continue ;;
   esac
@@ -134,28 +141,28 @@ $STEP_OUTPUT
 
 ---
 "
-  echo ""
-  echo "└─ STEP $STEP 완료"
-  echo ""
+  _log ""
+  _log "└─ STEP $STEP 완료"
+  _log ""
 done
 
 # ─── 완료 메시지 ─────────────────────────────────────────────
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "✅ 체인 완료 (${#AGENTS[@]}단계)"
-echo ""
+_log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+_log "✅ 체인 완료 (${#AGENTS[@]}단계)"
+_log ""
 
-# 품질 평가 (체인 전체 품질)
-RATING=""
-read -t 5 -p "📊 체인 품질 평가 (1-5, Enter=스킵): " RATING 2>/dev/null || true
-if [[ "$RATING" =~ ^[1-5]$ ]]; then
-  read -t 10 -p "   메모 (Enter=없음): " FB_NOTE 2>/dev/null || FB_NOTE=""
-  bash "$SCRIPT_DIR/feedback.sh" --log "chain" "$(IFS=+; echo "${AGENTS[*]}")" "$QUESTION" "$RATING" "$FB_NOTE"
-fi
+if [ "$CAPTURE_MODE" = false ]; then
+  # 품질 평가 (capture 모드에서는 스킵)
+  RATING=""
+  read -t 5 -p "📊 체인 품질 평가 (1-5, Enter=스킵): " RATING 2>/dev/null || true
+  if [[ "$RATING" =~ ^[1-5]$ ]]; then
+    read -t 10 -p "   메모 (Enter=없음): " FB_NOTE 2>/dev/null || FB_NOTE=""
+    bash "$SCRIPT_DIR/feedback.sh" --log "chain" "$(IFS=+; echo "${AGENTS[*]}")" "$QUESTION" "$RATING" "$FB_NOTE"
+  fi
 
-echo "💡 다음 단계:"
-echo "   메모리 기록:  bash memory_update.sh \"recent_decisions\" \"chain: $QUESTION\""
-if [ "$SAVE_NOTION" = false ]; then
-  echo "   Notion 저장:  bash chain.sh \"질문\" ... --save"
+  echo "💡 다음 단계:"
+  echo "   메모리 기록:  bash memory_update.sh \"recent_decisions\" \"chain: $QUESTION\""
+  [ "$SAVE_NOTION" = false ] && echo "   Notion 저장:  bash chain.sh \"질문\" ... --save"
 fi
 
 # ─── Notion 저장 ─────────────────────────────────────────────

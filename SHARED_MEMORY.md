@@ -6,6 +6,27 @@
 
 ---
 
+## 슬라이드 생성 시스템 (Living System)
+
+**상태**: 실사용 검증 완료. AP-01~09 누적.
+**핵심 파일**: `~/Desktop/agent-orchestration/slides_config.yaml`
+  - html_layout_patterns: Pattern A/B/C 정의 + CSS 예시
+  - html_anti_patterns: AP-01~09 (원인·증상·수정 코드)
+  - base_template, color_policy, proposal_template 포함
+**렌더 파이프라인**: HTML → `render-slides.sh` → Playwright → PDF → ~/Desktop/
+**검증된 주제**: 개vs고양이, 미쉐린서울, 치앙마이골프, 스포츠난이도, AI에이전트B2BSaaS
+**AP 현황** (slides_config.yaml에 상세 기록):
+  - AP-01: flex column 자식 height:100% → flex:1; min-height:0
+  - AP-02: 고정 height wrapper → flex:1; min-height:0
+  - AP-03: justify-content:center + flex:1 공존 → Pattern B 전환
+  - AP-04: min-height/height:100vh → height:720px 고정
+  - AP-05: 좁은 컬럼 긴 텍스트 → font-size 11px 이하
+  - AP-06: 바 차트 width 임의 설정 → value/max*100% 공식
+  - AP-07: 컬러 오버라이드 시 파스텔 사용 → 원색 유지
+  - AP-08: Pattern C 패널 내부 flex centering 미적용 → justify-content:center 필수
+  - AP-09: 사례박스 absolute bottom 고정 → flex 흐름 안에 margin-top:20px
+**다음 슬라이드 주제**: 빈지노 vs 이센스 힙합 비교 (Gemini 리서치 진행 중, 2026-03-06)
+
 ## Active Projects
 
 - **MOD**: 54-card thinking framework deck. v1=thought frameworks, v2=knowledge/memory, v3=agents/physical AI.
@@ -90,19 +111,30 @@
 
 ### AnythingLLM 플랜바이 워크스페이스
 - API Key: planby-cb99f5222e56c3ed40d98c77e35bf001
-- Workspace Slug: 4b7216ef-9bb1-4553-a2b0-0478a73d5b03
-- 65개 문서 임베딩 (로컬 PDF 24개 + 개인 Drive 2개 + 회사 Drive 6개)
-- 조회 스크립트: ~/Desktop/agent-orchestration/scripts/planby_ask.sh
+- 조회 스크립트: ~/Desktop/agent-orchestration/scripts/planby_ask.sh (워크스페이스 자동 라우팅)
+- 업로드 스크립트: ~/Desktop/agent-orchestration/scripts/planby_upload.sh
+  - `bash planby_upload.sh <파일>` — 자동 분류 업로드
+  - `bash planby_upload.sh <파일> <워크스페이스>` — 수동 지정
+  - `bash planby_upload.sh --list` — 워크스페이스별 문서 수 확인
+
+**워크스페이스 slug 매핑**
+| 워크스페이스 | slug | 용도 |
+|---|---|---|
+| 플랜바이 기준 문서 | 0fb026cf-455b-40b9-911e-33ba8c63dbaa | 계약서, 정책, 운영기준, 공식 스펙 |
+| 플랜바이 재무, 세무 | 51656bcc-e741-4e16-8094-4c813fe259bf | 재무제표, 세무신고, 결산, 회계 |
+| 플랜바이 전략, 영업 | 0e6792e6-bc20-4e49-9d24-91af61bbf5fb | 전략, 영업, 고객, OKR, 가격 |
+| 플랜바이 회의, 초안 | 497efbac-31d9-4864-8d53-98a49437d51e | 회의록, 초안, 메모, 검토 문서 |
+| 플랜바이 (전체/구) | 4b7216ef-9bb1-4553-a2b0-0478a73d5b03 | 분류 불명확 시 fallback |
 
 ### AnythingLLM 운영 규칙
 
 **워크스페이스 분리 기준**
 | 워크스페이스 | 용도 |
 |---|---|
-| Source of Truth | 최종 정책, 공식 스펙, 계약서, 운영 기준 |
-| Working Docs | 회의록, 초안, 아이디어 메모, 검토 문서 |
-| Tech / Architecture | 시스템 구조, API 설계, DB 구조, 런북 |
-| Sales / Business | 제안서, 고객 요구사항, FAQ, 가격 정책 |
+| 기준 문서 | 최종 정책, 공식 스펙, 계약서, 운영 기준 (FINAL 문서) |
+| 재무, 세무 | 재무제표, 세무신고서, 결산 자료, 회계 관련 |
+| 전략, 영업 | 제안서, 고객 요구사항, FAQ, 가격 정책, OKR |
+| 회의, 초안 | 회의록, 초안, 아이디어 메모, 검토 문서 (DRAFT) |
 
 **문서명 규칙**: `YYYY-MM-DD_주제_vN_STATUS.md`
 - STATUS: `FINAL` / `DRAFT` / `ARCHIVE`

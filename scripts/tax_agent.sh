@@ -1,11 +1,12 @@
 #!/bin/bash
 # tax_agent.sh — 회계사 AI 에이전트
-# 사용법: bash tax_agent.sh "질문" [--planby] [--pro] [--save] [--title "제목"]
+# 사용법: bash tax_agent.sh "질문" [--planby] [--pro] [--save] [--capture] [--title "제목"]
 #
 # 옵션:
 #   --planby   플랜바이 AnythingLLM 문서에서 관련 컨텍스트 검색 후 포함
 #   --pro      Gemini 2.5 Pro 사용 (심층 분석, 일 100회 제한)
 #   --save     결과를 Notion에 자동 저장 (PERSONAL_NOTION_TOKEN 필요)
+#   --capture  Claude Code가 결과를 받아 검토하는 모드 (interactive 프롬프트 제거)
 #   --title    Notion 저장 시 제목 (기본: 질문 앞 30자)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,15 +19,19 @@ MODEL="gemini-2.5-flash"
 BACKEND="gemini"
 SAVE_NOTION=false
 SAVE_TITLE=""
+CAPTURE_MODE=false
+BRIEF_MODE=false
 
 PREV_ARG=""
 for arg in "$@"; do
   case "$arg" in
-    --planby) USE_PLANBY=true ;;
-    --pro)    MODEL="gemini-2.5-pro" ;;
-    --codex)  BACKEND="codex"; MODEL="gpt-5.2" ;;
-    --save)   SAVE_NOTION=true ;;
-    --title)  ;;
+    --planby)  USE_PLANBY=true ;;
+    --pro)     MODEL="gemini-2.5-pro" ;;
+    --codex)   BACKEND="codex"; MODEL="gpt-5.2" ;;
+    --save)    SAVE_NOTION=true ;;
+    --capture) CAPTURE_MODE=true ;;
+    --brief)   BRIEF_MODE=true ;;
+    --title)   ;;
     *)
       if [ "$PREV_ARG" = "--title" ]; then
         SAVE_TITLE="$arg"
@@ -59,11 +64,18 @@ PERSONA=$(cat "$PERSONA_FILE")
 # Load knowledge files
 KNOWLEDGE_DIR="$REPO_DIR/agents/knowledge"
 KNOWLEDGE=""
+STALE_DAYS=90
+NOW=$(date +%s)
 for kfile in "$KNOWLEDGE_DIR/tax_core.md" "$KNOWLEDGE_DIR/tax_incentives.md" "$KNOWLEDGE_DIR/vat.md"; do
   if [ -f "$kfile" ]; then
     KNOWLEDGE="$KNOWLEDGE
 $(cat "$kfile")
 "
+    MTIME=$(stat -f %m "$kfile" 2>/dev/null || stat -c %Y "$kfile" 2>/dev/null)
+    if [ -n "$MTIME" ]; then
+      AGE=$(( (NOW - MTIME) / 86400 ))
+      [ "$AGE" -gt "$STALE_DAYS" ] && echo "⚠️  지식파일 오래됨 (${AGE}일): $(basename $kfile) — 내용 검토 필요" >&2
+    fi
   fi
 done
 
@@ -90,16 +102,28 @@ $KNOWLEDGE
 "
 fi
 
+BRIEF_INSTRUCTION=""
+[ "$BRIEF_MODE" = true ] && BRIEF_INSTRUCTION="## 답변 형식
+핵심만 bullet 3~5개로 요약. 총 200자 이내. 상세 설명 생략.
+
+---
+
+"
+
 PROMPT="$PERSONA
 
 ---
 
-${KNOWLEDGE_BLOCK}${PLANBY_CONTEXT}## 질문
+${KNOWLEDGE_BLOCK}${PLANBY_CONTEXT}${BRIEF_INSTRUCTION}## 질문
 $QUESTION"
 
-echo "💼 회계사 AI 처리 중 ($BACKEND / $MODEL)..."
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
+if [ "$CAPTURE_MODE" = false ]; then
+  echo "💼 회계사 AI 처리 중 ($BACKEND / $MODEL)..."
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+else
+  echo "💼 회계사 AI ($BACKEND / $MODEL)..." >&2
+fi
 
 _TMP=$(mktemp)
 if [ "$BACKEND" = "codex" ]; then
@@ -109,22 +133,24 @@ else
 fi
 OUTPUT=$(cat "$_TMP"); rm -f "$_TMP"
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+if [ "$CAPTURE_MODE" = false ]; then
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-# 품질 평가 (5초 타임아웃, Enter=스킵)
-RATING=""
-read -t 5 -p "📊 품질 평가 (1-5, Enter=스킵): " RATING 2>/dev/null || true
-if [[ "$RATING" =~ ^[1-5]$ ]]; then
-  read -t 10 -p "   메모 (Enter=없음): " FB_NOTE 2>/dev/null || FB_NOTE=""
-  bash "$SCRIPT_DIR/feedback.sh" --log "tax" "" "$QUESTION" "$RATING" "$FB_NOTE"
+  # 품질 평가 (5초 타임아웃, Enter=스킵)
+  RATING=""
+  read -t 5 -p "📊 품질 평가 (1-5, Enter=스킵): " RATING 2>/dev/null || true
+  if [[ "$RATING" =~ ^[1-5]$ ]]; then
+    read -t 10 -p "   메모 (Enter=없음): " FB_NOTE 2>/dev/null || FB_NOTE=""
+    bash "$SCRIPT_DIR/feedback.sh" --log "tax" "" "$QUESTION" "$RATING" "$FB_NOTE"
+  fi
+
+  echo "💡 다음 단계:"
+  echo "   Notion 저장:      bash tax_agent.sh \"질문\" --save [--title \"제목\"]"
+  echo "   메모리 기록:      bash memory_update.sh \"recent_decisions\" \"tax: 내용\""
+  echo "   심층 분석:        bash tax_agent.sh \"질문\" --pro"
+  echo "   품질 통계:        bash feedback.sh --stats"
 fi
-
-echo "💡 다음 단계:"
-echo "   Notion 저장:      bash tax_agent.sh \"질문\" --save [--title \"제목\"]"
-echo "   메모리 기록:      bash memory_update.sh \"recent_decisions\" \"tax: 내용\""
-echo "   심층 분석:        bash tax_agent.sh \"질문\" --pro"
-echo "   품질 통계:        bash feedback.sh --stats"
 
 if [ "$SAVE_NOTION" = true ]; then
   [ -z "$SAVE_TITLE" ] && SAVE_TITLE="세무: $(echo "$QUESTION" | cut -c1-30)"

@@ -401,6 +401,25 @@ do_status() {
   done
   exit 0
 }
+
+do_set_status() {
+  local task_id="${1:?Usage: orchestrate.sh set_status <TASK_ID> <TASK_NAME> <NEW_STATUS> [EXTRA_FIELD] [EXTRA_VALUE]}"
+  local task_name="${2:?Usage: orchestrate.sh set_status <TASK_ID> <TASK_NAME> <NEW_STATUS> [EXTRA_FIELD] [EXTRA_VALUE]}"
+  local new_status="${3:?Usage: orchestrate.sh set_status <TASK_ID> <TASK_NAME> <NEW_STATUS> [EXTRA_FIELD] [EXTRA_VALUE]}"
+  local extra_field="${4:-}"
+  local extra_value="${5:-}"
+
+  local task_dir="$QUEUE_DIR/${task_id}_${task_name}"
+  if [ ! -d "$task_dir" ]; then
+    echo "[ERROR] Task directory not found: $task_dir"
+    exit 1
+  fi
+
+  update_meta_status "$task_dir" "$new_status" "$extra_field" "$extra_value"
+  echo "[STATUS_UPDATE] Task $task_id ($task_name) status set to '$new_status'."
+  exit 0
+}
+
 do_resume() {
   echo "=== Resuming oldest pending/queued task ==="
 
@@ -768,6 +787,7 @@ case "${1:-}" in
   --cost)     do_cost ;;
   --clean)    shift; do_clean "${1:-}" ;;
   --chain)    do_chain "$@" ;;
+  set_status) shift; do_set_status "$@" ;;
 esac
 
 # --- Generate task brief from args ---
