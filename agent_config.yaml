@@ -72,8 +72,6 @@ fallback:
       model_key: heavy
     - agent: claude_subagent
       model_key: mid
-    - agent: gemini
-      model_key: default
     - action: queue_and_wait
 
   research:

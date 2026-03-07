@@ -314,11 +314,8 @@ run_with_fallback_code() {
 
   if run_codex "gpt-5.3-codex"; then return 0; fi
 
-  echo "[FALLBACK] Trying Gemini Flash..."
-  if run_gemini "gemini-2.5-flash"; then return 0; fi
-
-  echo "[QUEUED] All agents rate-limited. Task queued for retry."
-  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "all_agents_rate_limited"
+  echo "[QUEUED] Codex rate-limited. Task queued for retry."
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "codex_rate_limited"
   return 1
 }
 
