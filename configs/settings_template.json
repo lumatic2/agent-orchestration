@@ -1,5 +1,8 @@
 {
   "model": "sonnet",
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -16,7 +19,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo 'RULE VIOLATION: WebSearch is blocked. Delegate research to Gemini instead: bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini \"<query>\" <task-name>' >&2 && exit 2"
+            "command": "echo 'RULE VIOLATION: WebSearch is blocked. Delegate research to Gemini instead: bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"<query>\" <task-name>' >&2 && exit 2"
           }
         ]
       }

@@ -9,7 +9,7 @@
 ## 슬라이드 생성 시스템 (Living System)
 
 **상태**: 실사용 검증 완료. AP-01~09 누적.
-**핵심 파일**: `~/Desktop/agent-orchestration/slides_config.yaml`
+**핵심 파일**: `~/projects/agent-orchestration/slides_config.yaml`
   - html_layout_patterns: Pattern A/B/C 정의 + CSS 예시
   - html_anti_patterns: AP-01~09 (원인·증상·수정 코드)
   - base_template, color_policy, proposal_template 포함
@@ -111,8 +111,8 @@
 
 ### AnythingLLM 플랜바이 워크스페이스
 - API Key: planby-cb99f5222e56c3ed40d98c77e35bf001
-- 조회 스크립트: ~/Desktop/agent-orchestration/scripts/planby_ask.sh (워크스페이스 자동 라우팅)
-- 업로드 스크립트: ~/Desktop/agent-orchestration/scripts/planby_upload.sh
+- 조회 스크립트: ~/projects/agent-orchestration/scripts/planby_ask.sh (워크스페이스 자동 라우팅)
+- 업로드 스크립트: ~/projects/agent-orchestration/scripts/planby_upload.sh
   - `bash planby_upload.sh <파일>` — 자동 분류 업로드
   - `bash planby_upload.sh <파일> <워크스페이스>` — 수동 지정
   - `bash planby_upload.sh --list` — 워크스페이스별 문서 수 확인

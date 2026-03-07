@@ -13,8 +13,8 @@ brew install gh          # macOS
 # or: winget install GitHub.cli  # Windows
 
 gh auth login
-git clone https://github.com/Mod41529/agent-orchestration.git ~/Desktop/agent-orchestration
-cd ~/Desktop/agent-orchestration
+git clone https://github.com/Mod41529/agent-orchestration.git ~/projects/agent-orchestration
+cd ~/projects/agent-orchestration
 bash scripts/sync.sh
 ```
 
@@ -117,13 +117,13 @@ gemini \
 ### Via orchestrate.sh (with fallback)
 ```bash
 # Basic dispatch (3rd arg = task name for logs)
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh codex "task" my-task
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh codex-spark "quick task" fix-typo
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini "research task" lib-compare
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini-pro "deep analysis" arch-review
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh codex "task" my-task
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh codex-spark "quick task" fix-typo
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "research task" lib-compare
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini-pro "deep analysis" arch-review
 
 # Auto-generate task brief
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh --brief "goal" "src/auth/" "no extra deps"
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh --brief "goal" "src/auth/" "no extra deps"
 ```
 
 ---
@@ -189,13 +189,13 @@ Safety hook (`guard.sh`) blocks: `rm -rf /`, `git push --force`, `.env` access, 
 
 After any changes to shared files:
 ```bash
-cd ~/Desktop/agent-orchestration
+cd ~/projects/agent-orchestration
 git add -A && git commit -m "Update shared memory" && git push
 ```
 
 On the other device:
 ```bash
-cd ~/Desktop/agent-orchestration
+cd ~/projects/agent-orchestration
 git pull && bash scripts/sync.sh
 ```
 

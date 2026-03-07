@@ -14,7 +14,7 @@ import os
 import subprocess
 import argparse
 
-ORCHESTRATE = os.path.expanduser("~/Desktop/agent-orchestration/scripts/orchestrate.sh")
+ORCHESTRATE = os.path.expanduser("~/projects/agent-orchestration/scripts/orchestrate.sh")
 
 # 주요 법령 약어 → 정식 명칭
 MAJOR_LAWS = {
@@ -86,7 +86,7 @@ def search_via_gemini(query: str, law_filter: str = ""):
         # 로그 파일에서 결과 읽기
         import glob
         logs = sorted(glob.glob(
-            os.path.expanduser(f"~/Desktop/agent-orchestration/logs/gemini_{task_name}*.txt")
+            os.path.expanduser(f"~/projects/agent-orchestration/logs/gemini_{task_name}*.txt")
         ))
         if logs:
             with open(logs[-1]) as f:

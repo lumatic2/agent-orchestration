@@ -10,7 +10,7 @@
 Before evaluating any new task, scan the persistent queue:
 
 ```bash
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh --boot
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
 ```
 
 **Priority order:**

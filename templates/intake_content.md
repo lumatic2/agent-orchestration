@@ -15,16 +15,16 @@
 
 ```bash
 # 1. 목차 생성
-bash ~/Desktop/agent-orchestration/scripts/content_pipeline.sh init "프로젝트명" 소설 "주제"
+bash ~/projects/agent-orchestration/scripts/content_pipeline.sh init "프로젝트명" 소설 "주제"
 
 # 2. 챕터 순서대로 작성 (번호 없으면 자동으로 다음 챕터)
-bash ~/Desktop/agent-orchestration/scripts/content_pipeline.sh write "프로젝트명"
+bash ~/projects/agent-orchestration/scripts/content_pipeline.sh write "프로젝트명"
 
 # 3. 전체 합치기
-bash ~/Desktop/agent-orchestration/scripts/content_pipeline.sh compile "프로젝트명"
+bash ~/projects/agent-orchestration/scripts/content_pipeline.sh compile "프로젝트명"
 
 # 진행 현황 확인
-bash ~/Desktop/agent-orchestration/scripts/content_pipeline.sh status "프로젝트명"
+bash ~/projects/agent-orchestration/scripts/content_pipeline.sh status "프로젝트명"
 ```
 
 ## 결과물 위치

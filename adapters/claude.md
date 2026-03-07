@@ -60,7 +60,7 @@ gemini \
 On every new session, execute immediately:
 
 ```bash
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh --boot
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
 ```
 
 Priority order for pending work:
@@ -100,7 +100,7 @@ Even if you think you know — delegate. Gemini is cheap (1,500 req/day), you ar
 - 404 발생 시: 반대 토큰으로 1회 재시도 → 두 번 다 404 → page_id 확인 요청
 - **회사 워크스페이스(notion-company) 쓰기 절대 금지**
 
-> 전체 도메인 라우팅: `~/Desktop/agent-orchestration/ROUTING_TABLE.md`
+> 전체 도메인 라우팅: `~/projects/agent-orchestration/ROUTING_TABLE.md`
 
 ### Skill Override Guard
 
@@ -185,6 +185,44 @@ If you receive a task brief (structured instruction with Goal / Scope / Constrai
 | **"3"** | Surface key assumptions. Identify weakest assumption. Show impact if it fails. |
 | **"4"** | Answer only via comparison — table or bullet format. No narrative. |
 | **"5"** | Structure: Conclusion → Brief justification → Key risks. |
+
+---
+
+## AnythingLLM Integration Rules
+
+AnythingLLM은 **근거 회수 시스템**으로 쓴다. 정답 저장소가 아니다.
+
+### 컨텍스트 팩 (Claude Code에 넘길 때 이 형식 사용)
+
+```
+Task:
+수행할 작업 1~2줄
+
+Retrieved Evidence:
+- 문서명 / 날짜 / 상태(FINAL|DRAFT) / 핵심 요약
+- 문서명 / 날짜 / 상태 / 핵심 요약
+
+Constraints:
+- 최신 FINAL 문서 우선 / DRAFT는 보조만
+- 충돌 시 차이 명시
+- 불확실하면 추정 말고 Open Questions로
+
+Open Questions:
+- 아직 확정 안 된 부분
+```
+
+검색 결과 원문을 그대로 던지지 말고 반드시 이 형식으로 압축해 전달한다.
+
+### 질의 방식
+
+나쁨: "가격 정책 뭐야"
+좋음: "2026년 현재 유효한 가격 정책 문서와 예외 규정이 있는 문서를 찾아라"
+
+질의에 **주제 + 시점 + 공식성 + 용도** 포함.
+
+### 문서 우선순위
+
+FINAL > DRAFT > 회의록 > 메모. 충돌 시 최신 날짜 + FINAL 우선.
 <!-- END SHARED_PRINCIPLES -->
 
 <!-- BEGIN SHARED_MEMORY -->
@@ -195,6 +233,27 @@ If you receive a task brief (structured instruction with Goal / Scope / Constrai
 > Updated after each significant task completion.
 
 ---
+
+## 슬라이드 생성 시스템 (Living System)
+
+**상태**: 실사용 검증 완료. AP-01~09 누적.
+**핵심 파일**: `~/projects/agent-orchestration/slides_config.yaml`
+  - html_layout_patterns: Pattern A/B/C 정의 + CSS 예시
+  - html_anti_patterns: AP-01~09 (원인·증상·수정 코드)
+  - base_template, color_policy, proposal_template 포함
+**렌더 파이프라인**: HTML → `render-slides.sh` → Playwright → PDF → ~/Desktop/
+**검증된 주제**: 개vs고양이, 미쉐린서울, 치앙마이골프, 스포츠난이도, AI에이전트B2BSaaS
+**AP 현황** (slides_config.yaml에 상세 기록):
+  - AP-01: flex column 자식 height:100% → flex:1; min-height:0
+  - AP-02: 고정 height wrapper → flex:1; min-height:0
+  - AP-03: justify-content:center + flex:1 공존 → Pattern B 전환
+  - AP-04: min-height/height:100vh → height:720px 고정
+  - AP-05: 좁은 컬럼 긴 텍스트 → font-size 11px 이하
+  - AP-06: 바 차트 width 임의 설정 → value/max*100% 공식
+  - AP-07: 컬러 오버라이드 시 파스텔 사용 → 원색 유지
+  - AP-08: Pattern C 패널 내부 flex centering 미적용 → justify-content:center 필수
+  - AP-09: 사례박스 absolute bottom 고정 → flex 흐름 안에 margin-top:20px
+**다음 슬라이드 주제**: 빈지노 vs 이센스 힙합 비교 (Gemini 리서치 진행 중, 2026-03-06)
 
 ## Active Projects
 
@@ -218,6 +277,12 @@ If you receive a task brief (structured instruction with Goal / Scope / Constrai
     - **⚠️ 매출 수정**: 공식 재무제표(세무사 2026-03-04) 기준 2025 서비스매출=2.89억. 이전 "7.8억"은 출처 불명으로 폐기.
     - 실적 트래킹 (공식): 2023=2,510만 / 2024=4,412만 / 2025=2.89억 (서비스매출). 국고보조금 별도(2025: 3.32억)
   - **미완성 항목**: Series A 타임라인, TIPS R&D 마일스톤 상세
+  - **🟡 Win Rate 추정**: 55~65% (Won ~12건 / Active ~7건 / Lost ~7건 추정). B2B SaaS 평균 25~35% 상회 — 니치 특화. ⚠️ Lost 정확 건수는 고객사 DB Archived 뷰 확인 필요.
+  - **🟡 장기차입금 만기 추정**: IBK 4.5억 (연 4.2%, 연 5천만 상환). 운전자금=매년 갱신(2026년 시점 주의), 시설자금=2027~2030년. 완전상환 12년. ⚠️ 대출계약서 원본 확인 필요.
+  - **🟡 MRR 추정**: 현재 200~350만원/월. 연간 SaaS 2,000~3,000만원 = 서비스매출의 7~10%. 나머지 B2B 커스텀.
+  - **N_maint 실수 (2026-03-05 조회)**: 최소 3곳 확인 — HK건축(Pro Yearly 288만/년), 지안건축설계(서면계약완료), 한국공항공사(Pro Monthly ~33만/월, 3개월 결제 완료). 5건 가정 → 3건으로 하향 조정 고려. 삼성E&A 유지보수 계약 별도 확인 필요.
+  - **현재 활성 파이프라인 (2026-03-04 월간 전체 회의 기준)**: 넷폼알앤디 7,000만(계약직전), 위미코 PoC 1,500만+본계약 1.02억, 현대일렉트릭(BIM), 삼성전자(공장AI), 삼성물산(리모델링), LG전자(OI)
+  - **PLAD 가격 모델**: Starter 9.9만/월(마진 60%), Pro 29.9만/월(마진 47%)
   - **⚠️ notion_db.py 주의**: replace-content를 자식 페이지 있는 페이지에 쓰면 자식 페이지 아카이브됨.
 
 ## Planby 회사 데이터 지도 (COMPANY_NOTION_TOKEN 사용)
@@ -274,9 +339,39 @@ If you receive a task brief (structured instruction with Goal / Scope / Constrai
 
 ### AnythingLLM 플랜바이 워크스페이스
 - API Key: planby-cb99f5222e56c3ed40d98c77e35bf001
-- Workspace Slug: 4b7216ef-9bb1-4553-a2b0-0478a73d5b03
-- 65개 문서 임베딩 (로컬 PDF 24개 + 개인 Drive 2개 + 회사 Drive 6개)
-- 조회 스크립트: ~/Desktop/agent-orchestration/scripts/planby_ask.sh
+- 조회 스크립트: ~/projects/agent-orchestration/scripts/planby_ask.sh (워크스페이스 자동 라우팅)
+- 업로드 스크립트: ~/projects/agent-orchestration/scripts/planby_upload.sh
+  - `bash planby_upload.sh <파일>` — 자동 분류 업로드
+  - `bash planby_upload.sh <파일> <워크스페이스>` — 수동 지정
+  - `bash planby_upload.sh --list` — 워크스페이스별 문서 수 확인
+
+**워크스페이스 slug 매핑**
+| 워크스페이스 | slug | 용도 |
+|---|---|---|
+| 플랜바이 기준 문서 | 0fb026cf-455b-40b9-911e-33ba8c63dbaa | 계약서, 정책, 운영기준, 공식 스펙 |
+| 플랜바이 재무, 세무 | 51656bcc-e741-4e16-8094-4c813fe259bf | 재무제표, 세무신고, 결산, 회계 |
+| 플랜바이 전략, 영업 | 0e6792e6-bc20-4e49-9d24-91af61bbf5fb | 전략, 영업, 고객, OKR, 가격 |
+| 플랜바이 회의, 초안 | 497efbac-31d9-4864-8d53-98a49437d51e | 회의록, 초안, 메모, 검토 문서 |
+| 플랜바이 (전체/구) | 4b7216ef-9bb1-4553-a2b0-0478a73d5b03 | 분류 불명확 시 fallback |
+
+### AnythingLLM 운영 규칙
+
+**워크스페이스 분리 기준**
+| 워크스페이스 | 용도 |
+|---|---|
+| 기준 문서 | 최종 정책, 공식 스펙, 계약서, 운영 기준 (FINAL 문서) |
+| 재무, 세무 | 재무제표, 세무신고서, 결산 자료, 회계 관련 |
+| 전략, 영업 | 제안서, 고객 요구사항, FAQ, 가격 정책, OKR |
+| 회의, 초안 | 회의록, 초안, 아이디어 메모, 검토 문서 (DRAFT) |
+
+**문서명 규칙**: `YYYY-MM-DD_주제_vN_STATUS.md`
+- STATUS: `FINAL` / `DRAFT` / `ARCHIVE`
+- 예: `2026-03-05_Pricing_Policy_v2_FINAL.md`
+- 구버전은 삭제 말고 Archive 워크스페이스로 이동
+
+**코드 vs 문서**: 코드 자체는 AnythingLLM 대신 레포 검색. 코드 설명 문서만 업로드.
+
+컨텍스트 팩 형식 → SHARED_PRINCIPLES.md AnythingLLM Integration Rules 참조
 
 ### 확인된 B2B 파이프라인 (2026-03-05 회사 Notion 조회)
 - Won 고객사: HK건축(ARR 288만/년 Pro Yearly 2025.09~2026.09), 지안건축설계(서면계약완료 금액미기재)
@@ -291,6 +386,7 @@ If you receive a task brief (structured instruction with Goal / Scope / Constrai
 
 ## Recent Decisions
 
+- **2026-03-06**: Notion 라우팅 재설계. Gemini에 Notion MCP 연결 완료. 조사+저장 원스톱 파이프라인 활성화. 규칙: 조사+콘텐츠→Notion=Gemini, DB설계·판단=Claude, AI없는 저장=notion_db.py. ROUTING_TABLE + adapters/gemini.md 업데이트.
 - **2026-03-05**: knowledge 8개 파일 완성 (2026-03-05): tax_core, tax_incentives, vat, inheritance_gift_tax, valuation_formulas, audit_standards, ifrs_key, commercial_law_company. 15개 에이전트 전원 knowledge 매핑 완료
 - **2026-03-05**: chain.sh 실전 검증 완료 (2026-03-05): expert:ifrs_advisory→tax 2단계 체인, K-IFRS 1020/1012 + 조특법10조 복합 분석. 컨텍스트 누적 정상, 필터링 정상
 - **2026-03-05**: 전문가 에이전트 실무 직무 기반 재편: audit/deal_advisory/valuation/wealth_tax/tax_investigation/ifrs_advisory/international_tax/forensic 8개 추가. Big4 실무 직무 분류 기준 적용.
@@ -318,8 +414,17 @@ _Populated as project patterns emerge._
 ```bash
 git pull
 bash scripts/sync.sh            # settings, guard, adapters 배포
+
+# Claude Code — Notion MCP
 claude mcp add --scope user notion-personal -- npx -y @notionhq/notion-mcp-server
 claude mcp add --scope user notion-company  -- npx -y @notionhq/notion-mcp-server
+
+# Gemini CLI — Notion MCP (조사+저장 원스톱용)
+PERSONAL_NOTION_TOKEN=$(printenv PERSONAL_NOTION_TOKEN)
+gemini mcp add --scope user --trust \
+  -e "OPENAPI_MCP_HEADERS={\"Authorization\": \"Bearer ${PERSONAL_NOTION_TOKEN}\", \"Notion-Version\": \"2022-06-28\"}" \
+  notion-personal npx -y @notionhq/notion-mcp-server
+
 # 환경변수: PERSONAL_NOTION_TOKEN, COMPANY_NOTION_TOKEN → ~/.zshenv
 # AnythingLLM: 별도 설치 후 scripts/planby_ask.sh의 API key 재생성 필요
 ```
@@ -361,4 +466,23 @@ claude mcp add --scope user notion-company  -- npx -y @notionhq/notion-mcp-serve
 ## Known Issues
 
 _Tracked here when agents encounter blockers._
+
+## 실전 사례: POSCO 제안서 (2026-03-06)
+
+### MCP 작업은 위임 불가 — 직접 실행 원칙
+Notion/Slack 등 MCP 도구가 필요한 작업은 Codex/Gemini에 위임 불가 (MCP 접근 권한 없음).
+위임 결정 전 체크: "이 작업에 MCP가 필요한가?" → YES면 Claude 직접 실행.
+
+### Notion API 실전 한계
+- 블록 100개/요청 한도 → 초과 시 400 에러 → `append_paragraphs`에 chunk_size=100 청킹 적용
+- `notion_db.py` 버그 수정 완료: `_looks_like_markdown` 루프 내 early return 오류
+
+### 제안서 AI 지원 패턴 (비즈니스)
+1. **익명화**: 고객사명 → "도메인 전문사" (예: 넷폼알앤디 → 건축 도메인 전문사)
+2. **현학적 표현 3계층**: 제목(추상 개념어) / 도표(기술 용어 RAG·Embedding) / 본문(평이한 언어)
+3. **수혜자 중심 리프레이밍**: "타사 납품 사례" 뉘앙스 → "귀사 전용 구조" 프레이밍
+
+### 긴 세션 컨텍스트 관리
+- `/tmp/` 파일을 버전별 중간 저장소로 활용 (posco_v5_slim.md → posco_v6.md)
+- 컨텍스트 압축 발동 전 SHARED_MEMORY 업데이트가 연속성 핵심
 <!-- END SHARED_MEMORY -->

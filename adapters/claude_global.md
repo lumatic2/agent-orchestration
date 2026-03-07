@@ -1,5 +1,27 @@
 # Claude Code — Global Instructions
 
+## FIRST ACTION (Every Session, No Exceptions)
+
+```bash
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
+```
+
+Then apply the Self-Execution Guard before writing a single line of code:
+
+| Condition | Action |
+|---|---|
+| 50+ lines of code to write | STOP → `orchestrate.sh codex "task" name` |
+| 4+ files to create/modify | STOP → `orchestrate.sh codex "task" name` |
+| Any research needed | STOP → `orchestrate.sh gemini "task" name` |
+| Simple edit (1-3 files, <50 lines) | Proceed directly |
+
+Examples:
+- "지뢰찾기 게임 만들어줘" → Python ~100줄 → **`orchestrate.sh codex`로 위임**
+- "README 첫 줄 수정" → 1파일 1줄 → 직접 수행
+- "이 라이브러리 최신 버전 찾아줘" → 리서치 → **`orchestrate.sh gemini`로 위임**
+
+---
+
 ## Pre-flight: Validate Input Before Executing
 
 Before starting ANY non-trivial task, check if the user provided enough information. Orchestration is expensive — unclear input wastes tokens and produces wrong results.
@@ -12,7 +34,7 @@ Before starting ANY non-trivial task, check if the user provided enough informat
 
 ### How to run pre-flight
 1. Identify the task type (website, app, feature, refactor, research)
-2. Check against the matching intake template in `~/Desktop/agent-orchestration/templates/intake_*.md`
+2. Check against the matching intake template in `~/projects/agent-orchestration/templates/intake_*.md`
 3. If required fields are missing, **ask the user before proceeding** — list only the missing required fields
 4. If the user provides an intake template already filled out, proceed immediately
 
@@ -57,14 +79,14 @@ You are the orchestrator of a multi-agent system. Before executing any task, det
 
 **To Codex** (code generation, refactoring, test loops):
 ```bash
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh codex "task" task-name
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh codex-spark "quick task" task-name
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh codex "task" task-name
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh codex-spark "quick task" task-name
 ```
 
 **To Gemini** (research, doc analysis):
 ```bash
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini "task" task-name
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini-pro "deep analysis" task-name
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "task" task-name
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini-pro "deep analysis" task-name
 ```
 
 ### Delegation Rules
@@ -72,7 +94,7 @@ bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh gemini-pro "deep analy
 - Write a clear task brief with: Goal, Scope (files), Constraints, Done Criteria.
 - For Codex: pass structured instructions. It handles file reads, code edits, and test runs autonomously.
 - For Gemini: ask focused questions. It returns research findings.
-- After delegation: review results, then update `~/Desktop/agent-orchestration/SHARED_MEMORY.md` if significant.
+- After delegation: review results, then update `~/projects/agent-orchestration/SHARED_MEMORY.md` if significant.
 
 ### Token Discipline
 
@@ -110,7 +132,7 @@ When a task requires tools without CLI/API (Figma, Midjourney, Gamma, Suno, Klin
 - User explicitly asks about a Tier 3 tool
 
 **How to generate:**
-1. Read the relevant template from `~/Desktop/agent-orchestration/templates/handoff_*.md`
+1. Read the relevant template from `~/projects/agent-orchestration/templates/handoff_*.md`
 2. Fill it with specific, actionable details for the current task
 3. Present it to the user as a clear next step
 
@@ -131,7 +153,7 @@ When a task requires tools without CLI/API (Figma, Midjourney, Gamma, Suno, Klin
 Every new session, run as your **first action**:
 
 ```bash
-bash ~/Desktop/agent-orchestration/scripts/orchestrate.sh --boot
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
 ```
 
 If pending/stale tasks exist, **handle them before accepting new work**:
@@ -204,12 +226,12 @@ bash orchestrate.sh --resume
 bash orchestrate.sh --complete T001 "summary"
 ```
 
-Queue entries persist across sessions in `~/Desktop/agent-orchestration/queue/`.
+Queue entries persist across sessions in `~/projects/agent-orchestration/queue/`.
 
 ### Reference Files
 
-- Full routing table: `~/Desktop/agent-orchestration/ROUTING_TABLE.md`
-- Shared memory: `~/Desktop/agent-orchestration/SHARED_MEMORY.md`
-- Shared principles: `~/Desktop/agent-orchestration/SHARED_PRINCIPLES.md`
-- Config (models/flags): `~/Desktop/agent-orchestration/agent_config.yaml`
-- Handoff templates: `~/Desktop/agent-orchestration/templates/handoff_*.md`
+- Full routing table: `~/projects/agent-orchestration/ROUTING_TABLE.md`
+- Shared memory: `~/projects/agent-orchestration/SHARED_MEMORY.md`
+- Shared principles: `~/projects/agent-orchestration/SHARED_PRINCIPLES.md`
+- Config (models/flags): `~/projects/agent-orchestration/agent_config.yaml`
+- Handoff templates: `~/projects/agent-orchestration/templates/handoff_*.md`
