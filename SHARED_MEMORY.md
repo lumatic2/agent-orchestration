@@ -27,6 +27,44 @@
   - AP-09: 사례박스 absolute bottom 고정 → flex 흐름 안에 margin-top:20px
 **다음 슬라이드 주제**: 빈지노 vs 이센스 힙합 비교 (Gemini 리서치 진행 중, 2026-03-06)
 
+## 2026-03-08 오케스트레이션 실전 검증 기록
+
+### 검증된 패턴
+- **Gemini 리서치 병렬 디스패치**: 3개 태스크 동시 → 각 5~10분 내 완료. 효과적.
+- **Codex 단일 파일 생성**: vbt_backtest.py, video_creator.py — 명확한 brief + 완료 기준 필수.
+- **노션 MCP vs notion_db.py**: MCP는 회사 워크스페이스만. 개인 워크스페이스는 notion_db.py 필수.
+- **M1 헤드리스 자동화**: OpenClaw → SSH → Windows/MacBook Air 완전 작동. launchd로 스케줄 등록.
+
+### 새로 구축된 시스템
+- **content-automation**: GitHub Mod41529/content-automation (private)
+  - Gemini 2.5 Flash로 콘텐츠 생성 (무료, 1,500 req/일)
+  - YouTube OAuth 완료 (`credentials/youtube_token.json`)
+  - M1 launchd 등록: 화/목/토 10:00 자동 실행
+  - ⏳ MoviePy 영상 생성 모듈 (T058 Codex 작업 중)
+- **investment-bot**: VectorBT 백테스팅 레이어 추가 (`vbt_backtest.py`)
+  - 삼성전자 모멘텀 최적값: fast=30, slow=80 (+423%, Sharpe 1.52)
+
+### SSH 전체 연결 현황 (2026-03-08 완성)
+| 연결 | 방식 | alias |
+|---|---|---|
+| MacBook Air → Windows | Tailscale (100.103.17.19) | `ssh windows` |
+| Windows → MacBook Air | Tailscale (100.87.7.85) | `ssh macair` |
+| M1 → Windows | LAN (192.168.200.200) | `ssh windows` |
+| M1 → MacBook Air | LAN (192.168.200.104) | `ssh macair` |
+| Windows → M1 | LAN (192.168.200.164) | `ssh m1` |
+| ↔ M4 | Tailscale 미설치 | 회사 방문 후 |
+
+### 설치된 도구 (Windows)
+- lazygit (alias: lg), fzf, Ruff, Poetry, VectorBT, google-genai
+- Ruff Claude Code 훅: Edit/Write 시 .py 자동 린트
+
+### API 키 현황
+- Gemini API: aistudio.google.com (무료 Flash 1,500/일)
+- YouTube OAuth: credentials/youtube_token.json (M1 + Windows)
+- Moonshot/Kimi: ~/.zshrc MOONSHOT_API_KEY (M1, OpenClaw 사용)
+
+---
+
 ## Active Projects
 
 - **MOD**: 54-card thinking framework deck. v1=thought frameworks, v2=knowledge/memory, v3=agents/physical AI.
