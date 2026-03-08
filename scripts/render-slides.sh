@@ -49,18 +49,26 @@ else
 fi
 
 OUTPUT_DIR="${OUTPUT_DIR/#\~/$HOME}"
+# Windows 경로 변환 (Git Bash: /c/Users/... → C:/Users/...)
+if [[ "$OUTPUT_DIR" =~ ^/([a-zA-Z])/ ]]; then
+  OUTPUT_DIR="${BASH_REMATCH[1]^^}:/${OUTPUT_DIR:3}"
+fi
 PDF_PATH="$OUTPUT_DIR/$OUTPUT_NAME.pdf"
 
 # ── 임시 JS 렌더 스크립트 생성 ──────────────────────────────────────
 TMP_JS=$(mktemp /tmp/render-XXXXXX.js)
 ABS_HTML=$(cd "$(dirname "$HTML_FILE")" && pwd)/$(basename "$HTML_FILE")
+# Windows 경로 변환 (Git Bash: /c/Users/... → C:/Users/...)
+if [[ "$ABS_HTML" =~ ^/([a-zA-Z])/ ]]; then
+  ABS_HTML="${BASH_REMATCH[1]^^}:/${ABS_HTML:3}"
+fi
 
 cat > "$TMP_JS" << JSEOF
 const { chromium } = require('playwright');
 const path = require('path');
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ channel: 'chrome' });
   const page = await browser.newPage();
 
   await page.goto('file://${ABS_HTML}');
@@ -101,7 +109,7 @@ JSEOF
 echo "렌더 중: $HTML_FILE → $PDF_PATH"
 
 # playwright 모듈 위치 찾기 (~/Desktop/node_modules 우선)
-export NODE_PATH="$HOME/Desktop/node_modules:$(node -e 'console.log(require.resolve.paths("playwright").join(":"))'  2>/dev/null || true)"
+export NODE_PATH="/c/Users/1/AppData/Roaming/npm/node_modules:$HOME/Desktop/node_modules:$(node -e 'console.log(require.resolve.paths("playwright").join(":"))'  2>/dev/null || true)"
 cd "$HOME/Desktop" 2>/dev/null || true
 node "$TMP_JS"
 
