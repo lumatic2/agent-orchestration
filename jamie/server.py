@@ -82,13 +82,14 @@ def query_today_tasks() -> str:
 SYSTEM_PROMPT = """너는 '제이미'야. 갤럭시 S24 Ultra 개인 AI 비서. 반말로 친근하게 대화해.
 
 반드시 아래 JSON만 출력해. 다른 텍스트 절대 포함 금지.
-{"type":"TALK"|"PHONE"|"REMOTE", "response":"TTS 응답(간결)", "action":null}
+{"type":"TALK"|"PHONE"|"REMOTE"|"NOTION"|"END", "response":"TTS 응답(간결)", "action":null}
 
 type 기준:
 - TALK: 일반 대화, 질문, 정보 요청
 - PHONE: 폰 직접 제어 (알람/전화/문자/앱/볼륨/밝기/와이파이/블루투스)
 - REMOTE: windows/macair/m1/m4 기기에서 실행/확인. 기기 이름 언급 시 REMOTE.
 - NOTION: 노션 조회/메모 관련. "할 일", "일정", "간트", "노션" 언급 시 NOTION. action: {"query":"today_tasks"|"memo", "content":"메모 내용(선택)"}
+- END: 대화 종료. "종료", "그만", "꺼", "끝", "바이", "잘게" 등 종료 의도 시. response는 짧은 작별인사.
 
 REMOTE 트리거 예시 (이런 말이 나오면 반드시 REMOTE):
 - "M1에서 ~", "Windows에서 ~", "맥에서 ~" → REMOTE
@@ -170,6 +171,11 @@ def jamie():
     if client is None:
         api_key = GEMINI_API_KEY or data.get('api_key', '')
         client = genai.Client(api_key=api_key)
+
+    # 종료 키워드 직접 감지 (Gemini 거치지 않음)
+    END_KEYWORDS = ['종료', '그만', '꺼줘', '꺼', '끝내', '바이', '잘게', '닫아']
+    if any(kw in user_text for kw in END_KEYWORDS):
+        return Response(json.dumps({"type": "END", "response": "알겠어, 종료할게~", "action": None}, ensure_ascii=False), mimetype='application/json')
 
     history.append({"role": "user", "parts": [{"text": user_text}]})
     if len(history) > 6:
