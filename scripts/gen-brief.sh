@@ -174,7 +174,7 @@ if [ "$preset" = "planby_dark" ]; then
 slide_patterns=(
   "Pattern C|magazine_split"
   "Pattern A|bento_grid"
-  "Pattern C|2분할 (비교/대조)"
+  "Pattern C|2분할"
   "Pattern A|comparison_table"
   "Pattern A|zigzag_rows"
   "Pattern B|stat_trio"
@@ -184,92 +184,44 @@ slide_patterns=(
 )
 
 slide_sections=(
-"### S1 — 타이틀 [Pattern C: magazine_split]
+"### S1 — 타이틀 [magazine_split]
 - 주제: ${topic}
-- 좌 패널 58%: planby 로고(상단) + 주제 대형 타이틀 + 부제 1줄 + 날짜/버전
-- 우 패널 42%: 인디고 퍼플(#5E5CE6) 곡선 웨이브 + 도트 장식 (SVG, 회사소개서 표지 스타일)
-- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
-"### S2 — TODO [Pattern A: bento_grid]
+- 좌 60%: 배지(PLANBY) + 주제 대형 타이틀 + 부제 1줄 + 날짜/버전
+- 우 40%: planby-wave 클래스 SVG 장식 (곡선 2~3줄 + 도트 10개, stroke:#5E5CE6)"
+"### S2 — TODO [bento_grid]
 - badge: 현황 분석
 - 제목: TODO
-- 카드 3~4개: 각 카드 = 라벨(소형) + 핵심 수치/키워드(중대형, 인디고색) + 설명 2~3줄
-- 반드시 이 CSS를 사용할 것:
-  .b-card { display:flex; flex-direction:column; gap:10px; padding:28px 24px; height:100%; background:var(--bg-card); border-radius:12px; }
-  .b-label { font-size:11px; color:var(--text-muted); font-weight:600; letter-spacing:0.06em; text-transform:uppercase; }
-  .b-value { font-size:36px; font-weight:800; color:var(--accent-text, var(--accent)); line-height:1.1; }
-  .b-desc { font-size:12px; color:var(--text-sub); line-height:1.7; }
-- ⚠️ justify-content:space-between 절대 금지. margin-top:auto 절대 금지
-- 설명 텍스트는 2~3줄 분량으로 충분히 작성해 카드 공백 방지"
-"### S3 — TODO [Pattern C: 2분할 (비교/대조)]
+- 카드 3~4개: 각 카드에 라벨(소형, muted) + 핵심 수치(대형, accent-text) + 설명 2~3줄"
+"### S3 — TODO [2분할]
 - badge: 핵심 비교
-- 좌 패널 50%: badge + 제목 + 핵심 주장 3~4포인트
-- 우 패널 50%: 대비 항목 or 데이터 시각화 (수치·그래프 대체 표현)
-- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
-"### S4 — TODO [Pattern A: comparison_table]
+- 제목: TODO
+- 좌 50%: 핵심 주장 3~4포인트
+- 우 50%: 수치 비교 or 카드 그리드"
+"### S4 — TODO [comparison_table]
 - badge: 기능 구성
 - 제목: TODO
-- 표: 3~4행 × 3열 비교 (항목명 | Before | After 또는 A안 | B안)
-- 헤더 배경: var(--accent) 인디고"
-"### S5 — TODO [Pattern A: zigzag_rows]
+- 표: 4행 × 3열 (항목 | Before | After)"
+"### S5 — TODO [zigzag_rows]
 - badge: 실행 흐름
 - 제목: TODO
-- 행 3개: 각 행 = 아이콘 원형(인디고) + 단계명 + 설명 1~2줄
-- 연결선: 인디고 점선 (--border 색상)"
-"### S6 — TODO [Pattern B: stat_trio]
+- 3단계: 각 행 = 번호 원형 + 단계명 + 설명 1~2줄"
+"### S6 — TODO [stat_trio]
 - badge: 운영 지표
 - 제목: TODO
-- 핵심 수치 3개: 각 카드 = 숫자(초대형) + 액센트 구분선 + 라벨 + 설명 텍스트 2~3줄
-- 반드시 이 HTML 구조를 사용할 것:
-  <div class=\"stat-card\">
-    <div class=\"stat-number\">숫자</div>
-    <div class=\"stat-divider\"></div>
-    <div class=\"stat-label\">라벨</div>
-    <div class=\"stat-desc\">설명 2~3줄 (충분한 텍스트로 카드 채울 것)</div>
-  </div>
-- 반드시 이 CSS를 사용할 것:
-  .stat-card { display:flex; flex-direction:column; gap:12px; padding:32px 28px; height:100%; background:var(--bg-card); border-radius:12px; }
-  .stat-number { font-size:72px; font-weight:800; color:#FFFFFF; line-height:1; }
-  .stat-divider { width:36px; height:3px; background:var(--accent); border-radius:2px; opacity:0.6; }
-  .stat-label { font-size:14px; color:var(--text-sub); font-weight:600; }
-  .stat-desc { font-size:12px; color:var(--text-muted); line-height:1.7; }
-- ⚠️ justify-content:space-between 절대 금지. margin-top:auto 절대 금지"
-"### S7 — TODO [Pattern A: timeline_flow]
+- 수치 3개: 각 카드에 대형 숫자 + 단위 + 라벨 + 설명 2~3줄"
+"### S7 — TODO [timeline_flow]
 - badge: 로드맵
 - 제목: TODO
-- 타임라인 4단계: 각 카드 = 날짜 + 인디고 점(노드) + 단계명 + 설명 3~4줄 (카드를 채울 충분한 텍스트 필수)
-- 반드시 이 HTML 구조를 사용할 것:
-  <div class=\"tl-card\">
-    <div class=\"tl-date\">기간</div>
-    <div class=\"tl-node\"></div>
-    <div class=\"tl-title\">단계명</div>
-    <div class=\"tl-body\">설명 3~4줄. 구체적 액션/파일명/수치 포함.</div>
-  </div>
-- 반드시 이 CSS를 사용할 것:
-  .tl-card { display:flex; flex-direction:column; gap:10px; padding:24px 20px; height:100%; background:var(--bg-card); border-radius:12px; }
-  .tl-date { font-size:11px; color:var(--text-muted); font-weight:500; }
-  .tl-node { width:14px; height:14px; border-radius:50%; background:var(--accent); flex-shrink:0; }
-  .tl-title { font-size:17px; font-weight:700; color:var(--text); }
-  .tl-body { font-size:12px; color:var(--text-sub); line-height:1.7; }
-- ⚠️ justify-content:space-between 절대 금지. margin-top:auto 절대 금지"
-"### S8 — TODO [Pattern C: 3분할 big_statement]
+- 4단계: 각 카드에 날짜 + 단계명 + 설명 3~4줄 (구체적 수치·액션 포함)"
+"### S8 — TODO [3분할 big_statement]
 - badge: 핵심 메시지
-- 패널 CSS (반드시 준수):
-  .slide-inner { display:flex; width:100%; height:100%; }
-  .panel-left { width:30%; display:flex; flex-direction:column; justify-content:center; padding:48px 32px; background:var(--bg-card); }
-  .panel-mid  { width:40%; display:flex; flex-direction:column; justify-content:center; padding:48px 32px; }
-  .panel-right{ width:30%; display:flex; flex-direction:column; justify-content:center; padding:48px 32px; background:var(--bg-card2); }
-- 좌 패널: badge + 핵심 메시지 대형(font-size:28px, font-weight:700, word-break:keep-all)
-- 중앙 패널: 주요 근거 리스트 or 시각화 요소
-- 우 패널: 보조 수치 or 요약 포인트 (번호 목록)"
-"### S9 — TODO [Pattern C: three_split_verdict]
-- 패널 CSS (반드시 준수):
-  .slide-inner { display:flex; width:100%; height:100%; }
-  .panel-left  { width:33%; display:flex; flex-direction:column; justify-content:center; padding:48px 36px; background:var(--bg-card); }
-  .panel-mid   { width:34%; display:flex; flex-direction:column; justify-content:center; padding:48px 36px; }
-  .panel-right { width:33%; display:flex; flex-direction:column; justify-content:center; padding:48px 36px; background:var(--bg-card2); }
-- 좌 패널: 핵심 메시지 1문장 대형(font-size:26px, font-weight:700, word-break:keep-all)
-- 중앙 패널: badge(CTA) + 실행 포인트 3가지 (번호 + 한 줄)
-- 우 패널: 다음 단계 구체 명령어 or 연락처 (font-family:monospace for commands)"
+- 좌 30%: 핵심 메시지 대형 1~2문장
+- 중 40%: 근거 리스트 or 주요 수치
+- 우 30%: 요약 포인트 번호 목록"
+"### S9 — TODO [three_split_verdict]
+- 좌 33%: 결론 1문장 대형
+- 중 34%: badge(CTA) + 실행 포인트 3가지
+- 우 33%: 다음 단계 명령 or 연락처"
 )
 
 else
@@ -279,7 +231,7 @@ slide_patterns=(
   "Pattern C|magazine_split"
   "Pattern A|bento_grid"
   "Pattern A|comparison_table"
-  "Pattern C|2분할 (비교/대조)"
+  "Pattern C|2분할"
   "Pattern A|zigzag_rows"
   "Pattern B|stat_trio"
   "Pattern A|bento_grid"
@@ -288,45 +240,43 @@ slide_patterns=(
 )
 
 slide_sections=(
-"### S1 — 타이틀 [Pattern C: magazine_split]
+"### S1 — 타이틀 [magazine_split]
 - 주제: ${topic}
-- 좌 패널 58%: TODO
-- 우 패널 42%: TODO
-- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
-"### S2 — TODO [Pattern A: bento_grid]
+- 좌 58%: 배지 + 주제 대형 타이틀 + 부제 1줄
+- 우 42%: 주제와 어울리는 시각 요소 (아이콘, 도형, 패턴)"
+"### S2 — TODO [bento_grid]
 - badge: TODO
 - 제목: TODO
-- 내용: TODO"
-"### S3 — TODO [Pattern A: comparison_table]
+- 카드 3~4개: 각 카드에 라벨 + 핵심 수치/키워드 + 설명 2~3줄"
+"### S3 — TODO [comparison_table]
 - badge: TODO
 - 제목: TODO
-- 표 항목: TODO"
-"### S4 — TODO [Pattern C: 2분할 (비교/대조)]
-- 좌 패널: TODO
-- 우 패널: TODO
-- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
-"### S5 — TODO [Pattern A: zigzag_rows]
+- 표: 3~4행 × 3열 비교"
+"### S4 — TODO [2분할]
 - badge: TODO
 - 제목: TODO
-- 행 구성: TODO"
-"### S6 — TODO [Pattern B: stat_trio]
+- 좌 패널: 핵심 주장 + 포인트 목록
+- 우 패널: 수치 or 대비 항목"
+"### S5 — TODO [zigzag_rows]
 - badge: TODO
 - 제목: TODO
-- 핵심 수치 3개: TODO"
-"### S7 — TODO [Pattern A: bento_grid]
+- 3단계 흐름: 번호 + 단계명 + 설명"
+"### S6 — TODO [stat_trio]
 - badge: TODO
 - 제목: TODO
-- 카드 구성: TODO"
-"### S8 — TODO [Pattern C: 3분할 big_statement]
-- 좌 패널: TODO
-- 중앙 패널: TODO
-- 우 패널: TODO
-- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
-"### S9 — TODO [Pattern C: three_split_verdict]
-- 좌 패널: TODO
-- 중앙 패널: TODO
-- 우 패널: TODO
-- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
+- 수치 3개: 대형 숫자 + 라벨 + 설명 2~3줄"
+"### S7 — TODO [bento_grid]
+- badge: TODO
+- 제목: TODO
+- 카드 3~4개: 각 카드에 제목 + 내용"
+"### S8 — TODO [3분할 big_statement]
+- 좌 패널: 핵심 메시지 대형
+- 중앙 패널: 근거 리스트
+- 우 패널: 요약 포인트"
+"### S9 — TODO [three_split_verdict]
+- 좌 패널: 결론 1문장 대형
+- 중앙 패널: 실행 포인트 3가지
+- 우 패널: 다음 단계"
 )
 
 fi
@@ -415,34 +365,24 @@ CSS
     i=$((i+1))
   done
 
-  echo "## 필수 AP 체크 (모든 슬라이드 공통)"
-  echo "- AP-08: Pattern C 패널 → display:flex; justify-content:center 필수"
-  echo "- AP-11: card-grid → flex:1; min-height:0; align-content:stretch 필수"
-  echo "- AP-12: 배지 → display:inline-block 필수"
-  echo "- AP-13: 한국어 → word-break:keep-all 전역 필수"
-  echo "- AP-16: ghost text → .slide 직계 자식 position:absolute z-index:0"
-  echo "- AP-17: 다크 테마 선 → rgba() 사용 필수"
-  echo "- AP-20: 카드 내 텍스트 하단 쏠림 방지 → .card { display:flex; flex-direction:column; justify-content:space-between } 제목 상단, 설명 margin-top:auto"
-  echo "- AP-21: stat/timeline 카드 중간 공백 방지 → justify-content:flex-start; gap:10px 사용. space-between 금지. margin-top:auto 절대 금지"
-  echo "- AP-22: ghost/배경 대형 텍스트 과다 노출 → opacity:0.04~0.06 이하, color:var(--text-muted), font-size는 슬라이드 너비 20% 이하. 다크 테마에서 더 낮춰야 함 (opacity:0.04)"
-  echo "- AP-23: SHARED_MEMORY 컨텍스트 오염 → 주제와 무관한 시스템 설명(슬라이드 생성방법 등)을 슬라이드 내용에 포함하지 말 것"
+  echo "## 디자인 원칙"
+  echo "- 카드: flex-direction:column + gap:12px. 요소는 위→아래 순서로 배치. height:100% 채울 것"
+  echo "- 패널(2분할·3분할): 각 패널 justify-content:center로 세로 중앙 정렬"
+  echo "- 수치 강조: 숫자 크게(48~72px) + 라벨 작게(11~14px) + 설명(12px) 순서로 쌓기"
+  echo "- 배경 ghost 텍스트: position:absolute, opacity:0.05 이하, 콘텐츠 flow 밖에 배치"
+  echo "- 슬라이드 내용은 주제 [${topic}]에만 집중. 시스템·도구 설명 포함 금지"
   echo
 
   if [ "$preset" = "planby_dark" ]; then
-    echo "## Planby 브랜드 규칙 (planby_dark 전용)"
-    echo "- 워터마크: .slide::after { content:'planby' } — CSS에 이미 정의됨. 각 슬라이드 HTML에 별도 추가 불필요"
-    echo "- 액센트 색상: #5E5CE6 (인디고 퍼플) 고정 — 임의 변경 금지"
-    echo "- S1 우측 패널: .planby-wave SVG 곡선+도트 장식 반드시 포함"
-    echo "  SVG 예시: <path d='M0,360 C200,200 400,500 600,300 S900,100 1000,360' stroke='#5E5CE6' stroke-width='2.5' fill='none'/>"
-    echo "  도트: <circle> 요소 10~15개, r=3~5, fill='#5E5CE6', opacity=0.6~0.9"
-    echo "- 배지 스타일: border-color:#5E5CE6; color:#5E5CE6 (--accent 변수 사용)"
-    echo "- 폰트: Pretendard 우선, 없으면 Apple SD Gothic Neo"
-    echo "- 타이틀 텍스트: 흰색(#FFFFFF), 서브텍스트: #D1D1DB"
+    echo "## Planby 브랜드"
+    echo "- 배경 색: #2C2C2E, 카드: #3C3C3E, 액센트: #5E5CE6 (장식/fill), 텍스트 강조: #A8A6FF"
+    echo "- S1 우측: .planby-wave SVG (곡선 path + circle 도트, stroke:#5E5CE6)"
+    echo "- 워터마크 'planby'는 CSS ::after로 자동 추가됨 — HTML에 별도 추가 불필요"
     echo
   fi
 
-  echo "## 생성 완료 후 CHK 자가검증 (필수)"
-  echo "bash ~/Desktop/agent-orchestration/scripts/check-slides.sh /tmp/${slug}-brief.html"
+  echo "## 저장 경로"
+  echo "/tmp/${slug}.html 에 전체 슬라이드 저장"
   echo "---"
 } > "$outfile"
 
