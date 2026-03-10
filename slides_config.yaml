@@ -1088,6 +1088,28 @@ html_anti_patterns:
     applies_to: ["big_statement 슬라이드", "배경 ghost/watermark 텍스트 모든 슬라이드"]
     note: "ghost text는 항상 .slide 직계 자식으로, .body 바깥에 배치"
 
+  - id: AP-22
+    pattern: "ghost/배경 대형 텍스트 opacity가 높아 콘텐츠와 시각적 충돌"
+    symptom: |
+      슬라이드 우측 상단/하단에 섹션명이나 슬라이드 번호를 ghost text로 크게 표시할 때
+      opacity가 0.08 이상이면 다크 테마에서 너무 선명하게 보임.
+      특히 planby_dark(#2C2C2E 배경)에서 텍스트가 메인 콘텐츠와 겹쳐 가독성 저해.
+    fix: |
+      ghost text CSS:
+        .ghost-bg {
+          position: absolute; right: 24px; top: 16px;
+          font-size: 100px; font-weight: 900;
+          color: var(--text);
+          opacity: 0.04;  /* 라이트 테마: 0.05, 다크 테마: 0.04 */
+          letter-spacing: -0.02em;
+          pointer-events: none; z-index: 0; line-height: 1;
+          user-select: none;
+        }
+      font-size는 최대 120px (슬라이드 1280px의 9% 이하)
+    root_cause: "Codex가 ghost text를 장식 목적으로 추가하면서 opacity를 충분히 낮추지 않음"
+    applies_to: ["모든 레이아웃의 ghost/watermark 배경 텍스트"]
+    note: "다크 테마일수록 ghost text가 더 눈에 띄므로 opacity를 더 낮춰야 함"
+
   - id: AP-14
     pattern: "수직 컬러 강조 바(vertical accent bar)를 position:absolute; top:0 으로 배치 → 헤더 영역 침범 및 상단 과도한 공백"
     symptom: |
@@ -1286,3 +1308,5 @@ ap_quick_ref:
   AP-19: "bento_grid wide+small 혼합 시 셀 수 = 행×열 초과 금지 → grid-template-areas 명시"
   AP-20: "카드 내용 하단 쏠림 — flex-direction:column 카드에서 설명 텍스트가 하단에만 위치 → justify-content:space-between + 상단 제목 구조 필수"
   AP-21: "stat/timeline 카드 중간 공백 — 요소 2개(숫자+설명)에 space-between 적용 시 중간 텅 빔 → flex-start + gap:10px 사용, margin-top:auto 절대 금지"
+  AP-22: "ghost/배경 대형 텍스트 과다 노출 — opacity가 높으면 콘텐츠와 충돌하여 시각적 노이즈 발생 → opacity:0.04~0.06, 다크 테마는 0.04, font-size 슬라이드 너비 20% 이하"
+  AP-23: "SHARED_MEMORY 컨텍스트 오염 — 주제 키워드가 다른 섹션 본문에 포함되어 관련 없는 내용이 주입 → 섹션 제목 기준으로만 매칭. 슬라이드 내용에 시스템 설명 절대 포함 금지"

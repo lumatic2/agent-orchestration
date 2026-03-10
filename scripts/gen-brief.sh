@@ -45,7 +45,7 @@ choose_preset() {
     echo "light_green"
   elif [[ "$t" == *"금융"* || "$t" == *"기업"* || "$t" == *"투자"* || "$t" == *"ir"* || "$t" == *"컨설팅"* || "$t" == *"전략"* || "$t" == *"회계"* || "$t" == *"세무"* ]]; then
     echo "light_navy"
-  elif [[ "$t" == *"여행"* || "$t" == *"음식"* || "$t" == *"요리"* || "$t" == *"골프"* || "$t" == *"라이프스타일"* || "$t" == *"관광"* ]]; then
+  elif [[ "$t" == *"여행"* || "$t" == *"음식"* || "$t" == *"요리"* || "$t" == *"라이프스타일"* || "$t" == *"관광"* ]]; then
     echo "light_warm"
   else
     echo "base_light"
@@ -227,7 +227,7 @@ slide_sections=(
   </div>
 - 반드시 이 CSS를 사용할 것:
   .stat-card { display:flex; flex-direction:column; gap:12px; padding:32px 28px; height:100%; background:var(--bg-card); border-radius:12px; }
-  .stat-number { font-size:72px; font-weight:800; color:var(--accent); line-height:1; }
+  .stat-number { font-size:72px; font-weight:800; color:#FFFFFF; line-height:1; }
   .stat-divider { width:36px; height:3px; background:var(--accent); border-radius:2px; opacity:0.6; }
   .stat-label { font-size:14px; color:var(--text-sub); font-weight:600; }
   .stat-desc { font-size:12px; color:var(--text-muted); line-height:1.7; }
@@ -354,6 +354,12 @@ p,li,.desc,.sub,.card-text,.badge-text { word-break:keep-all; overflow-wrap:brea
 .badge { display:inline-block; width:fit-content; border:1.5px solid var(--accent);
          color:var(--accent); border-radius:6px; padding:4px 12px;
          font-size:11px; letter-spacing:0.08em; font-weight:600; }
+
+/* AP-22: ghost/배경 대형 텍스트 — opacity 필수 제한 */
+.ghost-bg, .slide-ghost, [class*="ghost"] {
+  position:absolute; pointer-events:none; z-index:0; user-select:none;
+  opacity:0.05; color:var(--text); font-weight:900; letter-spacing:-0.02em; line-height:1;
+}
 CSS
 
   # Planby 전용 추가 CSS
@@ -410,6 +416,8 @@ CSS
   echo "- AP-17: 다크 테마 선 → rgba() 사용 필수"
   echo "- AP-20: 카드 내 텍스트 하단 쏠림 방지 → .card { display:flex; flex-direction:column; justify-content:space-between } 제목 상단, 설명 margin-top:auto"
   echo "- AP-21: stat/timeline 카드 중간 공백 방지 → justify-content:flex-start; gap:10px 사용. space-between 금지. margin-top:auto 절대 금지"
+  echo "- AP-22: ghost/배경 대형 텍스트 과다 노출 → opacity:0.04~0.06 이하, color:var(--text-muted), font-size는 슬라이드 너비 20% 이하. 다크 테마에서 더 낮춰야 함 (opacity:0.04)"
+  echo "- AP-23: SHARED_MEMORY 컨텍스트 오염 → 주제와 무관한 시스템 설명(슬라이드 생성방법 등)을 슬라이드 내용에 포함하지 말 것"
   echo
 
   if [ "$preset" = "planby_dark" ]; then

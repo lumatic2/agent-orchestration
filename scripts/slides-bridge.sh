@@ -83,7 +83,7 @@ TASK_NAME="slides-research-$SLUG"
 SHARED_MEM="$HOME/Desktop/agent-orchestration/SHARED_MEMORY.md"
 CONTEXT_BLOCK=""
 if [ -f "$SHARED_MEM" ]; then
-  # 주제와 일치하는 ## 섹션 전체 추출 (다음 ## 섹션 전까지)
+  # SHARED_MEMORY 매칭: 섹션 제목(## 헤더)에만 키워드 매칭 — 섹션 내용 기반 매칭 금지 (AP-23)
   CONTEXT_HINT=$(python3 - <<PY
 import re, sys
 topic = """$TOPIC""".lower()
@@ -96,8 +96,9 @@ with open("$SHARED_MEM", encoding="utf-8") as f:
 sections = re.split(r'\n(?=## )', text)
 matched = []
 for sec in sections:
-    sec_lower = sec.lower()
-    if any(kw in sec_lower for kw in keywords):
+    # 섹션 제목(첫 줄)만 키워드 매칭 — 본문 포함 시 의도치 않은 크로스 오염 발생
+    title_line = sec.split('\n')[0].lower()
+    if any(kw in title_line for kw in keywords):
         matched.append(sec.strip())
 
 result = "\n\n".join(matched[:3])  # 최대 3섹션
@@ -108,8 +109,9 @@ PY
   if [ -n "$CONTEXT_HINT" ]; then
     CONTEXT_BLOCK="
 
-## ⚠️ 중요: 아래는 실제 구현된 시스템 정보입니다. 반드시 이 내용을 기반으로 슬라이드 작성.
-일반적인 설명 금지 — 실제 파일명, 수치, 기술 스택, 로드맵을 그대로 슬라이드에 반영할 것.
+## ⚠️ 참고 전용: 아래는 실제 구현된 시스템 정보입니다.
+⚠️ 경고: 이 컨텍스트는 주제 [${TOPIC}]과 직접 관련된 수치·파일명·기술스택을 슬라이드에 반영하기 위한 것입니다.
+⚠️ 절대 금지: 주제와 관련 없는 시스템 정보(슬라이드 생성 방법, 오케스트레이션 설명 등)는 슬라이드 내용에 포함하지 마세요.
 
 ${CONTEXT_HINT}"
   fi
@@ -124,7 +126,7 @@ S3: [섹션명] badge텍스트, 제목, 비교항목(표 형식)
 S4~S8: 각각 badge, 제목, 내용 요약
 S9: [결론] 핵심 메시지 1문장, 3가지 실행 포인트
 
-슬라이드별 내용은 구체적인 데이터, 숫자, 사례 포함.${CONTEXT_BLOCK}"
+슬라이드별 내용은 구체적인 데이터, 숫자, 사례 포함. 주제 [${TOPIC}]과 직접 관련된 내용만 작성할 것.${CONTEXT_BLOCK}"
 bash "$ORCH" gemini "$RESEARCH_PROMPT" "$TASK_NAME"
 
 RESEARCH_LOG="$(ls -t "$LOG_DIR"/gemini_slides-research-"$SLUG"_*.txt 2>/dev/null | head -1 || true)"
