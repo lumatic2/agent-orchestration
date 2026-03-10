@@ -148,6 +148,25 @@ color_presets:
         --surface:    #FEF3E2;
       }
 
+  planby_dark:
+    name: "플랜바이 공식 (다크 차콜 + 인디고 퍼플)"
+    theme: dark
+    keywords: ["planby", "플랜바이", "plana"]
+    source: "플랜바이테크놀로지스_회사소개서.pdf 표지 색상 기반"
+    css: |
+      :root {
+        --bg:         #2C2C2E;
+        --bg-card:    #3C3C3E;
+        --bg-card2:   #48484A;
+        --accent:     #5E5CE6;
+        --accent2:    #4844D4;
+        --text:       #FFFFFF;
+        --text-sub:   #D1D1DB;
+        --text-muted: #98989E;
+        --border:     rgba(94,92,230,0.25);
+        --surface:    #3C3C3E;
+      }
+
   dark_premium:
     name: "다크 프리미엄 (힙합·뮤직·럭셔리·나이트)"
     theme: dark

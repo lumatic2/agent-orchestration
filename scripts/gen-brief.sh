@@ -29,7 +29,9 @@ topic_lc=$(printf '%s' "$topic" | tr '[:upper:]' '[:lower:]')
 choose_preset() {
   local t="$1"
 
-  if [[ "$t" == *"커피"* || "$t" == *"카페"* || "$t" == *"원두"* || "$t" == *"브루잉"* || "$t" == *"바리스타"* ]]; then
+  if [[ "$t" == *"planby"* || "$t" == *"플랜바이"* || "$t" == *"plana"* ]]; then
+    echo "planby_dark"
+  elif [[ "$t" == *"커피"* || "$t" == *"카페"* || "$t" == *"원두"* || "$t" == *"브루잉"* || "$t" == *"바리스타"* ]]; then
     echo "dark_coffee"
   elif [[ "$t" == *"힙합"* || "$t" == *"트랩"* || "$t" == *"붐뱁"* || "$t" == *"뮤직"* || "$t" == *"음악"* || "$t" == *"랩"* ]]; then
     echo "dark_premium"
@@ -54,6 +56,16 @@ preset=$(choose_preset "$topic_lc")
 
 preset_css() {
   case "$1" in
+    planby_dark)
+      cat <<'CSS'
+:root {
+  --bg:#2C2C2E; --bg-card:#3C3C3E; --bg-card2:#48484A;
+  --accent:#5E5CE6; --accent2:#4844D4;
+  --text:#FFFFFF; --text-sub:#D1D1DB; --text-muted:#98989E;
+  --border:rgba(94,92,230,0.25); --surface:#3C3C3E;
+}
+CSS
+      ;;
     dark_coffee)
       cat <<'CSS'
 :root {
