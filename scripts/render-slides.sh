@@ -97,6 +97,16 @@ fi)
 })();
 JSEOF
 
+# ── CHK 자가검증 (렌더 전) ──────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/check-slides.sh" ]; then
+  bash "$SCRIPT_DIR/check-slides.sh" "$HTML_FILE"
+  CHK_EXIT=$?
+  if [ "$CHK_EXIT" -ne 0 ]; then
+    echo "⚠️  CHK FAIL 항목이 있습니다. 렌더를 계속 진행합니다 (확인 권장)."
+  fi
+fi
+
 # ── 렌더 실행 ───────────────────────────────────────────────────────
 echo "렌더 중: $HTML_FILE → $PDF_PATH"
 
