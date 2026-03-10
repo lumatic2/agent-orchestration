@@ -123,7 +123,8 @@ deploy_claude() {
   echo "[OK] Claude adapter → $target_dir/orchestrator_rules.md"
 
   # Deploy global CLAUDE.md to home directory (auto-loaded every session)
-  cp "$REPO_DIR/adapters/claude_global.md" "$BASE_DIR/CLAUDE.md"
+  # Replace generic ~/projects/agent-orchestration path with OS-specific actual path
+  sed "s|~/projects/agent-orchestration|$REPO_DIR|g" "$REPO_DIR/adapters/claude_global.md" > "$BASE_DIR/CLAUDE.md"
   echo "[OK] Global CLAUDE.md → $BASE_DIR/CLAUDE.md"
 
   # Deploy guard.sh hook config
