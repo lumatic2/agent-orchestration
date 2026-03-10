@@ -167,6 +167,71 @@ fi
 outfile="/tmp/${slug}-brief.md"
 preset_block="$(preset_css "$preset")"
 
+# ── Planby 전용 템플릿 ──────────────────────────────────────────────
+if [ "$preset" = "planby_dark" ]; then
+
+slide_patterns=(
+  "Pattern C|magazine_split"
+  "Pattern A|bento_grid"
+  "Pattern C|2분할 (비교/대조)"
+  "Pattern A|comparison_table"
+  "Pattern A|zigzag_rows"
+  "Pattern B|stat_trio"
+  "Pattern A|timeline_flow"
+  "Pattern C|3분할 big_statement"
+  "Pattern C|three_split_verdict"
+)
+
+slide_sections=(
+"### S1 — 타이틀 [Pattern C: magazine_split]
+- 주제: ${topic}
+- 좌 패널 58%: planby 로고(상단) + 주제 대형 타이틀 + 부제 1줄 + 날짜/버전
+- 우 패널 42%: 인디고 퍼플(#5E5CE6) 곡선 웨이브 + 도트 장식 (SVG, 회사소개서 표지 스타일)
+- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
+"### S2 — TODO [Pattern A: bento_grid]
+- badge: TODO (배경/현황)
+- 제목: TODO
+- 카드 3~4개: 문제/기회 정의 (각 카드 아이콘 + 수치 + 한 줄 설명)
+- AP-20 필수: .card { display:flex; flex-direction:column; justify-content:space-between }"
+"### S3 — TODO [Pattern C: 2분할 (비교/대조)]
+- 좌 패널 50%: badge + 제목 + 핵심 주장 3~4포인트
+- 우 패널 50%: 대비 항목 or 데이터 시각화 (수치·그래프 대체 표현)
+- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
+"### S4 — TODO [Pattern A: comparison_table]
+- badge: TODO
+- 제목: TODO
+- 표: 3~4행 × 3열 비교 (항목명 | Before | After 또는 A안 | B안)
+- 헤더 배경: var(--accent) 인디고"
+"### S5 — TODO [Pattern A: zigzag_rows]
+- badge: TODO
+- 제목: TODO
+- 행 3개: 각 행 = 아이콘 원형(인디고) + 단계명 + 설명 1~2줄
+- 연결선: 인디고 점선 (--border 색상)"
+"### S6 — TODO [Pattern B: stat_trio]
+- badge: TODO
+- 제목: TODO
+- 핵심 수치 3개: 숫자(대형) + 단위 + 설명 (예: 87% / 절감률 / 외주비 기준)
+- AP-20 필수: 각 stat 카드 flex-direction:column; justify-content:space-between"
+"### S7 — TODO [Pattern A: timeline_flow]
+- badge: TODO
+- 제목: TODO
+- 타임라인 4단계: 기간 + 마일스톤명 + 핵심 액션 1줄
+- 노드: 인디고 원형(border-radius:50%), AP-18 준수"
+"### S8 — TODO [Pattern C: 3분할 big_statement]
+- 좌 패널 30%: badge + 핵심 메시지 (대형 텍스트)
+- 중앙 패널 40%: 주요 근거 / 시각화 요소
+- 우 패널 30%: 보조 수치 or 요약 포인트
+- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
+"### S9 — TODO [Pattern C: three_split_verdict]
+- 좌 패널: 핵심 메시지 1문장 (대형)
+- 중앙 패널: 실행 포인트 3가지 (번호 + 한 줄)
+- 우 패널: CTA — 다음 단계 or 연락처
+- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
+)
+
+else
+# ── 일반 템플릿 ────────────────────────────────────────────────────
+
 slide_patterns=(
   "Pattern C|magazine_split"
   "Pattern A|bento_grid"
@@ -221,6 +286,8 @@ slide_sections=(
 - AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
 )
 
+fi
+
 {
   echo "---"
   echo "# ${topic} 슬라이드 브리프"
@@ -246,6 +313,29 @@ p,li,.desc,.sub,.card-text,.badge-text { word-break:keep-all; overflow-wrap:brea
          color:var(--accent); border-radius:6px; padding:4px 12px;
          font-size:11px; letter-spacing:0.08em; font-weight:600; }
 CSS
+
+  # Planby 전용 추가 CSS
+  if [ "$preset" = "planby_dark" ]; then
+    cat <<'CSS'
+
+/* Planby 워터마크 — 모든 슬라이드 공통 */
+.slide::after {
+  content: "planby";
+  position: absolute; bottom: 18px; left: 32px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.10em;
+  color: var(--text-muted); z-index: 10;
+  font-family: 'Pretendard','Apple SD Gothic Neo',sans-serif;
+}
+
+/* Planby 웨이브 장식 (S1 타이틀 전용) */
+.planby-wave {
+  position: absolute; top: 0; right: 0;
+  width: 55%; height: 100%; overflow: hidden; pointer-events: none;
+}
+.planby-wave svg { width: 100%; height: 100%; }
+CSS
+  fi
+
   echo '```'
   echo
   echo "## 레이아웃 배정"
@@ -278,6 +368,20 @@ CSS
   echo "- AP-17: 다크 테마 선 → rgba() 사용 필수"
   echo "- AP-20: 카드 내 텍스트 하단 쏠림 방지 → .card { display:flex; flex-direction:column; justify-content:space-between } 제목 상단, 설명 margin-top:auto"
   echo
+
+  if [ "$preset" = "planby_dark" ]; then
+    echo "## Planby 브랜드 규칙 (planby_dark 전용)"
+    echo "- 워터마크: .slide::after { content:'planby' } — CSS에 이미 정의됨. 각 슬라이드 HTML에 별도 추가 불필요"
+    echo "- 액센트 색상: #5E5CE6 (인디고 퍼플) 고정 — 임의 변경 금지"
+    echo "- S1 우측 패널: .planby-wave SVG 곡선+도트 장식 반드시 포함"
+    echo "  SVG 예시: <path d='M0,360 C200,200 400,500 600,300 S900,100 1000,360' stroke='#5E5CE6' stroke-width='2.5' fill='none'/>"
+    echo "  도트: <circle> 요소 10~15개, r=3~5, fill='#5E5CE6', opacity=0.6~0.9"
+    echo "- 배지 스타일: border-color:#5E5CE6; color:#5E5CE6 (--accent 변수 사용)"
+    echo "- 폰트: Pretendard 우선, 없으면 Apple SD Gothic Neo"
+    echo "- 타이틀 텍스트: 흰색(#FFFFFF), 서브텍스트: #D1D1DB"
+    echo
+  fi
+
   echo "## 생성 완료 후 CHK 자가검증 (필수)"
   echo "bash ~/Desktop/agent-orchestration/scripts/check-slides.sh /tmp/${slug}-brief.html"
   echo "---"
