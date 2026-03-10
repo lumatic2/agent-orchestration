@@ -189,35 +189,37 @@ slide_sections=(
 - 우 패널 42%: 인디고 퍼플(#5E5CE6) 곡선 웨이브 + 도트 장식 (SVG, 회사소개서 표지 스타일)
 - AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
 "### S2 — TODO [Pattern A: bento_grid]
-- badge: TODO (배경/현황)
+- badge: 현황 분석
 - 제목: TODO
 - 카드 3~4개: 문제/기회 정의 (각 카드 아이콘 + 수치 + 한 줄 설명)
 - AP-20 필수: .card { display:flex; flex-direction:column; justify-content:space-between }"
 "### S3 — TODO [Pattern C: 2분할 (비교/대조)]
+- badge: 핵심 비교
 - 좌 패널 50%: badge + 제목 + 핵심 주장 3~4포인트
 - 우 패널 50%: 대비 항목 or 데이터 시각화 (수치·그래프 대체 표현)
 - AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
 "### S4 — TODO [Pattern A: comparison_table]
-- badge: TODO
+- badge: 기능 구성
 - 제목: TODO
 - 표: 3~4행 × 3열 비교 (항목명 | Before | After 또는 A안 | B안)
 - 헤더 배경: var(--accent) 인디고"
 "### S5 — TODO [Pattern A: zigzag_rows]
-- badge: TODO
+- badge: 실행 흐름
 - 제목: TODO
 - 행 3개: 각 행 = 아이콘 원형(인디고) + 단계명 + 설명 1~2줄
 - 연결선: 인디고 점선 (--border 색상)"
 "### S6 — TODO [Pattern B: stat_trio]
-- badge: TODO
+- badge: 운영 지표
 - 제목: TODO
 - 핵심 수치 3개: 숫자(대형) + 단위 + 설명 (예: 87% / 절감률 / 외주비 기준)
 - AP-20 필수: 각 stat 카드 flex-direction:column; justify-content:space-between"
 "### S7 — TODO [Pattern A: timeline_flow]
-- badge: TODO
+- badge: 로드맵
 - 제목: TODO
 - 타임라인 4단계: 기간 + 마일스톤명 + 핵심 액션 1줄
 - 노드: 인디고 원형(border-radius:50%), AP-18 준수"
 "### S8 — TODO [Pattern C: 3분할 big_statement]
+- badge: 핵심 메시지
 - 좌 패널 30%: badge + 핵심 메시지 (대형 텍스트)
 - 중앙 패널 40%: 주요 근거 / 시각화 요소
 - 우 패널 30%: 보조 수치 or 요약 포인트

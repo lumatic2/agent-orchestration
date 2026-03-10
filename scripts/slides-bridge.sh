@@ -185,6 +185,22 @@ for slot, content in slot_map.items():
         re.MULTILINE,
     )
     brief = header_pattern.sub(rf"\1{summary}\3", brief)
+
+    # badge: TODO → Gemini 리서치에서 추출한 badge 값으로 교체
+    badge_match = re.search(
+        r"(?:\*\*badge\*\*|badge)\s*[:：]\s*([^\n*]+)", content, re.IGNORECASE
+    )
+    if badge_match:
+        badge_val = badge_match.group(1).strip().strip("*").strip()
+        if badge_val:
+            brief = re.sub(
+                rf"(###\s+{re.escape(slot)}\b.*\n(?:.*\n)*?)(- badge:\s*TODO\b[^\n]*)",
+                rf"\1- badge: {badge_val}",
+                brief,
+                count=1,
+                flags=re.MULTILINE,
+            )
+
     section_pattern = re.compile(
         rf"(^###\s+{re.escape(slot)}\s+—[^\n]*\n)",
         re.MULTILINE,
