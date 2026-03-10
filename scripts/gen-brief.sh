@@ -211,24 +211,42 @@ slide_sections=(
 "### S6 — TODO [Pattern B: stat_trio]
 - badge: 운영 지표
 - 제목: TODO
-- 핵심 수치 3개: 숫자(대형) + 단위 + 설명 (예: 87% / 절감률 / 외주비 기준)
-- AP-20 필수: 각 stat 카드 flex-direction:column; justify-content:space-between"
+- 핵심 수치 3개: 숫자(대형) + 라벨 + 설명
+- stat 카드 CSS (반드시 준수):
+  .stat-card { display:flex; flex-direction:column; justify-content:flex-start; gap:10px; padding:28px 24px; height:100%; }
+  .stat-number { font-size:56px; font-weight:700; color:var(--accent); line-height:1; }
+  .stat-label { font-size:13px; color:var(--text-sub); font-weight:500; }
+  .stat-desc { font-size:12px; color:var(--text-muted); margin-top:auto; line-height:1.5; }
+- ⚠️ AP-20 예외: stat 카드는 justify-content:space-between 금지 → flex-start+gap 사용"
 "### S7 — TODO [Pattern A: timeline_flow]
 - badge: 로드맵
 - 제목: TODO
-- 타임라인 4단계: 기간 + 마일스톤명 + 핵심 액션 1줄
+- 타임라인 4단계: 각 카드 = 기간(상단 소형) + 단계명(중형 bold) + 액션 설명(소형)
+- 타임라인 카드 CSS (반드시 준수):
+  .tl-card { display:flex; flex-direction:column; justify-content:flex-start; gap:8px; padding:20px; height:100%; }
+  .tl-date { font-size:11px; color:var(--text-muted); }
+  .tl-title { font-size:16px; font-weight:700; color:var(--text); }
+  .tl-body { font-size:12px; color:var(--text-sub); line-height:1.6; }
 - 노드: 인디고 원형(border-radius:50%), AP-18 준수"
 "### S8 — TODO [Pattern C: 3분할 big_statement]
 - badge: 핵심 메시지
-- 좌 패널 30%: badge + 핵심 메시지 (대형 텍스트)
-- 중앙 패널 40%: 주요 근거 / 시각화 요소
-- 우 패널 30%: 보조 수치 or 요약 포인트
-- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
+- 패널 CSS (반드시 준수):
+  .slide-inner { display:flex; width:100%; height:100%; }
+  .panel-left { width:30%; display:flex; flex-direction:column; justify-content:center; padding:48px 32px; background:var(--bg-card); }
+  .panel-mid  { width:40%; display:flex; flex-direction:column; justify-content:center; padding:48px 32px; }
+  .panel-right{ width:30%; display:flex; flex-direction:column; justify-content:center; padding:48px 32px; background:var(--bg-card2); }
+- 좌 패널: badge + 핵심 메시지 대형(font-size:28px, font-weight:700, word-break:keep-all)
+- 중앙 패널: 주요 근거 리스트 or 시각화 요소
+- 우 패널: 보조 수치 or 요약 포인트 (번호 목록)"
 "### S9 — TODO [Pattern C: three_split_verdict]
-- 좌 패널: 핵심 메시지 1문장 (대형)
-- 중앙 패널: 실행 포인트 3가지 (번호 + 한 줄)
-- 우 패널: CTA — 다음 단계 or 연락처
-- AP-08 필수: 패널에 display:flex; flex-direction:column; justify-content:center"
+- 패널 CSS (반드시 준수):
+  .slide-inner { display:flex; width:100%; height:100%; }
+  .panel-left  { width:33%; display:flex; flex-direction:column; justify-content:center; padding:48px 36px; background:var(--bg-card); }
+  .panel-mid   { width:34%; display:flex; flex-direction:column; justify-content:center; padding:48px 36px; }
+  .panel-right { width:33%; display:flex; flex-direction:column; justify-content:center; padding:48px 36px; background:var(--bg-card2); }
+- 좌 패널: 핵심 메시지 1문장 대형(font-size:26px, font-weight:700, word-break:keep-all)
+- 중앙 패널: badge(CTA) + 실행 포인트 3가지 (번호 + 한 줄)
+- 우 패널: 다음 단계 구체 명령어 or 연락처 (font-family:monospace for commands)"
 )
 
 else
@@ -369,6 +387,7 @@ CSS
   echo "- AP-16: ghost text → .slide 직계 자식 position:absolute z-index:0"
   echo "- AP-17: 다크 테마 선 → rgba() 사용 필수"
   echo "- AP-20: 카드 내 텍스트 하단 쏠림 방지 → .card { display:flex; flex-direction:column; justify-content:space-between } 제목 상단, 설명 margin-top:auto"
+  echo "- AP-21: stat/timeline 카드 중간 공백 방지 → justify-content:flex-start; gap:10px 사용. space-between 금지. stat-desc만 margin-top:auto"
   echo
 
   if [ "$preset" = "planby_dark" ]; then
