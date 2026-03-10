@@ -81,6 +81,17 @@ else
                  || fail "CHK-07" "타임라인 있는데 border-radius:50% 없음 (AP-18)"
 fi
 
+# CHK-07b: AP-20 카드 내 텍스트 하단 쏠림 방지 (justify-content:space-between)
+CARD_C=$(cnt_e '\.card|\.stat-card|\.b-card|\.trio-card' "$HTML")
+SB_C=$(cnt 'justify-content:.*space-between' "$HTML")
+if [ "$CARD_C" -eq 0 ]; then
+  na "CHK-09" "카드 클래스 없음"
+elif [ "$SB_C" -ge 1 ]; then
+  pass "CHK-09" "카드 ${CARD_C}개, justify-content:space-between ${SB_C}회 (AP-20)"
+else
+  fail "CHK-09" "카드 ${CARD_C}개인데 justify-content:space-between 없음 → 텍스트 하단 쏠림 (AP-20)"
+fi
+
 # CHK-08: 다크 테마 선 색상 rgba 사용
 DARK=$(cnt_e '#0A0A|#0F17|#1A1A|#14141|#1C0F|#121212' "$HTML")
 if [ "$DARK" -eq 0 ]; then

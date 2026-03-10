@@ -78,7 +78,53 @@ SLUG="$(basename "$BRIEF_FILE" -brief.md)"
 
 echo "[2/5] Gemini 리서치 중..." >&2
 TASK_NAME="slides-research-$SLUG"
-RESEARCH_PROMPT=$'주제 ['"$TOPIC"$']에 대한 슬라이드 '"$SLIDE_N"$'장 분량 리서치.\n\n다음 형식으로 각 슬라이드의 핵심 내용을 제안해줘:\nS1: [타이틀 슬라이드] 부제, 핵심 포인트 3개\nS2: [섹션명] badge텍스트, 제목, 핵심내용 4~6개\nS3: [섹션명] badge텍스트, 제목, 비교항목(표 형식)\nS4~S8: 각각 badge, 제목, 내용 요약\nS9: [결론] 핵심 메시지 1문장, 3가지 실행 포인트\n\n슬라이드별 내용은 구체적인 데이터, 숫자, 사례 포함.'
+
+# SHARED_MEMORY.md에서 주제 관련 섹션 추출
+SHARED_MEM="$HOME/Desktop/agent-orchestration/SHARED_MEMORY.md"
+CONTEXT_BLOCK=""
+if [ -f "$SHARED_MEM" ]; then
+  # 주제와 일치하는 ## 섹션 전체 추출 (다음 ## 섹션 전까지)
+  CONTEXT_HINT=$(python3 - <<PY
+import re, sys
+topic = """$TOPIC""".lower()
+keywords = [w for w in re.split(r'[\s/·\-]+', topic) if len(w) >= 2]
+
+with open("$SHARED_MEM", encoding="utf-8") as f:
+    text = f.read()
+
+# ## 섹션 단위로 분리
+sections = re.split(r'\n(?=## )', text)
+matched = []
+for sec in sections:
+    sec_lower = sec.lower()
+    if any(kw in sec_lower for kw in keywords):
+        matched.append(sec.strip())
+
+result = "\n\n".join(matched[:3])  # 최대 3섹션
+print(result[:3000] if len(result) > 3000 else result)
+PY
+  )
+
+  if [ -n "$CONTEXT_HINT" ]; then
+    CONTEXT_BLOCK="
+
+## ⚠️ 중요: 아래는 실제 구현된 시스템 정보입니다. 반드시 이 내용을 기반으로 슬라이드 작성.
+일반적인 설명 금지 — 실제 파일명, 수치, 기술 스택, 로드맵을 그대로 슬라이드에 반영할 것.
+
+${CONTEXT_HINT}"
+  fi
+fi
+
+RESEARCH_PROMPT="주제 [${TOPIC}]에 대한 슬라이드 ${SLIDE_N}장 분량 리서치.
+
+다음 형식으로 각 슬라이드의 핵심 내용을 제안해줘:
+S1: [타이틀 슬라이드] 부제, 핵심 포인트 3개
+S2: [섹션명] badge텍스트, 제목, 핵심내용 4~6개
+S3: [섹션명] badge텍스트, 제목, 비교항목(표 형식)
+S4~S8: 각각 badge, 제목, 내용 요약
+S9: [결론] 핵심 메시지 1문장, 3가지 실행 포인트
+
+슬라이드별 내용은 구체적인 데이터, 숫자, 사례 포함.${CONTEXT_BLOCK}"
 bash "$ORCH" gemini "$RESEARCH_PROMPT" "$TASK_NAME"
 
 RESEARCH_LOG="$(ls -t "$LOG_DIR"/gemini_slides-research-"$SLUG"_*.txt 2>/dev/null | head -1 || true)"
@@ -99,6 +145,7 @@ HTML_PATH="$(
   CODEX_BRIEF_FILE="$CODEX_BRIEF" \
   SLUG="$SLUG" \
   RESEARCH_CONTENT="$RESEARCH_CONTENT" \
+  CONTEXT_BLOCK="$CONTEXT_BLOCK" \
   python3 - <<'PY'
 import os
 import re
@@ -107,6 +154,7 @@ brief_file = os.environ["BRIEF_FILE"]
 codex_brief_file = os.environ["CODEX_BRIEF_FILE"]
 slug = os.environ["SLUG"]
 research = os.environ.get("RESEARCH_CONTENT", "")
+context_block = os.environ.get("CONTEXT_BLOCK", "")
 
 with open(brief_file, encoding="utf-8") as f:
     brief = f.read()
@@ -149,6 +197,13 @@ for slot, content in slot_map.items():
 
 html_path = f"/tmp/{slug}.html"
 brief = brief.rstrip() + f"\n\n## HTML 저장 경로\n{html_path}\n"
+
+# SHARED_MEMORY 컨텍스트를 Codex 브리프에 직접 주입
+if context_block.strip():
+    brief = brief.rstrip() + "\n\n## ⚠️ 실제 구현 정보 (반드시 슬라이드에 반영)\n"
+    brief += "일반적 설명 금지. 아래 실제 파일명, 수치, 기술 스택을 슬라이드 본문에 그대로 사용할 것.\n\n"
+    brief += context_block.strip() + "\n"
+
 instruction = (
     "아래 브리프를 따라 1280x720 HTML 슬라이드 9장을 생성하고, "
     f"반드시 {html_path} 에 저장하세요.\n"

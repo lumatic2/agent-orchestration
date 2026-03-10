@@ -978,6 +978,25 @@ html_anti_patterns:
     applies_to: ["Pattern A/B icon_card_grid", "카드 수 4개 이외 모든 카드 그리드"]
     note: "브리프에 카드 수가 명시되면 열 수를 카드 수 ÷ 2 로 계산. 홀수면 ceil 처리."
 
+  - id: AP-20
+    pattern: "카드 내 콘텐츠 하단 쏠림 — 제목+설명 구조에서 설명만 하단에 표시되고 중간 공백 과다"
+    symptom: |
+      flex-direction:column 카드에서 제목을 상단에 두지 않고 justify-content:flex-end 또는
+      margin-top:auto 를 설명 텍스트에만 적용 → 카드 상단 2/3가 비고 하단 1/3에만 텍스트 표시.
+      stat_trio, bento_grid, zigzag_rows 카드에서 자주 발생.
+    fix: |
+      카드 구조는 반드시 상단 제목 + 하단 설명 조합으로:
+        .card { display:flex; flex-direction:column; justify-content:space-between; padding:28px 24px; }
+        .card-title { font-size:1.1rem; font-weight:700; color:var(--text); }
+        .card-desc  { font-size:0.875rem; color:var(--text-muted); margin-top:auto; }
+      stat_trio(숫자 카드)는 숫자를 상단에 크게:
+        .stat-num   { font-size:3rem; font-weight:800; color:var(--accent); }
+        .stat-label { font-size:0.9rem; font-weight:600; margin-top:8px; }
+        .stat-desc  { font-size:0.8rem; color:var(--text-muted); margin-top:auto; }
+    root_cause: "Codex가 카드 내 텍스트 위치를 지정하지 않아 기본 flow로 하단 배치됨"
+    applies_to: ["stat_trio", "bento_grid", "zigzag_rows", "모든 flex 카드"]
+    note: "브리프에 카드 구조 명시: 제목(상단) + 설명(하단, margin-top:auto)"
+
   - id: AP-19
     pattern: "bento_grid에 (wide+small+small+small+wide) 5카드 → 3×2 그리드에서 7셀 필요 → 3번째 행 생성 → 클리핑"
     symptom: |
@@ -1226,3 +1245,4 @@ ap_quick_ref:
   AP-17: "다크 배경 선/텍스트는 배경 대비 40% 이상 밝게"
   AP-18: "타임라인 노드 모양 통일 (원형), 크기/색상으로만 강조"
   AP-19: "bento_grid wide+small 혼합 시 셀 수 = 행×열 초과 금지 → grid-template-areas 명시"
+  AP-20: "카드 내용 하단 쏠림 — flex-direction:column 카드에서 설명 텍스트가 하단에만 위치 → justify-content:space-between + 상단 제목 구조 필수"

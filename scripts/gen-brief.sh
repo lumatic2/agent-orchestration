@@ -264,6 +264,7 @@ CSS
   echo "- AP-13: 한국어 → word-break:keep-all 전역 필수"
   echo "- AP-16: ghost text → .slide 직계 자식 position:absolute z-index:0"
   echo "- AP-17: 다크 테마 선 → rgba() 사용 필수"
+  echo "- AP-20: 카드 내 텍스트 하단 쏠림 방지 → .card { display:flex; flex-direction:column; justify-content:space-between } 제목 상단, 설명 margin-top:auto"
   echo
   echo "## 생성 완료 후 CHK 자가검증 (필수)"
   echo "bash ~/Desktop/agent-orchestration/scripts/check-slides.sh /tmp/${slug}-brief.html"
