@@ -145,8 +145,7 @@ echo "  → 페이지 ID: $PAGE_ID"
 echo "[2/2] PDF 업로드 중: $(basename "$PDF_FILE")"
 
 UPLOAD_RESULT=$(PERSONAL_NOTION_TOKEN="$PERSONAL_NOTION_TOKEN" \
-  python3 "$NOTION_DB" upload-file \
-    --page-id "$PAGE_ID" \
+  python3 "$NOTION_DB" upload-file "$PAGE_ID" \
     --file "$PDF_FILE" 2>&1)
 
 if echo "$UPLOAD_RESULT" | grep -q "uploaded"; then

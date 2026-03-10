@@ -114,7 +114,7 @@ send_file() {
   fi
 
   ext="${file##*.}"
-  ext="${ext,,}"
+  ext="$(echo "$ext" | tr '[:upper:]' '[:lower:]')"
 
   file_size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null)
   if [ -z "${file_size:-}" ]; then
