@@ -14,6 +14,7 @@ compatibility:
 # --- Model Tiers ---
 models:
   codex:
+    ultra: "gpt-5.4"              # Architecture analysis, large codebase, complex agentic workflows (1M ctx)
     heavy: "gpt-5.3-codex"        # Complex coding, refactoring, debugging
     light: "gpt-5.3-codex-spark"  # Quick edits, formatting, boilerplate
     mini: "gpt-5-codex-mini"      # Cheap, simple file transforms
@@ -29,6 +30,62 @@ models:
     heavy: "opus"                 # Orchestration judgment only
     mid: "sonnet"                 # Code review, code generation (subagent)
     light: "haiku"                # Exploration, classification (subagent)
+
+# --- Reasoning Levels ---
+reasoning:
+  codex:
+    heavy: "extra-high"         # No cost concern — always use best
+    light: "high"
+    mini: "medium"
+  chatgpt:
+    ultra: "extra-high"         # gpt-5.4
+    heavy: "high"
+    default: "medium"
+    light: "low"
+  gemini:
+    # Gemini handles thinking internally; tier determines depth
+    heavy: "auto"               # gemini-3-auto decides
+    default: "auto"             # gemini-2.5-auto decides
+    light: "auto"               # manual model decides
+  claude:
+    opus: "high"
+    sonnet: "medium"            # Default baseline — good balance
+    haiku: "low"
+    # Cross-tier combos for budget-constrained complex tasks:
+    sonnet_high: "high"         # Complex task, opus too expensive
+    haiku_medium: "medium"      # Moderate exploration
+
+# --- Complexity Tiers ---
+# Claude judges task complexity and selects the matching tier.
+# Each tier maps to model + reasoning level per agent.
+complexity_tiers:
+  low:
+    signals: "1-2 files, <10 lines, simple edit or lookup, no reasoning required"
+    codex:   { tier: light,  reasoning: high }
+    chatgpt: { tier: default, reasoning: low }
+    gemini:  { tier: default }
+    claude:  { model: haiku,  effort: low }
+
+  medium:
+    signals: "3-5 files, new feature, standard coding, clear requirements"
+    codex:   { tier: heavy,  reasoning: extra-high }
+    chatgpt: { tier: heavy,  reasoning: high }
+    gemini:  { tier: default }
+    claude:  { model: sonnet, effort: medium }
+
+  high:
+    signals: "5+ files, complex bug with unclear root cause, non-trivial refactoring, cross-system changes"
+    codex:   { tier: heavy,  reasoning: extra-high }
+    chatgpt: { tier: ultra,  reasoning: extra-high }
+    gemini:  { tier: heavy }
+    claude:  { model: sonnet, effort: high }
+
+  ultra:
+    signals: "Full codebase analysis, architecture decisions, novel design, multi-system orchestration"
+    codex:   { tier: heavy,  reasoning: extra-high }
+    chatgpt: { tier: ultra,  reasoning: extra-high }
+    gemini:  { tier: heavy }
+    claude:  { model: opus,  effort: high }
 
 # --- CLI Flags ---
 flags:
