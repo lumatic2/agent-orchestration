@@ -191,8 +191,14 @@ slide_sections=(
 "### S2 — TODO [Pattern A: bento_grid]
 - badge: 현황 분석
 - 제목: TODO
-- 카드 3~4개: 문제/기회 정의 (각 카드 아이콘 + 수치 + 한 줄 설명)
-- AP-20 필수: .card { display:flex; flex-direction:column; justify-content:space-between }"
+- 카드 3~4개: 각 카드 = 라벨(소형) + 핵심 수치/키워드(중대형, 인디고색) + 설명 2~3줄
+- 반드시 이 CSS를 사용할 것:
+  .b-card { display:flex; flex-direction:column; gap:10px; padding:28px 24px; height:100%; background:var(--bg-card); border-radius:12px; }
+  .b-label { font-size:11px; color:var(--text-muted); font-weight:600; letter-spacing:0.06em; text-transform:uppercase; }
+  .b-value { font-size:36px; font-weight:800; color:var(--accent); line-height:1.1; }
+  .b-desc { font-size:12px; color:var(--text-sub); line-height:1.7; }
+- ⚠️ justify-content:space-between 절대 금지. margin-top:auto 절대 금지
+- 설명 텍스트는 2~3줄 분량으로 충분히 작성해 카드 공백 방지"
 "### S3 — TODO [Pattern C: 2분할 (비교/대조)]
 - badge: 핵심 비교
 - 좌 패널 50%: badge + 제목 + 핵심 주장 3~4포인트
@@ -211,23 +217,39 @@ slide_sections=(
 "### S6 — TODO [Pattern B: stat_trio]
 - badge: 운영 지표
 - 제목: TODO
-- 핵심 수치 3개: 숫자(대형) + 라벨 + 설명
-- stat 카드 CSS (반드시 준수):
-  .stat-card { display:flex; flex-direction:column; justify-content:flex-start; gap:10px; padding:28px 24px; height:100%; }
-  .stat-number { font-size:56px; font-weight:700; color:var(--accent); line-height:1; }
-  .stat-label { font-size:13px; color:var(--text-sub); font-weight:500; }
-  .stat-desc { font-size:12px; color:var(--text-muted); margin-top:auto; line-height:1.5; }
-- ⚠️ AP-20 예외: stat 카드는 justify-content:space-between 금지 → flex-start+gap 사용"
+- 핵심 수치 3개: 각 카드 = 숫자(초대형) + 액센트 구분선 + 라벨 + 설명 텍스트 2~3줄
+- 반드시 이 HTML 구조를 사용할 것:
+  <div class=\"stat-card\">
+    <div class=\"stat-number\">숫자</div>
+    <div class=\"stat-divider\"></div>
+    <div class=\"stat-label\">라벨</div>
+    <div class=\"stat-desc\">설명 2~3줄 (충분한 텍스트로 카드 채울 것)</div>
+  </div>
+- 반드시 이 CSS를 사용할 것:
+  .stat-card { display:flex; flex-direction:column; gap:12px; padding:32px 28px; height:100%; background:var(--bg-card); border-radius:12px; }
+  .stat-number { font-size:72px; font-weight:800; color:var(--accent); line-height:1; }
+  .stat-divider { width:36px; height:3px; background:var(--accent); border-radius:2px; opacity:0.6; }
+  .stat-label { font-size:14px; color:var(--text-sub); font-weight:600; }
+  .stat-desc { font-size:12px; color:var(--text-muted); line-height:1.7; }
+- ⚠️ justify-content:space-between 절대 금지. margin-top:auto 절대 금지"
 "### S7 — TODO [Pattern A: timeline_flow]
 - badge: 로드맵
 - 제목: TODO
-- 타임라인 4단계: 각 카드 = 기간(상단 소형) + 단계명(중형 bold) + 액션 설명(소형)
-- 타임라인 카드 CSS (반드시 준수):
-  .tl-card { display:flex; flex-direction:column; justify-content:flex-start; gap:8px; padding:20px; height:100%; }
-  .tl-date { font-size:11px; color:var(--text-muted); }
-  .tl-title { font-size:16px; font-weight:700; color:var(--text); }
-  .tl-body { font-size:12px; color:var(--text-sub); line-height:1.6; }
-- 노드: 인디고 원형(border-radius:50%), AP-18 준수"
+- 타임라인 4단계: 각 카드 = 날짜 + 인디고 점(노드) + 단계명 + 설명 3~4줄 (카드를 채울 충분한 텍스트 필수)
+- 반드시 이 HTML 구조를 사용할 것:
+  <div class=\"tl-card\">
+    <div class=\"tl-date\">기간</div>
+    <div class=\"tl-node\"></div>
+    <div class=\"tl-title\">단계명</div>
+    <div class=\"tl-body\">설명 3~4줄. 구체적 액션/파일명/수치 포함.</div>
+  </div>
+- 반드시 이 CSS를 사용할 것:
+  .tl-card { display:flex; flex-direction:column; gap:10px; padding:24px 20px; height:100%; background:var(--bg-card); border-radius:12px; }
+  .tl-date { font-size:11px; color:var(--text-muted); font-weight:500; }
+  .tl-node { width:14px; height:14px; border-radius:50%; background:var(--accent); flex-shrink:0; }
+  .tl-title { font-size:17px; font-weight:700; color:var(--text); }
+  .tl-body { font-size:12px; color:var(--text-sub); line-height:1.7; }
+- ⚠️ justify-content:space-between 절대 금지. margin-top:auto 절대 금지"
 "### S8 — TODO [Pattern C: 3분할 big_statement]
 - badge: 핵심 메시지
 - 패널 CSS (반드시 준수):
