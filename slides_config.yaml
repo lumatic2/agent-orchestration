@@ -155,16 +155,17 @@ color_presets:
     source: "플랜바이테크놀로지스_회사소개서.pdf 표지 색상 기반"
     css: |
       :root {
-        --bg:         #2C2C2E;
-        --bg-card:    #3C3C3E;
-        --bg-card2:   #48484A;
-        --accent:     #5E5CE6;
-        --accent2:    #4844D4;
-        --text:       #FFFFFF;
-        --text-sub:   #D1D1DB;
-        --text-muted: #98989E;
-        --border:     rgba(94,92,230,0.25);
-        --surface:    #3C3C3E;
+        --bg:           #2C2C2E;
+        --bg-card:      #3C3C3E;
+        --bg-card2:     #48484A;
+        --accent:       #5E5CE6;   /* 장식/fill 전용 (border, bg-fill) */
+        --accent2:      #4844D4;
+        --accent-text:  #A8A6FF;   /* 텍스트 전용 — 대비비 5.1:1 on bg-card */
+        --text:         #FFFFFF;
+        --text-sub:     #D1D1DB;
+        --text-muted:   #98989E;
+        --border:       rgba(94,92,230,0.25);
+        --surface:      #3C3C3E;
       }
 
   dark_premium:

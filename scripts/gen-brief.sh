@@ -61,6 +61,7 @@ preset_css() {
 :root {
   --bg:#2C2C2E; --bg-card:#3C3C3E; --bg-card2:#48484A;
   --accent:#5E5CE6; --accent2:#4844D4;
+  --accent-text:#A8A6FF;  /* 다크 카드 위 텍스트용 — 대비비 5.1:1 */
   --text:#FFFFFF; --text-sub:#D1D1DB; --text-muted:#98989E;
   --border:rgba(94,92,230,0.25); --surface:#3C3C3E;
 }
@@ -195,7 +196,7 @@ slide_sections=(
 - 반드시 이 CSS를 사용할 것:
   .b-card { display:flex; flex-direction:column; gap:10px; padding:28px 24px; height:100%; background:var(--bg-card); border-radius:12px; }
   .b-label { font-size:11px; color:var(--text-muted); font-weight:600; letter-spacing:0.06em; text-transform:uppercase; }
-  .b-value { font-size:36px; font-weight:800; color:var(--accent); line-height:1.1; }
+  .b-value { font-size:36px; font-weight:800; color:var(--accent-text, var(--accent)); line-height:1.1; }
   .b-desc { font-size:12px; color:var(--text-sub); line-height:1.7; }
 - ⚠️ justify-content:space-between 절대 금지. margin-top:auto 절대 금지
 - 설명 텍스트는 2~3줄 분량으로 충분히 작성해 카드 공백 방지"
@@ -365,6 +366,13 @@ CSS
   # Planby 전용 추가 CSS
   if [ "$preset" = "planby_dark" ]; then
     cat <<'CSS'
+
+/* Planby 다크 테마 — 텍스트용 accent 오버라이드 (AP-22 대비 확보) */
+/* var(--accent)는 장식/fill 전용, 텍스트에는 반드시 var(--accent-text) 사용 */
+.badge { color:var(--accent-text); border-color:var(--accent-text); }
+.b-value { color:var(--accent-text); }
+.stat-number { color:#FFFFFF; }
+.tl-date { color:var(--accent-text); font-size:11px; font-weight:600; letter-spacing:0.05em; }
 
 /* Planby 워터마크 — 모든 슬라이드 공통 */
 .slide::after {
