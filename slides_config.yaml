@@ -46,10 +46,190 @@ color_policy:
   default: base                  # 기본은 항상 base_template 컬러(포트폴리오 시스템) 사용
   override_trigger: "명시적 요청"  # "주제에 어울리는 컬러로" 또는 특정 색상 지정 시에만 변경
   override_examples:
-    - "미쉐린 가이드 → 다크+골드 (#0F172A, #C9A84C)"
-    - "자연/환경 → 그린 계열"
-    - "금융/신뢰 → 네이비 계열"
+    - "미쉐린 가이드 → dark_gold 프리셋"
+    - "자연/환경 → light_green 프리셋"
+    - "금융/신뢰 → light_navy 프리셋"
+    - "힙합/뮤직 → dark_premium 프리셋"
+    - "커피/카페 → dark_coffee 프리셋"
   note: "컬러 오버라이드 시에도 레이아웃·타이포·SVG 규칙은 base_template 동일 적용"
+
+# ── 컬러 프리셋 (즉시 복붙용 :root {} 블록) ──────────────────────────
+# 사용법: 주제 키워드로 프리셋 선택 → css 블록을 그대로 <style> 안에 복붙
+# AP-17 준수: 다크 프리셋의 --border는 모두 rgba() 사용
+color_presets:
+
+  base_light:
+    name: "기본 라이트 (포트폴리오)"
+    theme: light
+    keywords: ["기본", "일반", "비즈니스", "보고서", "교육", "기본값"]
+    css: |
+      :root {
+        --bg:         #FFFFFF;
+        --bg-card:    #F8FAFC;
+        --bg-card2:   #F1F5F9;
+        --accent:     #2563EB;
+        --accent2:    #1D4ED8;
+        --text:       #111827;
+        --text-sub:   #374151;
+        --text-muted: #6B7280;
+        --border:     #E5E7EB;
+        --surface:    #F8FAFC;
+      }
+
+  light_navy:
+    name: "라이트 네이비 (금융·기업·기술)"
+    theme: light
+    keywords: ["금융", "기업", "기술", "신뢰", "전문성", "컨설팅", "IR", "투자", "전략"]
+    css: |
+      :root {
+        --bg:         #FFFFFF;
+        --bg-card:    #EFF6FF;
+        --bg-card2:   #DBEAFE;
+        --accent:     #1E40AF;
+        --accent2:    #1D4ED8;
+        --text:       #0F172A;
+        --text-sub:   #1E3A5F;
+        --text-muted: #64748B;
+        --border:     #BFDBFE;
+        --surface:    #EFF6FF;
+      }
+
+  light_green:
+    name: "라이트 그린 (환경·건강·성장)"
+    theme: light
+    keywords: ["환경", "건강", "성장", "자연", "지속가능", "ESG", "농업", "웰니스"]
+    css: |
+      :root {
+        --bg:         #FFFFFF;
+        --bg-card:    #F0FDF4;
+        --bg-card2:   #DCFCE7;
+        --accent:     #059669;
+        --accent2:    #047857;
+        --text:       #052E16;
+        --text-sub:   #166534;
+        --text-muted: #6B7280;
+        --border:     #BBF7D0;
+        --surface:    #F0FDF4;
+      }
+
+  light_red:
+    name: "라이트 레드 (스포츠·에너지·경쟁)"
+    theme: light
+    keywords: ["스포츠", "에너지", "경쟁", "열정", "도전", "운동", "격투", "축구", "농구"]
+    css: |
+      :root {
+        --bg:         #FFFFFF;
+        --bg-card:    #FFF5F5;
+        --bg-card2:   #FEE2E2;
+        --accent:     #DC2626;
+        --accent2:    #B91C1C;
+        --text:       #111827;
+        --text-sub:   #374151;
+        --text-muted: #6B7280;
+        --border:     #FECACA;
+        --surface:    #FFF5F5;
+      }
+
+  light_warm:
+    name: "라이트 웜 (여행·음식·라이프스타일)"
+    theme: light
+    keywords: ["여행", "음식", "라이프스타일", "문화", "요리", "카페", "관광", "골프"]
+    css: |
+      :root {
+        --bg:         #FFFBF5;
+        --bg-card:    #FEF3E2;
+        --bg-card2:   #FDE8C8;
+        --accent:     #D97706;
+        --accent2:    #B45309;
+        --text:       #1C1917;
+        --text-sub:   #44403C;
+        --text-muted: #78716C;
+        --border:     #FDE68A;
+        --surface:    #FEF3E2;
+      }
+
+  dark_premium:
+    name: "다크 프리미엄 (힙합·뮤직·럭셔리·나이트)"
+    theme: dark
+    keywords: ["힙합", "뮤직", "음악", "럭셔리", "나이트", "클럽", "트랩", "붐뱁", "패션"]
+    css: |
+      :root {
+        --bg:         #0A0A0F;
+        --bg-card:    #14141F;
+        --bg-card2:   #1E1E2E;
+        --accent:     #8B5CF6;
+        --accent2:    #6D28D9;
+        --text:       #F8F8F2;
+        --text-sub:   #BFBFD0;
+        --text-muted: #9898B0;
+        --border:     rgba(255,255,255,0.10);
+        --surface:    #14141F;
+      }
+    note: "트랩(퍼플)·붐뱁(앰버) 2색 비교 시 --trap:#8B5CF6 / --boom:#D97706 추가"
+
+  dark_gold:
+    name: "다크 골드 (미쉐린·고급요리·프리미엄 브랜드)"
+    theme: dark
+    keywords: ["미쉐린", "고급", "레스토랑", "와인", "프리미엄", "파인다이닝", "호텔"]
+    css: |
+      :root {
+        --bg:         #0F172A;
+        --bg-card:    #1E293B;
+        --bg-card2:   #263348;
+        --accent:     #C9A84C;
+        --accent2:    #A07830;
+        --text:       #F8F4EE;
+        --text-sub:   #CBD5E1;
+        --text-muted: #94A3B8;
+        --border:     rgba(201,168,76,0.20);
+        --surface:    #1E293B;
+      }
+
+  dark_coffee:
+    name: "다크 커피 (카페·원두·브루잉·역사)"
+    theme: dark
+    keywords: ["커피", "카페", "원두", "에스프레소", "브루잉", "바리스타", "커피역사"]
+    css: |
+      :root {
+        --bg:         #1C0F07;
+        --bg-card:    #2C1A0E;
+        --bg-card2:   #3D2610;
+        --accent:     #D4A052;
+        --accent2:    #A07030;
+        --text:       #F5EBD8;
+        --text-sub:   #D4C4A8;
+        --text-muted: #A89070;
+        --border:     rgba(212,160,82,0.25);   /* AP-17: rgba 필수 */
+        --surface:    #2C1A0E;
+      }
+    note: "AP-17 검증완료: border를 rgba로 처리해야 다크 브라운 배경에서 선이 보임"
+
+  dark_midnight:
+    name: "다크 미드나잇 (우주·테크·AI·미래·SF)"
+    theme: dark
+    keywords: ["우주", "테크", "AI", "미래", "SF", "사이버", "데이터", "블록체인"]
+    css: |
+      :root {
+        --bg:         #0A1628;
+        --bg-card:    #0F2040;
+        --bg-card2:   #162952;
+        --accent:     #38BDF8;
+        --accent2:    #0284C7;
+        --text:       #F0F9FF;
+        --text-sub:   #BAE6FD;
+        --text-muted: #7DD3FC;
+        --border:     rgba(56,189,248,0.15);
+        --surface:    #0F2040;
+      }
+
+  # ── 선택 가이드 ──────────────────────────────────────────────────
+  selection_guide: |
+    주제 키워드로 프리셋 자동 선택:
+    1. 슬라이드 주제의 keywords 목록과 대조
+    2. 매칭되는 프리셋의 css 블록을 <style> 최상단에 복붙
+    3. 매칭 없을 때 → base_light 사용
+    4. 사용자가 "어울리는 색상으로" 요청 시에만 오버라이드
+       → 명시적 색상 지정 없으면 base_light 유지
 
 # ── 색상 사용 원칙 (웹 리서치 기반, 2026-03-06) ─────────────────────
 color_rules:
