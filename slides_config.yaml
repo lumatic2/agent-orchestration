@@ -1026,7 +1026,7 @@ html_anti_patterns:
         .stat-card { display:flex; flex-direction:column; justify-content:flex-start; gap:10px; padding:28px 24px; height:100%; }
         .stat-number { font-size:56px; font-weight:700; color:var(--accent); line-height:1; }
         .stat-label  { font-size:13px; color:var(--text-sub); font-weight:500; }
-        .stat-desc   { font-size:12px; color:var(--text-muted); margin-top:auto; line-height:1.5; }
+        .stat-desc   { font-size:12px; color:var(--text-muted); line-height:1.5; }
       timeline 카드:
         .tl-card { display:flex; flex-direction:column; justify-content:flex-start; gap:8px; padding:20px; height:100%; }
         .tl-date { font-size:11px; color:var(--text-muted); }
@@ -1285,4 +1285,4 @@ ap_quick_ref:
   AP-18: "타임라인 노드 모양 통일 (원형), 크기/색상으로만 강조"
   AP-19: "bento_grid wide+small 혼합 시 셀 수 = 행×열 초과 금지 → grid-template-areas 명시"
   AP-20: "카드 내용 하단 쏠림 — flex-direction:column 카드에서 설명 텍스트가 하단에만 위치 → justify-content:space-between + 상단 제목 구조 필수"
-  AP-21: "stat/timeline 카드 중간 공백 — 요소 2개(숫자+설명)에 space-between 적용 시 중간 텅 빔 → flex-start + gap:10px 사용, margin-top:auto는 .stat-desc에만"
+  AP-21: "stat/timeline 카드 중간 공백 — 요소 2개(숫자+설명)에 space-between 적용 시 중간 텅 빔 → flex-start + gap:10px 사용, margin-top:auto 절대 금지"

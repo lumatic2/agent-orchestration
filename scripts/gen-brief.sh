@@ -409,7 +409,7 @@ CSS
   echo "- AP-16: ghost text → .slide 직계 자식 position:absolute z-index:0"
   echo "- AP-17: 다크 테마 선 → rgba() 사용 필수"
   echo "- AP-20: 카드 내 텍스트 하단 쏠림 방지 → .card { display:flex; flex-direction:column; justify-content:space-between } 제목 상단, 설명 margin-top:auto"
-  echo "- AP-21: stat/timeline 카드 중간 공백 방지 → justify-content:flex-start; gap:10px 사용. space-between 금지. stat-desc만 margin-top:auto"
+  echo "- AP-21: stat/timeline 카드 중간 공백 방지 → justify-content:flex-start; gap:10px 사용. space-between 금지. margin-top:auto 절대 금지"
   echo
 
   if [ "$preset" = "planby_dark" ]; then
