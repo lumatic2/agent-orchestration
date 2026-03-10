@@ -251,7 +251,7 @@
 
 _Populated as project patterns emerge._
 
-## 기기별 시스템 가용성 (2026-03-05 기준)
+## 기기별 시스템 가용성 (2026-03-10 기준)
 
 | 시스템 | Mac mini (주) | Windows PC | 비고 |
 |---|---|---|---|
@@ -261,6 +261,47 @@ _Populated as project patterns emerge._
 | Google Drive (회사) | ✅ 마운트됨 | ❓ 확인 필요 | steven.jun@planby.us |
 | Figma MCP | ✅ (재시작 필요) | ❌ | launchd + npm 설치 필요 |
 | law_search.py | ✅ | ✅ git pull 후 | Gemini CLI 필요 |
+
+### SSH 접속 정보 (2026-03-10 전수 확인 완료)
+
+| 별칭 | IP (Tailscale) | 사용자 | SSH 키 | SCP | 비고 |
+|---|---|---|---|---|---|
+| mini | 100.114.2.73 | luma2 | ~/.ssh/id_ed25519 | ✅ | 이 Mac Mini |
+| m4 | 100.100.79.12 | luma3 | ~/.ssh/id_ed25519 | ✅ | |
+| macair | 100.87.7.85 | luma2 | ~/.ssh/id_ed25519 | ✅ | |
+| windows | 100.103.17.19 | 1 | ~/.ssh/id_ed25519 | ✅ | cmd.exe 기본 셸. 바탕화면: `Desktop\` |
+
+```bash
+# 파일 전송 예시
+scp /path/to/file.pdf windows:Desktop/file.pdf
+scp /path/to/file mini:/path/to/dest
+ssh windows "dir Desktop"
+```
+
+### OpenClaw 파이프라인 (2026-03-10)
+
+**구조**: 텔레그램 → OpenClaw(라우터) → Claude Code → 작업 수행 → 결과 텔레그램 전송
+
+- OpenClaw 설정: `~/.openclaw/openclaw.json`
+- 주 모델: `moonshot/moonshot-v1-32k` (라우팅용), fallback: `kimi-k2.5`
+- Claude Code 위임 방식: `delegate_to_claude` 툴 → `claude --dangerously-skip-permissions "작업"`
+- 완료 알림: `openclaw system event --text "Done: 요약" --mode now`
+
+**슬라이드 파이프라인** (`scripts/slides-bridge.sh`):
+1. `gen-brief.sh` → 브리프 생성
+2. `orchestrate.sh gemini` → Gemini 리서치
+3. `orchestrate.sh codex` → Codex HTML 생성
+4. `render-slides.sh` → Playwright → PDF
+5. `scp` → 대상 기기 전송 (Windows: `windows:Desktop/파일명.pdf`)
+6. `telegram-send.sh` → 텔레그램 전송
+
+```bash
+# 슬라이드 생성 예시 (로컬 저장)
+bash scripts/slides-bridge.sh "커피" 10 local
+
+# 텔레그램으로 직접 전송
+bash scripts/slides-bridge.sh "커피" 10 telegram
+```
 
 ### 새 기기/세션 셋업 순서
 ```bash
