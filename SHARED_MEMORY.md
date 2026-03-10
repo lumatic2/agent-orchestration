@@ -27,6 +27,55 @@
   - AP-09: 사례박스 absolute bottom 고정 → flex 흐름 안에 margin-top:20px
 **다음 슬라이드 주제**: 빈지노 vs 이센스 힙합 비교 (Gemini 리서치 진행 중, 2026-03-06)
 
+## Planby 자동 콘텐츠 시스템 (2026-03-10 완성)
+
+**목적**: 건설/부동산 업계 뉴스·인사이트 자동 생성 → Notion 검토 → 홈페이지 발행
+
+### 현재 완성된 기능 (v1)
+- 스크립트: `~/Desktop/agent-orchestration/scripts/planby-content.sh`
+- 실행: `bash planby-content.sh` (인자 없이 실행 → 요일 자동 로테이션)
+- 스케줄: Mac mini cron `0 9 * * 1,3,5` (월·수·금 오전 9시)
+- Notion DB: `31b85046ff558181b24cd5b94f371c75` (개인 워크스페이스)
+  - 컬럼: 제목/카테고리/상태/생성일/뉴스출처/슬러그/메타설명/태그
+- llms.txt 템플릿: `~/Desktop/planby-llms.txt` (사이트 루트에 배치 예정)
+- 히스토리: `~/Desktop/agent-orchestration/data/planby-title-history.txt`
+
+### 콘텐츠 로테이션
+- 월요일 → 주간뉴스 (주간 건설/부동산 뉴스 라운드업)
+- 수요일 → 인사이트 (단일 이슈 심층 분석)
+- 금요일 → Q&A (실무자 질문 답변)
+
+### 기술 스택 (무비용)
+- 뉴스 수집: Google News RSS (`urllib` + `xml` 파싱, 외부 라이브러리 없음)
+- 글 생성: Gemini 2.5 Flash CLI (`--yolo` 모드, 기존 $20/mo 플랜)
+- 검토: Notion DB (초안 → 검토완료 → 발행됨)
+- 발행: 수동 업로드 (사이트 미완성 상태)
+
+---
+### 사이트 완성 후 업그레이드 로드맵
+
+#### Phase 2 — 자동 발행 (사이트 완성 직후)
+| # | 기능 | 방법 | 난이도 |
+|---|---|---|---|
+| A | **Notion → 사이트 자동 발행** | Notion DB 상태 "발행됨" 변경 시 Vercel 자동 빌드 트리거. nobelium/nextjs-notion-starter-kit 방식. | 중 |
+| B | **Schema.org 자동 삽입** | 발행 시 `BlogPosting` 구조화 데이터 자동 추가 → Google/AI 크롤러 최적화 | 소 |
+| C | **llms.txt 배포** | `~/Desktop/planby-llms.txt`를 사이트 루트(/)에 배치 | 소 |
+| D | **Unsplash 썸네일** | 키워드 기반 무료 이미지 자동 첨부 (Unsplash API 무료 플랜) | 소 |
+
+#### Phase 3 — 인프라 고도화 (선택적)
+| # | 기능 | 방법 | 난이도 |
+|---|---|---|---|
+| E | **GitHub Actions 이전** | Mac mini 의존성 제거. GitHub repo에서 cron으로 실행. 전용 `planby-site` repo 생성 필요 | 중 |
+| F | **SEO 키워드 선행 분석** | Google Trends RSS로 이번 주 핫 키워드 먼저 파악 후 Gemini에 주제 제공 | 소 |
+| G | **Slack 검토 알림** | 초안 생성 시 Slack 웹훅으로 알림 → 버튼 클릭으로 승인/반려 | 중 |
+
+#### GitHub Repo 생성 타이밍
+- **지금 아님** — 사이트 미완성 상태에서 repo 만들 이유 없음
+- **사이트 완성 직전** — `planby-site` 또는 `planby-content` repo 생성
+  - 포함할 것: planby-content.sh, llms.txt, GitHub Actions 워크플로, Notion DB 스키마 문서
+  - agent-orchestration과 분리: 회사 팀원 공유 가능한 독립 repo
+
+---
 ## Active Projects
 
 - **MOD**: 54-card thinking framework deck. v1=thought frameworks, v2=knowledge/memory, v3=agents/physical AI.
