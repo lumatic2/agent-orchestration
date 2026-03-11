@@ -6,6 +6,29 @@
 
 ---
 
+## Personal Task Management System (2026-03-12)
+
+**Source of truth**: `C:/Users/1/Desktop/agent-orchestration/SCHEDULE.md`
+**반복 항목**: `RECURRING.md` (같은 폴더)
+**일일 로그**: `daily/YYYY-MM-DD.md`
+**세션 요약**: `session.md`
+
+슬래시 커맨드:
+- `/today` — 오늘 브리핑 (SCHEDULE + RECURRING + 마지막 세션 컨텍스트)
+- `/done 항목명` — 완료 처리 + daily 로그 기록
+- `/filter 카테고리` — 카테고리 필터 (#회사 #개발 #학습 #크리에이티브 #라이프 #노션)
+- `/weekly-review` — 주간 회고
+- `/session-end` — 세션 마무리 + session.md 업데이트
+
+> Codex/Gemini: 태스크 위임 전 SCHEDULE.md 참고해서 현재 진행 중인 프로젝트 컨텍스트 확인 가능.
+
+**Notion 간트 차트**
+- 페이지 ID: `30785046-ff55-8028-b0a9-ff0b5488330c`
+- DB ID: `30785046-ff55-81bc-b093-dfbd85d74ac5`
+- 접근: `PYTHONIOENCODING=utf-8 python C:/Users/1/notion_db.py` (PERSONAL_NOTION_TOKEN 필요)
+
+---
+
 ## 슬라이드 생성 시스템 (Living System)
 
 **상태**: 실사용 검증 완료. AP-01~09 누적.
