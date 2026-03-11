@@ -318,3 +318,18 @@ Notion/Slack 등 MCP 도구가 필요한 작업은 Codex/Gemini에 위임 불가
 ### 긴 세션 컨텍스트 관리
 - `/tmp/` 파일을 버전별 중간 저장소로 활용 (posco_v5_slim.md → posco_v6.md)
 - 컨텍스트 압축 발동 전 SHARED_MEMORY 업데이트가 연속성 핵심
+
+## Google Workspace MCP (2026-03-12)
+- **MCP 이름**: google-workspace (taylorwilsdon/google_workspace_mcp)
+- **설치 방법**: `uvx workspace-mcp --single-user` (stdio transport)
+- **인증**: OAuth 토큰 `~/.google_workspace_mcp/credentials/yusung8307@gmail.com.json`
+- **client_secret**: `~/.config/gws/client_secret.json`
+- **배포 완료**: Windows / M1 / M4 / MacBook Air 4대 동일 설정
+- **가능한 작업** (114개 도구):
+  - Gmail: 읽기/쓰기/검색/발송/라벨 관리
+  - Google Calendar: 일정 조회/생성/수정 + Google Meet 링크 포함
+  - Google Drive: 파일 읽기/쓰기/공유
+  - Google Docs/Sheets/Slides: 문서 읽기/편집
+  - Google Tasks/Contacts/Forms/Chat
+- **대표 시나리오**: 캘린더 조회 → 시트 데이터 추출 → 이메일 발송 → Meet 일정 생성을 한 번의 프롬프트로 자동화 가능
+- **gws CLI**도 별도 설치됨 (npm, v0.11.1): 터미널에서 직접 API 호출 가능
