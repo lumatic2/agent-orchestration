@@ -1,8 +1,38 @@
+> 📦 archived sections → `SHARED_MEMORY_ARCHIVE.md` (Active Projects / Recent Decisions / POSCO 사례)
+
 # Shared Memory
 
 > Managed by the orchestrator (Claude Code).
 > All agents read this for cross-session context.
 > Updated after each significant task completion.
+
+---
+
+## Personal Task Management System (2026-03-12)
+
+**Source of truth**: `C:/Users/1/Desktop/agent-orchestration/SCHEDULE.md`
+**반복 항목**: `RECURRING.md` (같은 폴더)
+**일일 로그**: `daily/YYYY-MM-DD.md`
+**세션 요약**: `session.md`
+
+**SCHEDULE.md 상태 마커**
+- `- [ ]` 대기 / `- [/]` 진행 중 (다른 세션) / `- [x]` 완료
+- `[/]` 항목은 `/today` 추천 포커스에서 제외됨
+
+슬래시 커맨드:
+- `/today` — 오늘 브리핑 (SCHEDULE + RECURRING + 마지막 세션 컨텍스트, `[/]` 항목 별도 표시)
+- `/done 항목명` — 완료 처리 + daily 로그 기록
+- `/filter 카테고리` — 카테고리 필터 (#회사 #개발 #학습 #크리에이티브 #라이프 #노션)
+- `/weekly-review` — 주간 회고
+- `/session-end` — 세션 마무리 + session.md 업데이트
+- `/github-trends` — 최신 GitHub 트렌드 브리핑 + TOP 3 적용 추천
+
+> Codex/Gemini: 태스크 위임 전 SCHEDULE.md 참고해서 현재 진행 중인 프로젝트 컨텍스트 확인 가능.
+
+**Notion 간트 차트**
+- 페이지 ID: `30785046-ff55-8028-b0a9-ff0b5488330c`
+- DB ID: `30785046-ff55-81bc-b093-dfbd85d74ac5`
+- 접근: `PYTHONIOENCODING=utf-8 python C:/Users/1/notion_db.py` (PERSONAL_NOTION_TOKEN 필요)
 
 ---
 
@@ -27,35 +57,124 @@
   - AP-09: 사례박스 absolute bottom 고정 → flex 흐름 안에 margin-top:20px
 **다음 슬라이드 주제**: 빈지노 vs 이센스 힙합 비교 (Gemini 리서치 진행 중, 2026-03-06)
 
+## Planby 온보딩 패키지 (2026-03-10 완성)
+
+## 2026-03-08 오케스트레이션 실전 검증 기록
+
+### 검증된 패턴
+- **Gemini 리서치 병렬 디스패치**: 3개 태스크 동시 → 각 5~10분 내 완료. 효과적.
+- **Codex 단일 파일 생성**: vbt_backtest.py, video_creator.py — 명확한 brief + 완료 기준 필수.
+- **노션 MCP vs notion_db.py**: MCP는 회사 워크스페이스만. 개인 워크스페이스는 notion_db.py 필수.
+- **M1 헤드리스 자동화**: OpenClaw → SSH → Windows/MacBook Air 완전 작동. launchd로 스케줄 등록.
+
+### 새로 구축된 시스템
+- **content-automation**: GitHub Mod41529/content-automation (private)
+  - Gemini 2.5 Flash로 콘텐츠 생성 (무료, 1,500 req/일)
+  - YouTube OAuth 완료 (`credentials/youtube_token.json`)
+  - M1 launchd 등록: 화/목/토 10:00 자동 실행
+  - ⏳ MoviePy 영상 생성 모듈 (T058 Codex 작업 중)
+- **investment-bot**: VectorBT 백테스팅 레이어 추가 (`vbt_backtest.py`)
+  - 삼성전자 모멘텀 최적값: fast=30, slow=80 (+423%, Sharpe 1.52)
+
+### SSH 전체 연결 현황 (2026-03-08 완성)
+| 연결 | 방식 | alias |
+|---|---|---|
+| MacBook Air → Windows | Tailscale (100.103.17.19) | `ssh windows` |
+| Windows → MacBook Air | Tailscale (100.87.7.85) | `ssh macair` |
+| M1 → Windows | LAN (192.168.200.200) | `ssh windows` |
+| M1 → MacBook Air | LAN (192.168.200.104) | `ssh macair` |
+| Windows → M1 | LAN (192.168.200.164) | `ssh m1` |
+| ↔ M4 | Tailscale 미설치 | 회사 방문 후 |
+
+### 설치된 도구 (Windows)
+- lazygit (alias: lg), fzf, Ruff, Poetry, VectorBT, google-genai
+- Ruff Claude Code 훅: Edit/Write 시 .py 자동 린트
+
+### API 키 현황
+- Gemini API: aistudio.google.com (무료 Flash 1,500/일)
+- YouTube OAuth: credentials/youtube_token.json (M1 + Windows)
+- Moonshot/Kimi: ~/.zshrc MOONSHOT_API_KEY (M1, OpenClaw 사용)
+
+---
+
 ## Active Projects
 
-- **MOD**: 54-card thinking framework deck. v1=thought frameworks, v2=knowledge/memory, v3=agents/physical AI.
-- **Planby Pilot**: Business Strategy & Finance. OKR-ROI-Decision structures.
-  - **현재 상태**: 4주 계획 전체 완료. Architecture v1.0 + 4개 운영 매뉴얼 + 대표용 보고서 생성됨.
-  - **세션 인수인계 페이지**: https://www.notion.so/31a85046ff5581b58b6cf4a171319da1
-  - **Architecture v1.0**: 31a85046-ff55-816e-8414-f25e60cbdaed
-  - **대표용 보고서**: 31a85046-ff55-81bb-a57c-cb77428be930
-  - **핵심 발견**:
-    - P_parallel 실데이터: 최대 5건 (2025-09~11). Base 3건은 보수적으로 합리적.
-    - 계약금 실데이터: Won 평균 ~4,900만 (PoC 포함). 대형 커스텀 1억+은 2건.
-    - 재발주율: **9건 중 6건(66.7%)이 기존 고객** ✅ (DIPS 신청서 직접 명시, 2026-02-13)
-    - 재발주 사례: 루시드프로모 2,080만 → 1.52억 (7.3x). PoC First 구조 증거.
-    - **특허 4건 등록 확인** ✅: 10-2759071, 10-2776139, 10-2776140, 10-2797720 (모두 2025년 AI 이미지 생성 관련)
-    - TIPS 협약: 정부지원금 15억 (2024~2027). 2026년 5억 입금 예정 (2026-03-31).
-    - 투자: 500 Global 1.5억 + 카이스트창투 3.5억 = VC 5억. Series A 50~100억 미체결.
-    - 현금: ~1.97억 (2026-03-01 재무제표 기준). TIPS 5억 후 ~6.97억. 런웨이 약 8개월.
-    - 자본잠식 96%. Series A 즉시 착수 필요.
-    - 기술기여도 의무: 2026년 45.76% (TIPS R&D 매출 기술료 납부 의무).
-    - **⚠️ 매출 수정**: 공식 재무제표(세무사 2026-03-04) 기준 2025 서비스매출=2.89억. 이전 "7.8억"은 출처 불명으로 폐기.
-    - 실적 트래킹 (공식): 2023=2,510만 / 2024=4,412만 / 2025=2.89억 (서비스매출). 국고보조금 별도(2025: 3.32억)
-  - **미완성 항목**: Series A 타임라인, TIPS R&D 마일스톤 상세
-  - **🟡 Win Rate 추정**: 55~65% (Won ~12건 / Active ~7건 / Lost ~7건 추정). B2B SaaS 평균 25~35% 상회 — 니치 특화. ⚠️ Lost 정확 건수는 고객사 DB Archived 뷰 확인 필요.
-  - **🟡 장기차입금 만기 추정**: IBK 4.5억 (연 4.2%, 연 5천만 상환). 운전자금=매년 갱신(2026년 시점 주의), 시설자금=2027~2030년. 완전상환 12년. ⚠️ 대출계약서 원본 확인 필요.
-  - **🟡 MRR 추정**: 현재 200~350만원/월. 연간 SaaS 2,000~3,000만원 = 서비스매출의 7~10%. 나머지 B2B 커스텀.
-  - **N_maint 실수 (2026-03-05 조회)**: 최소 3곳 확인 — HK건축(Pro Yearly 288만/년), 지안건축설계(서면계약완료), 한국공항공사(Pro Monthly ~33만/월, 3개월 결제 완료). 5건 가정 → 3건으로 하향 조정 고려. 삼성E&A 유지보수 계약 별도 확인 필요.
-  - **현재 활성 파이프라인 (2026-03-04 월간 전체 회의 기준)**: 넷폼알앤디 7,000만(계약직전), 위미코 PoC 1,500만+본계약 1.02억, 현대일렉트릭(BIM), 삼성전자(공장AI), 삼성물산(리모델링), LG전자(OI)
-  - **PLAD 가격 모델**: Starter 9.9만/월(마진 60%), Pro 29.9만/월(마진 47%)
-  - **⚠️ notion_db.py 주의**: replace-content를 자식 페이지 있는 페이지에 쓰면 자식 페이지 아카이브됨.
+**목적**: 플랜바이 신입 온보딩 프로그램 설계 → 노션 + 대표 제안 슬라이드
+
+### 완성된 Notion 페이지 (개인 워크스페이스 > 플랜바이 업무)
+- **Part A** (담당자용): https://www.notion.so/Part-A-31f85046ff5581eaad80eda74a4adefe
+  - 설계 원칙 / 4단계 로드맵 / 90일 성공 프로파일 / Stage 0 체크리스트(전날 D-1 포함)
+  - Day 1 운영 가이드 / 대표 비전 세션 아젠다 / 버디 제도 / 피드백 루프
+  - **온보딩 실패 신호 & 개입 가이드** (Early Warning 5가지 + 개입 방법)
+- **Part B** (신입사원용): https://www.notion.so/Part-B-31f85046ff5581bb8e86c24cbeb8b8d8
+  - 0. 입사 전 준비 (계정/서류/보안) / 1. 회사 이해 (미션·창업스토리·사업영역)
+  - **플랜바이 문화 코드** (대표 DM 가능, 실수 공유, 의견 불일치 문화)
+  - 팀 구조 / 도구 / 일하는 방식 (Slack 에티켓·의사결정 3단계) / Plana 써보기
+  - 온보딩 체크리스트 Day 1→Week 1→Week 2→Day 30→**Day 60**→Day 90
+  - 30-60-90일 플랜 (목표/완료기준/주요액션 3열 테이블) / 용어집
+  - **10. FAQ** (근태·복지·업무·도구 10개 Q&A)
+
+### 다음 작업: 온보딩 패키지 제안 슬라이드
+- **목적**: 대표에게 이 온보딩 프로그램 도입을 제안하는 슬라이드 덱
+- **핵심 메시지**: 현재 가이드(4개 섹션) → 신규 패키지로 업그레이드, 기대 효과
+- **슬라이드 구성 (안)**:
+  1. 표지: "플랜바이 온보딩 패키지 v1"
+  2. 문제 정의: 지금 온보딩의 빈틈 (기존 가이드 한계)
+  3. 솔루션 개요: Part A(운영자) + Part B(신입) 구조
+  4. 핵심 차별점 5가지 (맥락 제공 / Day 1 경험 / 성공 기준 / 문화 코드 / 실패 감지)
+  5. 90일 로드맵 타임라인
+  6. 기대 효과 (적응 속도, 이탈 리스크 감소, 운영 비용 절감)
+  7. 실행 계획 (즉시 적용 가능한 체크리스트)
+- **슬라이드 시스템**: `render-slides.sh` 사용, slides_config.yaml AP 참조
+- **새 세션에서**: `orchestrate.sh codex "온보딩 패키지 제안 슬라이드" planby-onboarding-slides` 로 위임
+
+## Planby 자동 콘텐츠 시스템 (2026-03-10 완성)
+
+**목적**: 건설/부동산 업계 뉴스·인사이트 자동 생성 → Notion 검토 → 홈페이지 발행
+
+### 현재 완성된 기능 (v1)
+- 스크립트: `~/Desktop/agent-orchestration/scripts/planby-content.sh`
+- 실행: `bash planby-content.sh` (인자 없이 실행 → 요일 자동 로테이션)
+- 스케줄: Mac mini cron `0 9 * * 1,3,5` (월·수·금 오전 9시)
+- Notion DB: `31b85046ff558181b24cd5b94f371c75` (개인 워크스페이스)
+  - 컬럼: 제목/카테고리/상태/생성일/뉴스출처/슬러그/메타설명/태그
+- llms.txt 템플릿: `~/Desktop/planby-llms.txt` (사이트 루트에 배치 예정)
+- 히스토리: `~/Desktop/agent-orchestration/data/planby-title-history.txt`
+
+### 콘텐츠 로테이션
+- 월요일 → 주간뉴스 (주간 건설/부동산 뉴스 라운드업)
+- 수요일 → 인사이트 (단일 이슈 심층 분석)
+- 금요일 → Q&A (실무자 질문 답변)
+
+### 기술 스택 (무비용)
+- 뉴스 수집: Google News RSS (`urllib` + `xml` 파싱, 외부 라이브러리 없음)
+- 글 생성: Gemini 2.5 Flash CLI (`--yolo` 모드, 기존 $20/mo 플랜)
+- 검토: Notion DB (초안 → 검토완료 → 발행됨)
+- 발행: 수동 업로드 (사이트 미완성 상태)
+
+---
+### 사이트 완성 후 업그레이드 로드맵
+
+#### Phase 2 — 자동 발행 (사이트 완성 직후)
+| # | 기능 | 방법 | 난이도 |
+|---|---|---|---|
+| A | **Notion → 사이트 자동 발행** | Notion DB 상태 "발행됨" 변경 시 Vercel 자동 빌드 트리거. nobelium/nextjs-notion-starter-kit 방식. | 중 |
+| B | **Schema.org 자동 삽입** | 발행 시 `BlogPosting` 구조화 데이터 자동 추가 → Google/AI 크롤러 최적화 | 소 |
+| C | **llms.txt 배포** | `~/Desktop/planby-llms.txt`를 사이트 루트(/)에 배치 | 소 |
+| D | **Unsplash 썸네일** | 키워드 기반 무료 이미지 자동 첨부 (Unsplash API 무료 플랜) | 소 |
+
+#### Phase 3 — 인프라 고도화 (선택적)
+| # | 기능 | 방법 | 난이도 |
+|---|---|---|---|
+| E | **GitHub Actions 이전** | Mac mini 의존성 제거. GitHub repo에서 cron으로 실행. 전용 `planby-site` repo 생성 필요 | 중 |
+| F | **SEO 키워드 선행 분석** | Google Trends RSS로 이번 주 핫 키워드 먼저 파악 후 Gemini에 주제 제공 | 소 |
+| G | **Slack 검토 알림** | 초안 생성 시 Slack 웹훅으로 알림 → 버튼 클릭으로 승인/반려 | 중 |
+
+#### GitHub Repo 생성 타이밍
+- **지금 아님** — 사이트 미완성 상태에서 repo 만들 이유 없음
+- **사이트 완성 직전** — `planby-site` 또는 `planby-content` repo 생성
+  - 포함할 것: planby-content.sh, llms.txt, GitHub Actions 워크플로, Notion DB 스키마 문서
+  - agent-orchestration과 분리: 회사 팀원 공유 가능한 독립 repo
 
 ## Planby 회사 데이터 지도 (COMPANY_NOTION_TOKEN 사용)
 
@@ -109,7 +228,7 @@
 - MRR 사실상 0, 매출 대부분 B2B 일회성 프로젝트
 - 2024 R&D 세액공제 42.85백만 이월 중
 
-### AnythingLLM 플랜바이 워크스페이스
+### ~~AnythingLLM 플랜바이 워크스페이스~~ (2026-03-12 사용 중단 — 기록 보존)
 - API Key: planby-cb99f5222e56c3ed40d98c77e35bf001
 - 조회 스크립트: ~/projects/agent-orchestration/scripts/planby_ask.sh (워크스페이스 자동 라우팅)
 - 업로드 스크립트: ~/projects/agent-orchestration/scripts/planby_upload.sh
@@ -126,7 +245,7 @@
 | 플랜바이 회의, 초안 | 497efbac-31d9-4864-8d53-98a49437d51e | 회의록, 초안, 메모, 검토 문서 |
 | 플랜바이 (전체/구) | 4b7216ef-9bb1-4553-a2b0-0478a73d5b03 | 분류 불명확 시 fallback |
 
-### AnythingLLM 운영 규칙
+### ~~AnythingLLM 운영 규칙~~ (deprecated)
 
 **워크스페이스 분리 기준**
 | 워크스페이스 | 용도 |
@@ -156,31 +275,57 @@
 3. 2026년 1월 지급수수료 4,489만원 내역 → 반복 여부 확인
 4. 삼성 E&A 재계약 협상 현황 파악 (계약 시 런웨이 즉시 개선)
 
-## Recent Decisions
-
-- **2026-03-06**: Notion 라우팅 재설계. Gemini에 Notion MCP 연결 완료. 조사+저장 원스톱 파이프라인 활성화. 규칙: 조사+콘텐츠→Notion=Gemini, DB설계·판단=Claude, AI없는 저장=notion_db.py. ROUTING_TABLE + adapters/gemini.md 업데이트.
-- **2026-03-05**: knowledge 8개 파일 완성 (2026-03-05): tax_core, tax_incentives, vat, inheritance_gift_tax, valuation_formulas, audit_standards, ifrs_key, commercial_law_company. 15개 에이전트 전원 knowledge 매핑 완료
-- **2026-03-05**: chain.sh 실전 검증 완료 (2026-03-05): expert:ifrs_advisory→tax 2단계 체인, K-IFRS 1020/1012 + 조특법10조 복합 분석. 컨텍스트 누적 정상, 필터링 정상
-- **2026-03-05**: 전문가 에이전트 실무 직무 기반 재편: audit/deal_advisory/valuation/wealth_tax/tax_investigation/ifrs_advisory/international_tax/forensic 8개 추가. Big4 실무 직무 분류 기준 적용.
-- **2026-03-05**: expert 에이전트 확장: economics, gov_accounting, business, commercial_law 추가. kicpa_agent 실무 특화 재작성 (시험 언어 제거)
-- **2026-03-05**: orchestration upgrade: --cost/--clean 추가, kicpa_agent.sh + law_agent.sh 신규, sync.sh notion_pages.conf 배포, 큐 52개 아카이브
-- **2026-03-05**: connection layer 구현 완료: save_to_notion.sh + memory_update.sh 추가
-- **2026-02-27**: E2E orchestration test passed. Gemini researched (argparse recommended) → Codex generated code → Claude verified. Full pipeline working. Note: Gemini `--sandbox` removed (requires Docker).
-
-## Conventions
-
-_Populated as project patterns emerge._
-
-## 기기별 시스템 가용성 (2026-03-05 기준)
+## 기기별 시스템 가용성 (2026-03-10 기준)
 
 | 시스템 | Mac mini (주) | Windows PC | 비고 |
 |---|---|---|---|
 | Claude Code + MCP | ✅ | git pull → sync.sh | notion/figma MCP 별도 등록 필요 |
-| AnythingLLM RAG | ✅ localhost:3001 | ❌ 미설치 | 기기별 별도 설치 + 문서 재업로드 |
+| AnythingLLM RAG | ~~✅ localhost:3001~~ ❌ 사용 중단 | ❌ | 수치 오류로 제거. PDF 직접 Read로 대체 |
 | Google Drive (개인) | ✅ 마운트됨 | ❓ 확인 필요 | ~/Library/CloudStorage/ |
 | Google Drive (회사) | ✅ 마운트됨 | ❓ 확인 필요 | steven.jun@planby.us |
 | Figma MCP | ✅ (재시작 필요) | ❌ | launchd + npm 설치 필요 |
 | law_search.py | ✅ | ✅ git pull 후 | Gemini CLI 필요 |
+
+### SSH 접속 정보 (2026-03-10 전수 확인 완료)
+
+| 별칭 | IP (Tailscale) | 사용자 | SSH 키 | SCP | 비고 |
+|---|---|---|---|---|---|
+| mini | 100.114.2.73 | luma2 | ~/.ssh/id_ed25519 | ✅ | 이 Mac Mini |
+| m4 | 100.100.79.12 | luma3 | ~/.ssh/id_ed25519 | ✅ | |
+| macair | 100.87.7.85 | luma2 | ~/.ssh/id_ed25519 | ✅ | |
+| windows | 100.103.17.19 | 1 | ~/.ssh/id_ed25519 | ✅ | cmd.exe 기본 셸. 바탕화면: `Desktop\` |
+
+```bash
+# 파일 전송 예시
+scp /path/to/file.pdf windows:Desktop/file.pdf
+scp /path/to/file mini:/path/to/dest
+ssh windows "dir Desktop"
+```
+
+### OpenClaw 파이프라인 (2026-03-10)
+
+**구조**: 텔레그램 → OpenClaw(라우터) → Claude Code → 작업 수행 → 결과 텔레그램 전송
+
+- OpenClaw 설정: `~/.openclaw/openclaw.json`
+- 주 모델: `moonshot/moonshot-v1-32k` (라우팅용), fallback: `kimi-k2.5`
+- Claude Code 위임 방식: `delegate_to_claude` 툴 → `claude --dangerously-skip-permissions "작업"`
+- 완료 알림: `openclaw system event --text "Done: 요약" --mode now`
+
+**슬라이드 파이프라인** (`scripts/slides-bridge.sh`):
+1. `gen-brief.sh` → 브리프 생성
+2. `orchestrate.sh gemini` → Gemini 리서치
+3. `orchestrate.sh codex` → Codex HTML 생성
+4. `render-slides.sh` → Playwright → PDF
+5. `scp` → 대상 기기 전송 (Windows: `windows:Desktop/파일명.pdf`)
+6. `telegram-send.sh` → 텔레그램 전송
+
+```bash
+# 슬라이드 생성 예시 (로컬 저장)
+bash scripts/slides-bridge.sh "커피" 10 local
+
+# 텔레그램으로 직접 전송
+bash scripts/slides-bridge.sh "커피" 10 telegram
+```
 
 ### 새 기기/세션 셋업 순서
 ```bash
@@ -235,6 +380,20 @@ gemini mcp add --scope user --trust \
 - `--pro`: Gemini 2.5 Pro 사용 (심층 분석)
 - 추가 비용 없음 (Gemini Pro 구독 내)
 
+## GitHub 트렌드 자동 수신 시스템 (2026-03-12)
+
+- **스크립트**: `~/Desktop/agent-orchestration/scripts/github-trends.sh`
+- **실행**: `bash github-trends.sh` (전체 파이프라인) / `--dry-run` (미리보기)
+- **스케줄**: macOS launchd `com.luma3.github-trends` — 매주 월 09:00 자동 실행
+- **흐름**: `gh api` 수집 (최근 7일 ★기준) → Gemini 분류 → 리포트 저장 → 텔레그램 알림
+- **리포트**: `reports/github-trends-YYYY-MM-DD.md` (즉시적용/참고/스킵 분류)
+- **텔레그램**: 즉시적용 5개 + 이유 + 적용 포인트 + 하단 "Claude Code 붙여넣기" 명령어
+- **적용 방법**: 텔레그램 명령어 복사 → Claude Code에 붙여넣기 or `/github-trends` 실행
+
+**버그 수정 (2026-03-12)**: `is_rate_limited()` false positive
+- 원인: Codex가 작업 중 `orchestrate.sh` 읽을 때 파일 내 "rate limit" 주석이 매칭됨
+- 수정: 출력 전체 대신 마지막 30줄만 검사하도록 변경
+
 ## Known Issues
 
 _Tracked here when agents encounter blockers._
@@ -257,3 +416,46 @@ Notion/Slack 등 MCP 도구가 필요한 작업은 Codex/Gemini에 위임 불가
 ### 긴 세션 컨텍스트 관리
 - `/tmp/` 파일을 버전별 중간 저장소로 활용 (posco_v5_slim.md → posco_v6.md)
 - 컨텍스트 압축 발동 전 SHARED_MEMORY 업데이트가 연속성 핵심
+
+## 통합 지식베이스 (2026-03-12)
+
+**경로**: `~/Desktop/knowledge-base/`
+**목적**: Claude가 파일을 복사하지 않고 링크/ID로 원본에 직접 접근하는 인덱스 시스템
+
+### 소스별 접근 방법
+
+| 소스 | 방법 | 비고 |
+|------|------|------|
+| 회사 Notion | `NOTION_TOKEN=$COMPANY_NOTION_TOKEN python3 ~/notion_db.py` | 읽기 전용 |
+| 로컬 PDF | Claude `Read` 도구 직접 사용 | `~/Desktop/플랜바이 자료/` |
+| Clobe.AI Excel | Python `openpyxl` 직접 파싱 | 랜딩존: `플랜바이 재무:세무 정보/Clobe.AI 엑셀 파일/` |
+| Google Drive | MCP `search_drive_files` (yusung8307@gmail.com) | 온디맨드 검색 |
+| 대용량 멀티문서 | `orchestrate.sh gemini` 위임 | 1M 컨텍스트 활용 |
+| Obsidian | `~/knowledge-vault/` 직접 Read | claude-logs, notes, projects |
+
+### 인덱스 파일
+- `notion-company-index.md` — 회사 Notion 100개 페이지 PAGE_ID
+- `local-files-index.md` — 로컬 파일 전체 (기본정보/재무세무/고객사/영업/분석)
+- `drive-guide.md` — Drive 검색 가이드
+- `obsidian-guide.md` — Obsidian vault 구조
+
+### ⚠️ AnythingLLM 사용 중단 (2026-03-12)
+수치 오류 문제로 제거. PDF → Claude 직접 Read, Excel → Python 파싱으로 대체.
+(API Key, 워크스페이스 정보는 하단 섹션에 기록 보존)
+
+---
+
+## Google Workspace MCP (2026-03-12)
+- **MCP 이름**: google-workspace (taylorwilsdon/google_workspace_mcp)
+- **설치 방법**: `uvx workspace-mcp --single-user` (stdio transport)
+- **인증**: OAuth 토큰 `~/.google_workspace_mcp/credentials/yusung8307@gmail.com.json`
+- **client_secret**: `~/.config/gws/client_secret.json`
+- **배포 완료**: Windows / M1 / M4 / MacBook Air 4대 동일 설정
+- **가능한 작업** (114개 도구):
+  - Gmail: 읽기/쓰기/검색/발송/라벨 관리
+  - Google Calendar: 일정 조회/생성/수정 + Google Meet 링크 포함
+  - Google Drive: 파일 읽기/쓰기/공유
+  - Google Docs/Sheets/Slides: 문서 읽기/편집
+  - Google Tasks/Contacts/Forms/Chat
+- **대표 시나리오**: 캘린더 조회 → 시트 데이터 추출 → 이메일 발송 → Meet 일정 생성을 한 번의 프롬프트로 자동화 가능
+- **gws CLI**도 별도 설치됨 (npm, v0.11.1): 터미널에서 직접 API 호출 가능

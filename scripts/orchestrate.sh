@@ -11,6 +11,9 @@
 #   bash orchestrate.sh gemini "task description" task-name
 #   bash orchestrate.sh codex-spark "quick edit task" task-name
 #   bash orchestrate.sh gemini-pro "deep analysis task" task-name
+#   bash orchestrate.sh --dry-run codex "task description" task-name
+#   bash orchestrate.sh codex --json '{"goal":"...","scope":"..."}' task-name
+#   bash orchestrate.sh schema [agent] [--json]
 #   bash orchestrate.sh --brief "goal" "scope" "constraints"
 #   bash orchestrate.sh --boot           # scan queue on session start
 #   bash orchestrate.sh --status         # show all queue entries
@@ -157,7 +160,8 @@ read_meta_field_raw() {
 # --- Rate limit detection ---
 is_rate_limited() {
   local output="$1"
-  if echo "$output" | grep -qEi "rate.?limit|429|quota|exceeded|too.?many.?requests|resource.?exhausted"; then
+  # Check only last 30 lines to avoid false positives from file contents read by agents
+  if echo "$output" | tail -30 | grep -qEi "rate.?limit|429|quota|exceeded|too.?many.?requests|resource.?exhausted"; then
     return 0
   fi
   return 1
@@ -213,10 +217,261 @@ dispatch_guard() {
   date +%s > "$stamp_file"
 }
 
+print_dry_run() {
+  local agent="$1" model="$2"
+  echo "=== DRY RUN ==="
+  echo "Agent:   $agent"
+  echo "Model:   $model"
+  echo "Task:    $TASK_NAME"
+  echo "Brief:"
+  echo "---"
+  echo "$TASK"
+  echo "---"
+  echo "(실제 실행 없음)"
+}
+
+json_to_brief() {
+  local json_input="$1"
+  PYTHONIOENCODING=utf-8 python3 - "$json_input" << 'PYEOF'
+import json
+import sys
+
+def fail(msg):
+    print(f"[ERROR] {msg}", file=sys.stderr)
+    sys.exit(1)
+
+raw = sys.argv[1]
+try:
+    data = json.loads(raw)
+except Exception as e:
+    fail(f"Invalid JSON for --json: {e}")
+
+if not isinstance(data, dict):
+    fail("--json input must be a JSON object")
+
+goal = str(data.get("goal", "")).strip()
+if not goal:
+    fail("--json requires field: goal")
+
+def clean(key):
+    val = data.get(key)
+    if val is None:
+        return ""
+    return str(val).strip()
+
+scope = clean("scope")
+constraints = clean("constraints")
+output = clean("output")
+context = clean("context")
+done_criteria = data.get("done_criteria")
+
+lines = []
+lines += ["## Goal", goal, ""]
+
+if scope:
+    lines += ["## Scope", f"- {scope}", ""]
+
+if constraints:
+    lines += ["## Constraints", f"- {constraints}", ""]
+
+if output:
+    lines += ["## Output Format", f"- {output}", ""]
+
+if context:
+    lines += ["## Context", f"- {context}", ""]
+
+lines += ["## Done Criteria"]
+if done_criteria is None or (isinstance(done_criteria, str) and not done_criteria.strip()):
+    lines += ["- [ ] Task completed successfully"]
+elif isinstance(done_criteria, list):
+    items = [str(x).strip() for x in done_criteria if str(x).strip()]
+    if not items:
+        lines += ["- [ ] Task completed successfully"]
+    else:
+        lines += [f"- [ ] {item}" for item in items]
+else:
+    lines += [f"- [ ] {str(done_criteria).strip()}"]
+
+print("\n".join(lines))
+PYEOF
+}
+
+do_schema() {
+  local target="${1:-}"
+  local output_json="false"
+
+  if [ "$target" = "--json" ]; then
+    output_json="true"
+    target=""
+  elif [ "${2:-}" = "--json" ]; then
+    output_json="true"
+  fi
+
+  if [ "$output_json" = "true" ]; then
+    if [ -n "$target" ]; then
+      case "$target" in
+        codex)
+          cat << 'JSON_EOF'
+{"name":"codex","models":["gpt-5.3-codex","gpt-5.3-codex-spark"],"default_model":"gpt-5.3-codex","use_for":["Code generation, refactoring, test loops","4+ files or 50+ lines of code"],"flags":{"--dry-run":"Validate without executing","--json <JSON>":"Structured task input (goal, scope, constraints, output)"},"input":{"task":"string (required) — task description or @filepath or --json","task_name":"string (optional, default: unnamed)"},"quota":"most generous (use first for code tasks)","fallback":"queues on rate limit, retry with --resume"}
+JSON_EOF
+          ;;
+        codex-spark)
+          cat << 'JSON_EOF'
+{"name":"codex-spark","models":["gpt-5.3-codex-spark"],"default_model":"gpt-5.3-codex-spark","use_for":["Quick edits, small patches, fast iterations"],"flags":{"--dry-run":"Validate without executing","--json <JSON>":"Structured task input (goal, scope, constraints, output)"},"input":{"task":"string (required) — task description or @filepath or --json","task_name":"string (optional, default: unnamed)"},"quota":"high","fallback":"codex fallback chain, retry with --resume"}
+JSON_EOF
+          ;;
+        gemini)
+          cat << 'JSON_EOF'
+{"name":"gemini","models":["gemini-2.5-flash"],"default_model":"gemini-2.5-flash","use_for":["Research, summarization, lightweight analysis"],"flags":{"--dry-run":"Validate without executing","--json <JSON>":"Structured task input (goal, scope, constraints, output)"},"input":{"task":"string (required) — task description or @filepath or --json","task_name":"string (optional, default: unnamed)"},"quota":"moderate","fallback":"codex fallback on rate limit"}
+JSON_EOF
+          ;;
+        gemini-pro)
+          cat << 'JSON_EOF'
+{"name":"gemini-pro","models":["gemini-2.5-pro"],"default_model":"gemini-2.5-pro","use_for":["Deep analysis, complex reasoning tasks"],"flags":{"--dry-run":"Validate without executing","--json <JSON>":"Structured task input (goal, scope, constraints, output)"},"input":{"task":"string (required) — task description or @filepath or --json","task_name":"string (optional, default: unnamed)"},"quota":"lower than flash","fallback":"codex fallback on rate limit"}
+JSON_EOF
+          ;;
+        *)
+          echo "[ERROR] Unknown agent for schema: $target"
+          exit 1
+          ;;
+      esac
+      exit 0
+    fi
+
+    cat << 'JSON_EOF'
+{"agents":[{"name":"codex","default_model":"gpt-5.3-codex","models":["gpt-5.3-codex","gpt-5.3-codex-spark"]},{"name":"codex-spark","default_model":"gpt-5.3-codex-spark","models":["gpt-5.3-codex-spark"]},{"name":"gemini","default_model":"gemini-2.5-flash","models":["gemini-2.5-flash"]},{"name":"gemini-pro","default_model":"gemini-2.5-pro","models":["gemini-2.5-pro"]}]}
+JSON_EOF
+    exit 0
+  fi
+
+  if [ -z "$target" ]; then
+    cat << 'SCHEMA_EOF'
+=== Agent Schema ===
+
+- codex
+- codex-spark
+- gemini
+- gemini-pro
+
+Usage:
+  orchestrate.sh schema
+  orchestrate.sh schema codex
+  orchestrate.sh schema gemini
+  orchestrate.sh schema --json
+SCHEMA_EOF
+    exit 0
+  fi
+
+  case "$target" in
+    codex)
+      cat << 'SCHEMA_EOF'
+=== Agent Schema: codex ===
+
+name:        codex
+models:
+  - gpt-5.3-codex (default, heavy tasks)
+  - gpt-5.3-codex-spark (quick edits)
+use_for:
+  - Code generation, refactoring, test loops
+  - 4+ files or 50+ lines of code
+flags:
+  --dry-run     : Validate without executing
+  --json <JSON> : Structured task input (goal, scope, constraints, output)
+input:
+  task:         string (required) — task description or @filepath or --json
+  task-name:    string (optional, default: unnamed)
+quota:          most generous (use first for code tasks)
+fallback:       queues on rate limit, retry with --resume
+
+examples:
+  orchestrate.sh codex "리팩토링 작업" task-name
+  orchestrate.sh codex @brief.md task-name
+  orchestrate.sh codex --json '{"goal":"...","scope":"..."}' task-name
+SCHEMA_EOF
+      ;;
+    codex-spark)
+      cat << 'SCHEMA_EOF'
+=== Agent Schema: codex-spark ===
+
+name:        codex-spark
+models:
+  - gpt-5.3-codex-spark (default, quick edits)
+use_for:
+  - Quick edits, small patches, fast iterations
+flags:
+  --dry-run     : Validate without executing
+  --json <JSON> : Structured task input (goal, scope, constraints, output)
+input:
+  task:         string (required) — task description or @filepath or --json
+  task-name:    string (optional, default: unnamed)
+quota:          high
+fallback:       codex fallback chain, retry with --resume
+
+examples:
+  orchestrate.sh codex-spark "빠른 수정" task-name
+SCHEMA_EOF
+      ;;
+    gemini)
+      cat << 'SCHEMA_EOF'
+=== Agent Schema: gemini ===
+
+name:        gemini
+models:
+  - gemini-2.5-flash (default)
+use_for:
+  - Research, summarization, lightweight analysis
+flags:
+  --dry-run     : Validate without executing
+  --json <JSON> : Structured task input (goal, scope, constraints, output)
+input:
+  task:         string (required) — task description or @filepath or --json
+  task-name:    string (optional, default: unnamed)
+quota:          moderate
+fallback:       Codex fallback on rate limit
+
+examples:
+  orchestrate.sh gemini "최신 라이브러리 조사" research-task
+SCHEMA_EOF
+      ;;
+    gemini-pro)
+      cat << 'SCHEMA_EOF'
+=== Agent Schema: gemini-pro ===
+
+name:        gemini-pro
+models:
+  - gemini-2.5-pro (default, deep analysis)
+use_for:
+  - Deep analysis, complex reasoning tasks
+flags:
+  --dry-run     : Validate without executing
+  --json <JSON> : Structured task input (goal, scope, constraints, output)
+input:
+  task:         string (required) — task description or @filepath or --json
+  task-name:    string (optional, default: unnamed)
+quota:          lower than flash
+fallback:       Codex fallback on rate limit
+
+examples:
+  orchestrate.sh gemini-pro "심층 분석" analysis-task
+SCHEMA_EOF
+      ;;
+    *)
+      echo "[ERROR] Unknown agent for schema: $target"
+      exit 1
+      ;;
+  esac
+  exit 0
+}
+
 # --- Run Codex ---
 run_codex() {
   local model="${1:-gpt-5.3-codex}"
   local log_file="$LOG_DIR/codex_${TASK_NAME}_${TIMESTAMP}.json"
+
+  if [ "${DRY_RUN:-false}" = "true" ]; then
+    print_dry_run "$AGENT" "$model"
+    return 0
+  fi
 
   dispatch_guard "codex"
   echo "[DISPATCH] Codex ($model) — task: $TASK_NAME"
@@ -272,6 +527,11 @@ run_codex() {
 run_gemini() {
   local model="${1:-gemini-2.5-flash}"
   local log_file="$LOG_DIR/gemini_${TASK_NAME}_${TIMESTAMP}.txt"
+
+  if [ "${DRY_RUN:-false}" = "true" ]; then
+    print_dry_run "$AGENT" "$model"
+    return 0
+  fi
 
   dispatch_guard "gemini"
   echo "[DISPATCH] Gemini ($model) — task: $TASK_NAME"
@@ -374,6 +634,29 @@ do_boot() {
     echo ""
     echo "$found task(s) need attention. Run --resume to re-dispatch oldest, or --status for details."
   fi
+
+  # Knowledge file refresh (최근 1일 이내 갱신된 경우 스킵)
+  REFRESH_SCRIPT="$SCRIPT_DIR/refresh_knowledge.sh"
+  REFRESH_STAMP="$SCRIPT_DIR/.refresh_last_run"
+  if [ -f "$REFRESH_SCRIPT" ]; then
+    SKIP_REFRESH=false
+    if [ -f "$REFRESH_STAMP" ]; then
+      LAST=$(cat "$REFRESH_STAMP")
+      NOW_SEC=$(date +%s)
+      if [ $(( NOW_SEC - LAST )) -lt 86400 ]; then
+        SKIP_REFRESH=true
+      fi
+    fi
+    if [ "$SKIP_REFRESH" = false ]; then
+      echo ""
+      echo "=== Knowledge Refresh ==="
+      bash "$REFRESH_SCRIPT" --agent all 2>&1 | grep -E "✅|⚠️|갱신|ERROR" || true
+      date +%s > "$REFRESH_STAMP"
+    else
+      echo "Knowledge files up-to-date (갱신 후 24h 미경과)."
+    fi
+  fi
+
   exit 0
 }
 
@@ -777,6 +1060,7 @@ do_chain() {
 # ============================================================
 
 case "${1:-}" in
+  schema)     shift; do_schema "$@" ;;
   --boot)     do_boot ;;
   --status)   do_status ;;
   --resume)   do_resume ;;
@@ -814,10 +1098,28 @@ BRIEF_EOF
 fi
 
 # --- Parse arguments ---
-AGENT="${1:?Usage: orchestrate.sh <agent> <task> [task_name]}"
-TASK="${2:?Usage: orchestrate.sh <agent> <task> [task_name]}"
-TASK_NAME="${3:-unnamed}"
-shift 2; shift 2>/dev/null || true
+DRY_RUN="false"
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_RUN="true"
+  shift
+fi
+
+AGENT="${1:?Usage: orchestrate.sh [--dry-run] <agent> <task|--json JSON> [task_name]}"
+
+if [[ "${2:-}" == "--json" ]]; then
+  JSON_INPUT="${3:-}"
+  if [ -z "$JSON_INPUT" ]; then
+    echo "[ERROR] Missing JSON payload after --json"
+    exit 1
+  fi
+  if ! TASK="$(json_to_brief "$JSON_INPUT")"; then
+    exit 1
+  fi
+  TASK_NAME="${4:-unnamed}"
+else
+  TASK="${2:?Usage: orchestrate.sh [--dry-run] <agent> <task|--json JSON> [task_name]}"
+  TASK_NAME="${3:-unnamed}"
+fi
 
 # --- Resolve task content ---
 if [[ "$TASK" == @* ]]; then
@@ -831,10 +1133,12 @@ if [[ "$TASK" == @* ]]; then
 fi
 
 # --- Create queue entry for this dispatch ---
-QUEUE_TASK_ID=$(next_task_id)
-create_queue_entry "$QUEUE_TASK_ID" "$TASK_NAME" "$AGENT" "$TASK"
-QUEUE_TASK_DIR="$QUEUE_DIR/${QUEUE_TASK_ID}_${TASK_NAME}"
-echo "[QUEUE] Created $QUEUE_TASK_ID ($TASK_NAME)"
+if [ "$DRY_RUN" != "true" ]; then
+  QUEUE_TASK_ID=$(next_task_id)
+  create_queue_entry "$QUEUE_TASK_ID" "$TASK_NAME" "$AGENT" "$TASK"
+  QUEUE_TASK_DIR="$QUEUE_DIR/${QUEUE_TASK_ID}_${TASK_NAME}"
+  echo "[QUEUE] Created $QUEUE_TASK_ID ($TASK_NAME)"
+fi
 
 # --- Main dispatch ---
 case "$AGENT" in
@@ -868,11 +1172,16 @@ case "$AGENT" in
   *)
     echo "[ERROR] Unknown agent: $AGENT"
     echo "Available: codex, codex-spark, chatgpt, chatgpt-mini, chatgpt-light, gemini, gemini-pro"
-    echo "Options:   --boot, --status, --resume, --complete <ID> <summary>"
+    echo "Options:   --boot, --status, --resume, --complete <ID> <summary>, schema [agent] [--json]"
     echo "           --brief <goal> <scope> <constraints>"
+    echo "           --dry-run, --json '{\"goal\":\"...\"}'"
     exit 1
     ;;
 esac
+
+if [ "${DRY_RUN:-false}" = "true" ]; then
+  exit 0
+fi
 
 echo ""
 echo "[LOG] $LOG_DIR/${AGENT}_${TASK_NAME}_${TIMESTAMP}.*"
