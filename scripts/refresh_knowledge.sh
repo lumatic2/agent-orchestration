@@ -404,11 +404,51 @@ _마지막 자동확인: {today}_
 # ──────────────────────────────────────────────────────────
 # 실행
 # ──────────────────────────────────────────────────────────
+def refresh_audit():
+    print("\n🔍 [audit] 감사기준 최신성 점검 중...")
+    audit_path = os.path.join(kdir, "audit_standards.md")
+    audit_cases_path = os.path.join(kdir, "audit_cases.md")
+
+    # 파일 수정일 기준 경과일 체크
+    for path, label in [(audit_path, "audit_standards"), (audit_cases_path, "audit_cases")]:
+        if not os.path.exists(path):
+            print(f"  ⚠️  파일 없음: {os.path.basename(path)}")
+            continue
+        try:
+            mtime = os.path.getmtime(path)
+            from datetime import date
+            age = (date.fromisoformat(today) - date.fromtimestamp(mtime)).days
+            if age > 90:
+                print(f"  ⚠️  {os.path.basename(path)}: {age}일 경과 — 감리위 최신 지적사례 수동 갱신 권장")
+            else:
+                print(f"  ✓  {os.path.basename(path)}: {age}일 전 갱신")
+        except Exception as e:
+            print(f"  ⚠️  {label} 점검 오류: {e}")
+
+    if check_only:
+        return
+
+    # AUTOREFRESH 마커 있으면 갱신 상태 업데이트
+    if os.path.exists(audit_cases_path):
+        try:
+            with open(audit_cases_path, encoding="utf-8") as f:
+                content = f.read()
+            if "AUTOREFRESH_START" in content:
+                content_new = f"""## ⏰ 갱신 상태 (자동확인)
+_마지막 자동확인: {today}_
+
+> ⚠️ 감리위 지적사례는 분기별 수동 갱신 필요. 금감원 감리결과(dart.fss.or.kr) 확인.
+> 마지막 수동 검토: {today}"""
+                update_section(audit_cases_path, "audit_cases", content_new)
+        except Exception as e:
+            print(f"  ⚠️  audit_cases 갱신 오류: {e}")
+
 run_map = {
     "economics":      [refresh_macro],
     "lawyer":         [refresh_labor],
     "tax":            [refresh_tax, refresh_tax_incentives],
-    "all":            [refresh_macro, refresh_labor, refresh_tax, refresh_tax_incentives],
+    "audit":          [refresh_audit],
+    "all":            [refresh_macro, refresh_labor, refresh_tax, refresh_tax_incentives, refresh_audit],
 }
 
 fns = run_map.get(target, run_map["all"])
