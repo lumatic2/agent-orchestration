@@ -8,6 +8,29 @@
 
 ---
 
+## Personal Task Management System (2026-03-12)
+
+**Source of truth**: `C:/Users/1/Desktop/agent-orchestration/SCHEDULE.md`
+**반복 항목**: `RECURRING.md` (같은 폴더)
+**일일 로그**: `daily/YYYY-MM-DD.md`
+**세션 요약**: `session.md`
+
+슬래시 커맨드:
+- `/today` — 오늘 브리핑 (SCHEDULE + RECURRING + 마지막 세션 컨텍스트)
+- `/done 항목명` — 완료 처리 + daily 로그 기록
+- `/filter 카테고리` — 카테고리 필터 (#회사 #개발 #학습 #크리에이티브 #라이프 #노션)
+- `/weekly-review` — 주간 회고
+- `/session-end` — 세션 마무리 + session.md 업데이트
+
+> Codex/Gemini: 태스크 위임 전 SCHEDULE.md 참고해서 현재 진행 중인 프로젝트 컨텍스트 확인 가능.
+
+**Notion 간트 차트**
+- 페이지 ID: `30785046-ff55-8028-b0a9-ff0b5488330c`
+- DB ID: `30785046-ff55-81bc-b093-dfbd85d74ac5`
+- 접근: `PYTHONIOENCODING=utf-8 python C:/Users/1/notion_db.py` (PERSONAL_NOTION_TOKEN 필요)
+
+---
+
 ## 슬라이드 생성 시스템 (Living System)
 
 **상태**: 실사용 검증 완료. AP-01~09 누적.
@@ -30,6 +53,46 @@
 **다음 슬라이드 주제**: 빈지노 vs 이센스 힙합 비교 (Gemini 리서치 진행 중, 2026-03-06)
 
 ## Planby 온보딩 패키지 (2026-03-10 완성)
+
+## 2026-03-08 오케스트레이션 실전 검증 기록
+
+### 검증된 패턴
+- **Gemini 리서치 병렬 디스패치**: 3개 태스크 동시 → 각 5~10분 내 완료. 효과적.
+- **Codex 단일 파일 생성**: vbt_backtest.py, video_creator.py — 명확한 brief + 완료 기준 필수.
+- **노션 MCP vs notion_db.py**: MCP는 회사 워크스페이스만. 개인 워크스페이스는 notion_db.py 필수.
+- **M1 헤드리스 자동화**: OpenClaw → SSH → Windows/MacBook Air 완전 작동. launchd로 스케줄 등록.
+
+### 새로 구축된 시스템
+- **content-automation**: GitHub Mod41529/content-automation (private)
+  - Gemini 2.5 Flash로 콘텐츠 생성 (무료, 1,500 req/일)
+  - YouTube OAuth 완료 (`credentials/youtube_token.json`)
+  - M1 launchd 등록: 화/목/토 10:00 자동 실행
+  - ⏳ MoviePy 영상 생성 모듈 (T058 Codex 작업 중)
+- **investment-bot**: VectorBT 백테스팅 레이어 추가 (`vbt_backtest.py`)
+  - 삼성전자 모멘텀 최적값: fast=30, slow=80 (+423%, Sharpe 1.52)
+
+### SSH 전체 연결 현황 (2026-03-08 완성)
+| 연결 | 방식 | alias |
+|---|---|---|
+| MacBook Air → Windows | Tailscale (100.103.17.19) | `ssh windows` |
+| Windows → MacBook Air | Tailscale (100.87.7.85) | `ssh macair` |
+| M1 → Windows | LAN (192.168.200.200) | `ssh windows` |
+| M1 → MacBook Air | LAN (192.168.200.104) | `ssh macair` |
+| Windows → M1 | LAN (192.168.200.164) | `ssh m1` |
+| ↔ M4 | Tailscale 미설치 | 회사 방문 후 |
+
+### 설치된 도구 (Windows)
+- lazygit (alias: lg), fzf, Ruff, Poetry, VectorBT, google-genai
+- Ruff Claude Code 훅: Edit/Write 시 .py 자동 린트
+
+### API 키 현황
+- Gemini API: aistudio.google.com (무료 Flash 1,500/일)
+- YouTube OAuth: credentials/youtube_token.json (M1 + Windows)
+- Moonshot/Kimi: ~/.zshrc MOONSHOT_API_KEY (M1, OpenClaw 사용)
+
+---
+
+## Active Projects
 
 **목적**: 플랜바이 신입 온보딩 프로그램 설계 → 노션 + 대표 제안 슬라이드
 
@@ -311,3 +374,41 @@ gemini mcp add --scope user --trust \
 - `--planby`: AnythingLLM 플랜바이 문서 컨텍스트 포함
 - `--pro`: Gemini 2.5 Pro 사용 (심층 분석)
 - 추가 비용 없음 (Gemini Pro 구독 내)
+
+## Known Issues
+
+_Tracked here when agents encounter blockers._
+
+## 실전 사례: POSCO 제안서 (2026-03-06)
+
+### MCP 작업은 위임 불가 — 직접 실행 원칙
+Notion/Slack 등 MCP 도구가 필요한 작업은 Codex/Gemini에 위임 불가 (MCP 접근 권한 없음).
+위임 결정 전 체크: "이 작업에 MCP가 필요한가?" → YES면 Claude 직접 실행.
+
+### Notion API 실전 한계
+- 블록 100개/요청 한도 → 초과 시 400 에러 → `append_paragraphs`에 chunk_size=100 청킹 적용
+- `notion_db.py` 버그 수정 완료: `_looks_like_markdown` 루프 내 early return 오류
+
+### 제안서 AI 지원 패턴 (비즈니스)
+1. **익명화**: 고객사명 → "도메인 전문사" (예: 넷폼알앤디 → 건축 도메인 전문사)
+2. **현학적 표현 3계층**: 제목(추상 개념어) / 도표(기술 용어 RAG·Embedding) / 본문(평이한 언어)
+3. **수혜자 중심 리프레이밍**: "타사 납품 사례" 뉘앙스 → "귀사 전용 구조" 프레이밍
+
+### 긴 세션 컨텍스트 관리
+- `/tmp/` 파일을 버전별 중간 저장소로 활용 (posco_v5_slim.md → posco_v6.md)
+- 컨텍스트 압축 발동 전 SHARED_MEMORY 업데이트가 연속성 핵심
+
+## Google Workspace MCP (2026-03-12)
+- **MCP 이름**: google-workspace (taylorwilsdon/google_workspace_mcp)
+- **설치 방법**: `uvx workspace-mcp --single-user` (stdio transport)
+- **인증**: OAuth 토큰 `~/.google_workspace_mcp/credentials/yusung8307@gmail.com.json`
+- **client_secret**: `~/.config/gws/client_secret.json`
+- **배포 완료**: Windows / M1 / M4 / MacBook Air 4대 동일 설정
+- **가능한 작업** (114개 도구):
+  - Gmail: 읽기/쓰기/검색/발송/라벨 관리
+  - Google Calendar: 일정 조회/생성/수정 + Google Meet 링크 포함
+  - Google Drive: 파일 읽기/쓰기/공유
+  - Google Docs/Sheets/Slides: 문서 읽기/편집
+  - Google Tasks/Contacts/Forms/Chat
+- **대표 시나리오**: 캘린더 조회 → 시트 데이터 추출 → 이메일 발송 → Meet 일정 생성을 한 번의 프롬프트로 자동화 가능
+- **gws CLI**도 별도 설치됨 (npm, v0.11.1): 터미널에서 직접 API 호출 가능
