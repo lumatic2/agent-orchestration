@@ -236,6 +236,53 @@
         grid-template-columns: 1fr 110px 120px;
       }
     }
+
+    .dday-red { background: #f44336; }
+    .dday-yellow { background: var(--warn); }
+
+    .readonly-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .readonly-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(15, 52, 96, 0.22);
+      font-size: 0.9rem;
+    }
+
+    .readonly-item .reason {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .card-header h2 {
+      margin: 0;
+    }
+
+    .refresh-btn {
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -244,6 +291,12 @@
       <h2>🖥 디바이스 상태</h2>
       <div id="devices" class="device-grid"></div>
       <div id="devices-meta" class="meta"></div>
+    </section>
+
+    <section class="card">
+      <h2>💡 추천 포커스</h2>
+      <div id="recommendations" class="readonly-list"></div>
+      <div id="recommendations-meta" class="meta"></div>
     </section>
 
     <section class="card">
@@ -270,15 +323,28 @@
       <div id="projects" class="progress-list"></div>
       <div id="projects-meta" class="meta"></div>
     </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>✨ Someday 힐끗보기</h2>
+        <button class="refresh-btn" type="button" onclick="fetchSomeday()">새로고침</button>
+      </div>
+      <div id="someday" class="readonly-list"></div>
+      <div id="someday-meta" class="meta"></div>
+    </section>
   </main>
 
   <script>
     const devicesEl = document.getElementById('devices');
     const tasksEl = document.getElementById('tasks');
     const projectsEl = document.getElementById('projects');
+    const recommendationsEl = document.getElementById('recommendations');
+    const somedayEl = document.getElementById('someday');
     const devicesMeta = document.getElementById('devices-meta');
     const tasksMeta = document.getElementById('tasks-meta');
     const projectsMeta = document.getElementById('projects-meta');
+    const recommendationsMeta = document.getElementById('recommendations-meta');
+    const somedayMeta = document.getElementById('someday-meta');
     const addForm = document.getElementById('add-form');
 
     const deviceNames = { m4: 'M4', m1: 'M1', macair: 'Air', windows: 'Win' };
@@ -334,14 +400,28 @@
       '진행 중': '🔄 진행 중',
     };
 
+    function ddayBadgeHTML(task) {
+      if (task.section !== '마감 있음 (Deadline)' || task.dday == null) return '';
+      const d = task.dday;
+      if (d <= 0) {
+        const label = d === 0 ? 'D-0' : `D+${Math.abs(d)}`;
+        return `<span class="badge dday-red">${label}</span>`;
+      }
+      if (d <= 3) return `<span class="badge dday-red">D-${d}</span>`;
+      if (d <= 7) return `<span class="badge dday-yellow">D-${d}</span>`;
+      return '';
+    }
+
     function taskItemHTML(task) {
       const checked = task.status === 'completed' ? 'checked' : '';
       const doneClass = task.status === 'completed' ? 'done' : '';
+      const ddayBadge = ddayBadgeHTML(task);
       return `
-        <div class="task-item">
+        <div class="task-item" style="grid-template-columns: auto auto 1fr ${ddayBadge ? 'auto ' : ''}auto auto">
           <input type="checkbox" ${checked} onclick="completeTask('${esc(task.text)}')">
           <span class="badge ${priorityClass(task.priority)}">${esc(task.priority)}</span>
           <span class="task-text ${doneClass}">${esc(task.text)}</span>
+          ${ddayBadge}
           <span class="tag">${esc(task.category)}</span>
           <button class="icon-btn" type="button" onclick="removeTask('${esc(task.text)}')">삭제</button>
         </div>
@@ -396,6 +476,53 @@
         projectsMeta.textContent = `${entries.length}개 카테고리`;
       } catch (e) {
         projectsMeta.textContent = `오류: ${e.message}`;
+      }
+    }
+
+    async function fetchRecommendations() {
+      recommendationsMeta.textContent = '로딩 중...';
+      try {
+        const data = await fetchJSON('/api/recommendations');
+        const items = data.items || [];
+        if (!items.length) {
+          recommendationsEl.innerHTML = '<div class="empty">추천 항목이 없습니다.</div>';
+        } else {
+          recommendationsEl.innerHTML = items.map(item => `
+            <div class="readonly-item">
+              <span class="badge ${priorityClass(item.priority)}">${esc(item.priority)}</span>
+              <div>
+                <div>${esc(item.text)}</div>
+                <div class="reason">${esc(item.reason)}</div>
+              </div>
+              <span class="tag">${esc(item.category)}</span>
+            </div>
+          `).join('');
+        }
+        recommendationsMeta.textContent = `${items.length}개 추천`;
+      } catch (e) {
+        recommendationsMeta.textContent = `오류: ${e.message}`;
+      }
+    }
+
+    async function fetchSomeday() {
+      somedayMeta.textContent = '로딩 중...';
+      try {
+        const data = await fetchJSON('/api/someday');
+        const items = data.items || [];
+        if (!items.length) {
+          somedayEl.innerHTML = '<div class="empty">Someday 항목이 없습니다.</div>';
+        } else {
+          somedayEl.innerHTML = items.map(item => `
+            <div class="readonly-item">
+              <span class="tag">${esc(item.category)}</span>
+              <div>${esc(item.text)}</div>
+              <span class="badge ${priorityClass(item.priority)}">${esc(item.priority)}</span>
+            </div>
+          `).join('');
+        }
+        somedayMeta.textContent = `${items.length}개 표시`;
+      } catch (e) {
+        somedayMeta.textContent = `오류: ${e.message}`;
       }
     }
 
@@ -463,10 +590,13 @@
     window.completeTask = completeTask;
     window.removeTask = removeTask;
     window.fetchDevices = fetchDevices;
+    window.fetchSomeday = fetchSomeday;
 
     fetchDevices();
+    fetchRecommendations();
     fetchTasks();
     fetchProjects();
+    fetchSomeday();
     setInterval(fetchDevices, 30000);
   </script>
 </body>
