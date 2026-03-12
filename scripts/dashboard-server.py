@@ -91,12 +91,11 @@ def parse_schedule():
 
 
 def select_today_and_in_progress(tasks):
+    SHOW_SECTIONS = {'오늘 (Today)', '마감 있음 (Deadline)'}
     out = []
     seen = set()
     for t in tasks:
-        in_today = t['section'] == '오늘 (Today)'
-        in_progress = t['status'] == 'in_progress'
-        if in_today or in_progress:
+        if t['section'] in SHOW_SECTIONS or t['status'] == 'in_progress':
             key = (t['text'], t['category'], t['section'])
             if key in seen:
                 continue
