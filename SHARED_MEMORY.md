@@ -8,24 +8,35 @@
 
 ---
 
-## Personal Task Management System (2026-03-12)
+## Personal Task Management System (2026-03-13)
 
 **Source of truth**: `C:/Users/1/Desktop/agent-orchestration/SCHEDULE.md`
 **반복 항목**: `RECURRING.md` (같은 폴더)
+**언젠가 아이디어**: `SOMEDAY.md` (같은 폴더) — 당장 실행 불필요, 주간 리뷰 때 언제든으로 승격 검토
 **일일 로그**: `daily/YYYY-MM-DD.md`
 **세션 요약**: `session.md`
+
+**SCHEDULE.md 구조** (3-섹션)
+- `## 오늘 (Today)` — 오늘 할 것 (MIT 원칙, 최대 3~5개 권장)
+- `## 마감 있음 (Deadline)` — 날짜 태그(`03-24` 등) 포함 항목만
+- `## 언제든 (Anytime)` — 카테고리별 활성 백로그 (#회사 #개발 #학습 #크리에이티브 #라이프)
 
 **SCHEDULE.md 상태 마커**
 - `- [ ]` 대기 / `- [/]` 진행 중 (다른 세션) / `- [x]` 완료
 - `[/]` 항목은 `/today` 추천 포커스에서 제외됨
 
-슬래시 커맨드:
-- `/today` — 오늘 브리핑 (SCHEDULE + RECURRING + 마지막 세션 컨텍스트, `[/]` 항목 별도 표시)
+**슬래시 커맨드**
+- `/today` — 오늘 브리핑: 마감 임박(D-day) → Today → 반복 항목 → 추천 3개(언제든) → Someday 힐끗보기 3개
 - `/done 항목명` — 완료 처리 + daily 로그 기록
-- `/filter 카테고리` — 카테고리 필터 (#회사 #개발 #학습 #크리에이티브 #라이프 #노션)
-- `/weekly-review` — 주간 회고
+- `/filter 카테고리` — 카테고리 필터
+- `/weekly-review` — 주간 회고 (SOMEDAY.md 승격 검토 포함)
 - `/session-end` — 세션 마무리 + session.md 업데이트
 - `/github-trends` — 최신 GitHub 트렌드 브리핑 + TOP 3 적용 추천
+
+**모바일 대시보드 (M1)**
+- 실행 중: `~/dashboard/dashboard-server.py` (port 8765)
+- 접근: `http://100.114.2.73:8765` (Tailscale) 또는 `http://192.168.200.164:8765` (LAN)
+- SCHEDULE.md 읽기/완료 처리 가능, `마감 있음` + `오늘` 섹션 표시
 
 > Codex/Gemini: 태스크 위임 전 SCHEDULE.md 참고해서 현재 진행 중인 프로젝트 컨텍스트 확인 가능.
 
