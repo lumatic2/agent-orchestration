@@ -561,6 +561,30 @@ run_gemini() {
   [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
   [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
 
+  # Save to vault if --vault flag was passed
+  if [ -n "${VAULT_DOMAIN:-}" ]; then
+    local vault_dir
+    if [ "$VAULT_DOMAIN" = "inbox" ]; then
+      vault_dir="00-inbox"
+    else
+      vault_dir="10-knowledge/${VAULT_DOMAIN}"
+    fi
+    local vault_file="${TASK_NAME}_$(date +%Y-%m-%d).md"
+    ssh m1 "mkdir -p ~/vault/${vault_dir} && cat > ~/vault/${vault_dir}/${vault_file}" << VAULTEOF
+---
+type: knowledge
+domain: ${VAULT_DOMAIN}
+source: gemini
+date: $(date +%Y-%m-%d)
+status: inbox
+task: ${TASK_NAME}
+---
+
+${result}
+VAULTEOF
+    echo "[VAULT] Saved → ~/vault/${vault_dir}/${vault_file}"
+  fi
+
   # Strip YOLO noise lines, show clean output
   echo ""
   echo "--- Gemini Result ---"
@@ -1099,10 +1123,14 @@ fi
 
 # --- Parse arguments ---
 DRY_RUN="false"
-if [[ "${1:-}" == "--dry-run" ]]; then
-  DRY_RUN="true"
-  shift
-fi
+VAULT_DOMAIN=""
+while [[ "${1:-}" == --* ]]; do
+  case "${1:-}" in
+    --dry-run) DRY_RUN="true"; shift ;;
+    --vault)   VAULT_DOMAIN="${2:-inbox}"; shift 2 ;;
+    *) break ;;
+  esac
+done
 
 AGENT="${1:?Usage: orchestrate.sh [--dry-run] <agent> <task|--json JSON> [task_name]}"
 
