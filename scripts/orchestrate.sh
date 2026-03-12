@@ -570,6 +570,8 @@ run_gemini() {
       vault_dir="10-knowledge/${VAULT_DOMAIN}"
     fi
     local vault_file="${TASK_NAME}_$(date +%Y-%m-%d).md"
+    local clean_result
+    clean_result=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$" | sed '/^$/d')
     ssh m1 "mkdir -p ~/vault/${vault_dir} && cat > ~/vault/${vault_dir}/${vault_file}" << VAULTEOF
 ---
 type: knowledge
@@ -580,7 +582,7 @@ status: inbox
 task: ${TASK_NAME}
 ---
 
-${result}
+${clean_result}
 VAULTEOF
     echo "[VAULT] Saved → ~/vault/${vault_dir}/${vault_file}"
   fi

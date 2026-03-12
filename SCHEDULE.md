@@ -34,6 +34,7 @@
 - [ ] [중] 전문가 AI 집단 시스템 고도화 (회계법인 업무 AI 대체 증명)
 - [ ] [중] 폰으로 보는 Task 대시보드 구현 방법 조사 및 적용
 - [ ] [중] 노트북 LM 활용법 + Obsidian/AnythingLLM 개선 방향 정리
+- [/] [중] Obsidian vault 구축 및 CLI·MCP 활용법 연구 — vault@M1, mcp-obsidian 연동 완료, 에이전트 파이프라인 통합 진행 중
 - [ ] [중] Google AI 디자인 도구 분석 — Pomelli, Stitch 오케스트레이션 통합 가능성
 - [ ] [중] 미드저니 MCP — Claude Code 연동 가능한지 확인
 - [ ] [중] 유튜브 영상 자동화 프로그램 만들어 보기
