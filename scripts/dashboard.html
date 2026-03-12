@@ -222,6 +222,15 @@
       padding: 6px 2px;
     }
 
+    .section-label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 8px 2px 4px;
+      text-transform: uppercase;
+    }
+
     @media (min-width: 540px) {
       .add-row {
         grid-template-columns: 1fr 110px 120px;
@@ -238,7 +247,7 @@
     </section>
 
     <section class="card">
-      <h2>📋 오늘 할일</h2>
+      <h2>📋 할일</h2>
       <div id="tasks" class="task-list"></div>
       <form id="add-form" class="add-form">
         <div class="add-row">
@@ -318,6 +327,27 @@
       }
     }
 
+    const SECTION_ORDER = ['오늘 (Today)', '마감 있음 (Deadline)', '진행 중'];
+    const SECTION_LABELS = {
+      '오늘 (Today)': '📅 오늘',
+      '마감 있음 (Deadline)': '⏰ 마감 있음',
+      '진행 중': '🔄 진행 중',
+    };
+
+    function taskItemHTML(task) {
+      const checked = task.status === 'completed' ? 'checked' : '';
+      const doneClass = task.status === 'completed' ? 'done' : '';
+      return `
+        <div class="task-item">
+          <input type="checkbox" ${checked} onclick="completeTask('${esc(task.text)}')">
+          <span class="badge ${priorityClass(task.priority)}">${esc(task.priority)}</span>
+          <span class="task-text ${doneClass}">${esc(task.text)}</span>
+          <span class="tag">${esc(task.category)}</span>
+          <button class="icon-btn" type="button" onclick="removeTask('${esc(task.text)}')">삭제</button>
+        </div>
+      `;
+    }
+
     async function fetchTasks() {
       tasksMeta.textContent = '로딩 중...';
       try {
@@ -326,18 +356,17 @@
         if (!tasks.length) {
           tasksEl.innerHTML = '<div class="empty">표시할 작업이 없습니다.</div>';
         } else {
-          tasksEl.innerHTML = tasks.map((task) => {
-            const checked = task.status === 'completed' ? 'checked' : '';
-            const doneClass = task.status === 'completed' ? 'done' : '';
-            return `
-              <div class="task-item">
-                <input type="checkbox" ${checked} onclick="completeTask('${esc(task.text)}')">
-                <span class="badge ${priorityClass(task.priority)}">${esc(task.priority)}</span>
-                <span class="task-text ${doneClass}">${esc(task.text)}</span>
-                <span class="tag">${esc(task.category)}</span>
-                <button class="icon-btn" type="button" onclick="removeTask('${esc(task.text)}')">삭제</button>
-              </div>
-            `;
+          const grouped = {};
+          tasks.forEach(t => {
+            const sec = t.section || '기타';
+            if (!grouped[sec]) grouped[sec] = [];
+            grouped[sec].push(t);
+          });
+          const order = [...SECTION_ORDER, ...Object.keys(grouped).filter(s => !SECTION_ORDER.includes(s))];
+          tasksEl.innerHTML = order.filter(s => grouped[s]).map(sec => {
+            const label = SECTION_LABELS[sec] || sec;
+            const items = grouped[sec].map(taskItemHTML).join('');
+            return `<div class="section-label">${esc(label)}</div>${items}`;
           }).join('');
         }
         tasksMeta.textContent = `${tasks.length}개 작업`;
