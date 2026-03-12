@@ -15,12 +15,17 @@
 **일일 로그**: `daily/YYYY-MM-DD.md`
 **세션 요약**: `session.md`
 
+**SCHEDULE.md 상태 마커**
+- `- [ ]` 대기 / `- [/]` 진행 중 (다른 세션) / `- [x]` 완료
+- `[/]` 항목은 `/today` 추천 포커스에서 제외됨
+
 슬래시 커맨드:
-- `/today` — 오늘 브리핑 (SCHEDULE + RECURRING + 마지막 세션 컨텍스트)
+- `/today` — 오늘 브리핑 (SCHEDULE + RECURRING + 마지막 세션 컨텍스트, `[/]` 항목 별도 표시)
 - `/done 항목명` — 완료 처리 + daily 로그 기록
 - `/filter 카테고리` — 카테고리 필터 (#회사 #개발 #학습 #크리에이티브 #라이프 #노션)
 - `/weekly-review` — 주간 회고
 - `/session-end` — 세션 마무리 + session.md 업데이트
+- `/github-trends` — 최신 GitHub 트렌드 브리핑 + TOP 3 적용 추천
 
 > Codex/Gemini: 태스크 위임 전 SCHEDULE.md 참고해서 현재 진행 중인 프로젝트 컨텍스트 확인 가능.
 
@@ -223,7 +228,7 @@
 - MRR 사실상 0, 매출 대부분 B2B 일회성 프로젝트
 - 2024 R&D 세액공제 42.85백만 이월 중
 
-### AnythingLLM 플랜바이 워크스페이스
+### ~~AnythingLLM 플랜바이 워크스페이스~~ (2026-03-12 사용 중단 — 기록 보존)
 - API Key: planby-cb99f5222e56c3ed40d98c77e35bf001
 - 조회 스크립트: ~/projects/agent-orchestration/scripts/planby_ask.sh (워크스페이스 자동 라우팅)
 - 업로드 스크립트: ~/projects/agent-orchestration/scripts/planby_upload.sh
@@ -240,7 +245,7 @@
 | 플랜바이 회의, 초안 | 497efbac-31d9-4864-8d53-98a49437d51e | 회의록, 초안, 메모, 검토 문서 |
 | 플랜바이 (전체/구) | 4b7216ef-9bb1-4553-a2b0-0478a73d5b03 | 분류 불명확 시 fallback |
 
-### AnythingLLM 운영 규칙
+### ~~AnythingLLM 운영 규칙~~ (deprecated)
 
 **워크스페이스 분리 기준**
 | 워크스페이스 | 용도 |
@@ -275,7 +280,7 @@
 | 시스템 | Mac mini (주) | Windows PC | 비고 |
 |---|---|---|---|
 | Claude Code + MCP | ✅ | git pull → sync.sh | notion/figma MCP 별도 등록 필요 |
-| AnythingLLM RAG | ✅ localhost:3001 | ❌ 미설치 | 기기별 별도 설치 + 문서 재업로드 |
+| AnythingLLM RAG | ~~✅ localhost:3001~~ ❌ 사용 중단 | ❌ | 수치 오류로 제거. PDF 직접 Read로 대체 |
 | Google Drive (개인) | ✅ 마운트됨 | ❓ 확인 필요 | ~/Library/CloudStorage/ |
 | Google Drive (회사) | ✅ 마운트됨 | ❓ 확인 필요 | steven.jun@planby.us |
 | Figma MCP | ✅ (재시작 필요) | ❌ | launchd + npm 설치 필요 |
@@ -375,6 +380,20 @@ gemini mcp add --scope user --trust \
 - `--pro`: Gemini 2.5 Pro 사용 (심층 분석)
 - 추가 비용 없음 (Gemini Pro 구독 내)
 
+## GitHub 트렌드 자동 수신 시스템 (2026-03-12)
+
+- **스크립트**: `~/Desktop/agent-orchestration/scripts/github-trends.sh`
+- **실행**: `bash github-trends.sh` (전체 파이프라인) / `--dry-run` (미리보기)
+- **스케줄**: macOS launchd `com.luma3.github-trends` — 매주 월 09:00 자동 실행
+- **흐름**: `gh api` 수집 (최근 7일 ★기준) → Gemini 분류 → 리포트 저장 → 텔레그램 알림
+- **리포트**: `reports/github-trends-YYYY-MM-DD.md` (즉시적용/참고/스킵 분류)
+- **텔레그램**: 즉시적용 5개 + 이유 + 적용 포인트 + 하단 "Claude Code 붙여넣기" 명령어
+- **적용 방법**: 텔레그램 명령어 복사 → Claude Code에 붙여넣기 or `/github-trends` 실행
+
+**버그 수정 (2026-03-12)**: `is_rate_limited()` false positive
+- 원인: Codex가 작업 중 `orchestrate.sh` 읽을 때 파일 내 "rate limit" 주석이 매칭됨
+- 수정: 출력 전체 대신 마지막 30줄만 검사하도록 변경
+
 ## Known Issues
 
 _Tracked here when agents encounter blockers._
@@ -397,6 +416,34 @@ Notion/Slack 등 MCP 도구가 필요한 작업은 Codex/Gemini에 위임 불가
 ### 긴 세션 컨텍스트 관리
 - `/tmp/` 파일을 버전별 중간 저장소로 활용 (posco_v5_slim.md → posco_v6.md)
 - 컨텍스트 압축 발동 전 SHARED_MEMORY 업데이트가 연속성 핵심
+
+## 통합 지식베이스 (2026-03-12)
+
+**경로**: `~/Desktop/knowledge-base/`
+**목적**: Claude가 파일을 복사하지 않고 링크/ID로 원본에 직접 접근하는 인덱스 시스템
+
+### 소스별 접근 방법
+
+| 소스 | 방법 | 비고 |
+|------|------|------|
+| 회사 Notion | `NOTION_TOKEN=$COMPANY_NOTION_TOKEN python3 ~/notion_db.py` | 읽기 전용 |
+| 로컬 PDF | Claude `Read` 도구 직접 사용 | `~/Desktop/플랜바이 자료/` |
+| Clobe.AI Excel | Python `openpyxl` 직접 파싱 | 랜딩존: `플랜바이 재무:세무 정보/Clobe.AI 엑셀 파일/` |
+| Google Drive | MCP `search_drive_files` (yusung8307@gmail.com) | 온디맨드 검색 |
+| 대용량 멀티문서 | `orchestrate.sh gemini` 위임 | 1M 컨텍스트 활용 |
+| Obsidian | `~/knowledge-vault/` 직접 Read | claude-logs, notes, projects |
+
+### 인덱스 파일
+- `notion-company-index.md` — 회사 Notion 100개 페이지 PAGE_ID
+- `local-files-index.md` — 로컬 파일 전체 (기본정보/재무세무/고객사/영업/분석)
+- `drive-guide.md` — Drive 검색 가이드
+- `obsidian-guide.md` — Obsidian vault 구조
+
+### ⚠️ AnythingLLM 사용 중단 (2026-03-12)
+수치 오류 문제로 제거. PDF → Claude 직접 Read, Excel → Python 파싱으로 대체.
+(API Key, 워크스페이스 정보는 하단 섹션에 기록 보존)
+
+---
 
 ## Google Workspace MCP (2026-03-12)
 - **MCP 이름**: google-workspace (taylorwilsdon/google_workspace_mcp)

@@ -1,5 +1,19 @@
 # Session Log
 
+## [2026-03-12 오후]
+**한 일**:
+- OpenClaw 완전 제거 → claude-code-telegram 설치 및 설정 (E2E 테스트 완료)
+- 각종 트러블슈팅: 봇 토큰 혼동, Conflict, 비용 한도, 보안 검증, Welcome 메시지 제거
+- M4 원격 파일 생성 (piano.html, minesweeper.html) + git status 실행 검증
+
+**진행 중**:
+- agent-orchestration 12커밋 미푸시 상태
+- claude-code-telegram 세션 간 컨텍스트 유지 개선 가능
+
+**주요 결정**:
+- OpenClaw 대체 확정. Telegram → Claude Code 직통 구조로 단순화.
+---
+
 ## [2026-03-12]
 **한 일**:
 - Notion 간트 차트 → SCHEDULE.md 마이그레이션 (42개 항목, 카테고리 태그 포함)
