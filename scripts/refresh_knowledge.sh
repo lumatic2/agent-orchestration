@@ -296,35 +296,40 @@ _마지막 갱신: {today}_
 def refresh_tax():
     print("\n💼 [tax] 법인세율 갱신 중...")
 
-    # law.go.kr 법인세법 스크래핑 (URL 인코딩)
-    html = None
+    # 법제처 Open API — 법인세법 제55조 (세율) 조문 텍스트 조회
+    # https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=000156&type=JSON&unit=article&articles=55
+    import urllib.parse
+    api_rates = None
     try:
-        import urllib.parse
-        law_url = "https://www.law.go.kr/법령/법인세법"
-        encoded = urllib.parse.quote(law_url, safe=":/?=&")
-        req = urllib.request.Request(encoded, headers={"User-Agent": "Mozilla/5.0"})
+        api_url = "https://www.law.go.kr/DRF/lawService.do?OC=test&target=law&MST=000156&type=JSON&unit=article&articles=55"
+        req = urllib.request.Request(api_url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=10) as r:
-            html = r.read().decode("utf-8", errors="replace")
+            data = json.loads(r.read().decode("utf-8", errors="replace"))
+        # 조문 텍스트에서 세율 숫자 추출 (예: "100분의 9", "100분의 19")
+        article_text = json.dumps(data, ensure_ascii=False)
+        found = re.findall(r'100분의\s*(\d+)', article_text)
+        unique_rates = sorted(set(int(x) for x in found if int(x) in [9, 19, 21, 24]))
+        if len(unique_rates) == 4:
+            api_rates = unique_rates
+            print(f"  ℹ️  법제처 API 세율 감지: {unique_rates} → 하드코딩값과 일치 확인")
+        elif found:
+            print(f"  ⚠️  법제처 API 세율 파싱 불확실 (감지값: {found[:8]}) — 하드코딩 유지")
     except Exception as e:
-        print(f"  ⚠️  law.go.kr 접근 실패: {e}", file=sys.stderr)
+        print(f"  ⚠️  법제처 API 접근 실패: {e}", file=sys.stderr)
 
-    # 현행 법인세율 (2023년 이후 인하 적용)
-    # 하드코딩 기준값 (2023년 세제개편으로 인하)
+    # 현행 법인세율 (2023년 세제개편 이후)
     rates = [
-        ("2억 이하",       "9%",  "법인세법 §55"),
-        ("2억 초과~200억", "19%", "법인세법 §55"),
+        ("2억 이하",          "9%",  "법인세법 §55"),
+        ("2억 초과~200억",    "19%", "법인세법 §55"),
         ("200억 초과~3000억", "21%", "법인세법 §55"),
-        ("3000억 초과",    "24%", "법인세법 §55"),
+        ("3000억 초과",       "24%", "법인세법 §55"),
     ]
     carryforward = "80% (중소기업 100%)"
 
-    # law.go.kr에서 실제 세율 추출 시도
-    if html:
-        # 세율 패턴 탐지 (예: 9퍼센트, 19퍼센트)
-        found = re.findall(r'(\d+)퍼센트', html)
-        if found and len(found) >= 4:
-            print(f"  ℹ️  law.go.kr에서 세율 감지: {found[:6]}")
-            # 실제 파싱은 구조가 복잡해 하드코딩 우선 유지
+    # API로 세율 변경 감지 시 경고
+    api_note = ""
+    if api_rates and api_rates != [9, 19, 21, 24]:
+        api_note = f"\n> 🚨 법제처 API 감지값({api_rates})이 기존 하드코딩과 다름 — 수동 검토 필요!"
 
     rows_str = "\n".join([f"| 법인세율 ({r[0]}) | {r[1]} | {r[2]} |" for r in rates])
     content = f"""## ⏰ 최신 세율·한도 (자동갱신)
@@ -335,7 +340,7 @@ _마지막 갱신: {today}_
 {rows_str}
 | 이월결손금 공제 한도 | {carryforward} | 법인세법 §13 |
 
-> ⚠️ 세율은 매년 세제개편 확인 필요. 출처: 법제처 law.go.kr"""
+> ⚠️ 세율은 매년 세제개편 확인 필요. 출처: 법제처 law.go.kr{api_note}"""
 
     if check_only:
         for r in rates:
@@ -349,13 +354,61 @@ _마지막 갱신: {today}_
     )
 
 # ──────────────────────────────────────────────────────────
+# [4] TAX_INCENTIVES: 조특법 세액공제·감면 갱신 상태 업데이트
+# ──────────────────────────────────────────────────────────
+def refresh_tax_incentives():
+    print("\n📋 [tax_incentives] 조특법 갱신 상태 업데이트 중...")
+
+    # 세제개편 시즌(12월~2월) 경고
+    cur_month = int(today.split("-")[1])
+    season_warn = ""
+    if cur_month in [12, 1, 2]:
+        season_warn = "\n> 🚨 세제개편 시즌(12~2월) — 공제율·감면율 수동 검토 필요!"
+
+    # 마지막 수동 검토일 추출 (파일에서 읽어서 경과일 계산)
+    incentives_path = os.path.join(kdir, "tax_incentives.md")
+    manual_date_str = None
+    stale_warn = ""
+    try:
+        with open(incentives_path, encoding="utf-8") as f:
+            text = f.read()
+        m = re.search(r'마지막 수동 검토:\s*(\d{4}-\d{2}-\d{2})', text)
+        if m:
+            manual_date_str = m.group(1)
+            from datetime import date
+            manual_dt = date.fromisoformat(manual_date_str)
+            delta = (date.fromisoformat(today) - manual_dt).days
+            if delta > 365:
+                stale_warn = f"\n> 🚨 수동 검토 {delta}일 경과 — 세제개편 반영 여부 확인 필요!"
+    except Exception as e:
+        print(f"  ⚠️  파일 읽기 오류: {e}", file=sys.stderr)
+
+    manual_note = f"마지막 수동 검토: {manual_date_str}" if manual_date_str else "마지막 수동 검토: 미기록"
+
+    content = f"""## ⏰ 갱신 상태 (자동확인)
+_마지막 자동확인: {today}_
+
+> ⚠️ 아래 세율·공제율은 수동 업데이트 필요. 세제개편(매년 12월) 이후 반드시 검토.
+> {manual_note}{season_warn}{stale_warn}"""
+
+    if check_only:
+        print(f"  수동 검토일: {manual_date_str or '미기록'}")
+        return
+
+    update_section(
+        incentives_path,
+        "tax_incentives",
+        content
+    )
+
+# ──────────────────────────────────────────────────────────
 # 실행
 # ──────────────────────────────────────────────────────────
 run_map = {
-    "economics": [refresh_macro],
-    "lawyer":    [refresh_labor],
-    "tax":       [refresh_tax],
-    "all":       [refresh_macro, refresh_labor, refresh_tax],
+    "economics":      [refresh_macro],
+    "lawyer":         [refresh_labor],
+    "tax":            [refresh_tax, refresh_tax_incentives],
+    "all":            [refresh_macro, refresh_labor, refresh_tax, refresh_tax_incentives],
 }
 
 fns = run_map.get(target, run_map["all"])

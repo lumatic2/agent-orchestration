@@ -160,7 +160,8 @@ read_meta_field_raw() {
 # --- Rate limit detection ---
 is_rate_limited() {
   local output="$1"
-  if echo "$output" | grep -qEi "rate.?limit|429|quota|exceeded|too.?many.?requests|resource.?exhausted"; then
+  # Check only last 30 lines to avoid false positives from file contents read by agents
+  if echo "$output" | tail -30 | grep -qEi "rate.?limit|429|quota|exceeded|too.?many.?requests|resource.?exhausted"; then
     return 0
   fi
   return 1
@@ -633,6 +634,29 @@ do_boot() {
     echo ""
     echo "$found task(s) need attention. Run --resume to re-dispatch oldest, or --status for details."
   fi
+
+  # Knowledge file refresh (최근 1일 이내 갱신된 경우 스킵)
+  REFRESH_SCRIPT="$SCRIPT_DIR/refresh_knowledge.sh"
+  REFRESH_STAMP="$SCRIPT_DIR/.refresh_last_run"
+  if [ -f "$REFRESH_SCRIPT" ]; then
+    SKIP_REFRESH=false
+    if [ -f "$REFRESH_STAMP" ]; then
+      LAST=$(cat "$REFRESH_STAMP")
+      NOW_SEC=$(date +%s)
+      if [ $(( NOW_SEC - LAST )) -lt 86400 ]; then
+        SKIP_REFRESH=true
+      fi
+    fi
+    if [ "$SKIP_REFRESH" = false ]; then
+      echo ""
+      echo "=== Knowledge Refresh ==="
+      bash "$REFRESH_SCRIPT" --agent all 2>&1 | grep -E "✅|⚠️|갱신|ERROR" || true
+      date +%s > "$REFRESH_STAMP"
+    else
+      echo "Knowledge files up-to-date (갱신 후 24h 미경과)."
+    fi
+  fi
+
   exit 0
 }
 
