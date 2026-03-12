@@ -96,17 +96,17 @@ KNOWLEDGE_DIR="$REPO_DIR/agents/knowledge"
 KNOWLEDGE_FILES=()
 case "$EXPERT" in
   audit)
-    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/audit_standards.md" "$KNOWLEDGE_DIR/ifrs_key.md") ;;
+    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/audit_standards.md" "$KNOWLEDGE_DIR/ifrs_key.md" "$KNOWLEDGE_DIR/audit_cases.md") ;;
   accounting_advisory)
     KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/ifrs_key.md" "$KNOWLEDGE_DIR/ifrs_advanced.md" "$KNOWLEDGE_DIR/management_accounting.md" "$KNOWLEDGE_DIR/sme_accounting.md") ;;
   legal_advisory)
-    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/commercial_law_company.md" "$KNOWLEDGE_DIR/labor_civil_law.md") ;;
+    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/commercial_law_company.md" "$KNOWLEDGE_DIR/labor_civil_law.md" "$KNOWLEDGE_DIR/legal_cases.md") ;;
   deal_valuation)
-    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/valuation_formulas.md" "$KNOWLEDGE_DIR/financial_strategy.md" "$KNOWLEDGE_DIR/startup_finance.md" "$KNOWLEDGE_DIR/capital_markets.md") ;;
+    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/valuation_formulas.md" "$KNOWLEDGE_DIR/financial_strategy.md" "$KNOWLEDGE_DIR/startup_finance.md" "$KNOWLEDGE_DIR/capital_markets.md" "$KNOWLEDGE_DIR/legal_cases.md") ;;
   wealth_tax)
-    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/inheritance_gift_tax.md" "$KNOWLEDGE_DIR/valuation_formulas.md" "$KNOWLEDGE_DIR/tax_incentives.md" "$KNOWLEDGE_DIR/tax_personal.md") ;;
+    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/inheritance_gift_tax.md" "$KNOWLEDGE_DIR/valuation_formulas.md" "$KNOWLEDGE_DIR/tax_incentives.md" "$KNOWLEDGE_DIR/tax_personal.md" "$KNOWLEDGE_DIR/tax_cases.md") ;;
   tax_investigation)
-    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/tax_core.md" "$KNOWLEDGE_DIR/tax_incentives.md" "$KNOWLEDGE_DIR/vat.md") ;;
+    KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/tax_core.md" "$KNOWLEDGE_DIR/tax_incentives.md" "$KNOWLEDGE_DIR/vat.md" "$KNOWLEDGE_DIR/tax_cases.md") ;;
   international_tax)
     KNOWLEDGE_FILES=("$KNOWLEDGE_DIR/international_tax_rules.md" "$KNOWLEDGE_DIR/tax_core.md") ;;
   forensic)
