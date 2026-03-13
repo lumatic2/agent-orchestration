@@ -441,6 +441,96 @@ print('obsidian-vault MCP added')
 - 원인: Codex가 작업 중 `orchestrate.sh` 읽을 때 파일 내 "rate limit" 주석이 매칭됨
 - 수정: 출력 전체 대신 마지막 30줄만 검사하도록 변경
 
+## Slack ↔ Claude Code 봇 프로젝트 (2026-03-13 진행 중)
+
+**목적**: 플랜바이 팀 전체가 Slack에서 Claude Code를 사용 — 문서·슬라이드 생성, 회사 데이터 조회, 업무 자동화
+**방식**: SDK 방식 (`@anthropic-ai/claude-code`), API 호출 아님
+
+### 레포 & 경로
+- **레포**: `~/projects/claude-code-slack-bot/` (원본: mpociot/claude-code-slack-bot)
+- **npm install**: ✅ 완료
+- **버그 수정**: `claude-handler.ts` 65행 하드코딩 경로 → `import.meta.url` 기반으로 수정
+
+### 완료된 설정 파일
+| 파일 | 상태 | 내용 |
+|---|---|---|
+| `.env` | ⚠️ Slack 토큰 빈칸 | ANTHROPIC_API_KEY 입력됨, BASE_DIRECTORY 설정됨 |
+| `mcp-servers.json` | ⚠️ COMPANY_NOTION_TOKEN 필요 | notion-company + obsidian-vault 설정 |
+| `templates/templates.yaml` | ✅ 완료 | 슬라이드 2종 + 문서 3종 템플릿 매니페스트 |
+| `CLAUDE.md` | ✅ 완료 | 회사 컨텍스트 + Notion DB ID + 생성 규칙 |
+
+### company-vault 초기 구축
+- **경로**: `~/company-vault/` (재무, 계약, 정책, 고객사, 회의록)
+- **초기 문서**: `재무/2026-03-05_런웨이-분석.md`, `고객사/고객사-현황.md`
+
+### 봇 실행 명령어
+```bash
+NODE24="v24.14.0"
+export PATH="$HOME/.nvm/versions/node/$NODE24/bin:$PATH"
+cd ~/projects/claude-code-slack-bot
+unset CLAUDECODE ANTHROPIC_API_KEY
+npm run dev
+```
+
+### 완료된 설정
+- Slack 토큰 3개 `.env`에 입력 완료
+- Node v24.14.0 필수 (v25는 CLI 호환 오류)
+- `@anthropic-ai/claude-code` v1.0.128으로 업데이트
+- `permissionMode: bypassPermissions` (permission 팝업 없음)
+- DM에서 thread 없이 새 메시지로 답장
+- DM 세션 키 안정화 (ts 제거 → 메시지마다 새 세션 방지)
+- `SLACK_BOT=1` 환경변수 → 글로벌 CLAUDE.md의 --boot 스킵
+- `BASE_DIRECTORY=/Users/luma2/projects/claude-code-slack-bot/`
+
+### 남은 작업
+1. **COMPANY_NOTION_TOKEN** → `mcp-servers.json`에 입력
+2. **Phase 2**: Google Workspace MCP 추가, company-vault 확장
+3. **Phase 3**: 슬라이드·문서 HTML 템플릿 실제 작성
+
+### Slack App Manifest (앱 생성 시 붙여넣기)
+```yaml
+display_information:
+  name: Claude Code Bot
+  description: AI-powered assistant using Claude Code SDK
+  background_color: "#4A154B"
+features:
+  bot_user:
+    display_name: Claude Code
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - chat:write
+      - chat:write.public
+      - im:history
+      - im:read
+      - im:write
+      - users:read
+      - reactions:read
+      - reactions:write
+      - files:read
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_mention
+      - message.im
+      - member_joined_channel
+  interactivity:
+    is_enabled: true
+  socket_mode_enabled: true
+```
+
+### 아키텍처 요약
+```
+Slack 메시지 → Slack Bot (Socket Mode, Mac mini)
+  → Claude Code SDK 프로세스
+  → MCP: notion-company, obsidian-vault, (google-workspace 예정)
+  → 로컬: company-vault, templates, slides_config.yaml
+  → 결과를 Slack에 응답
+```
+
 ## Known Issues
 
 _Tracked here when agents encounter blockers._
