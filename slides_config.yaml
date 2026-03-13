@@ -151,7 +151,7 @@ color_presets:
   planby_dark:
     name: "플랜바이 공식 (다크 차콜 + 인디고 퍼플)"
     theme: dark
-    keywords: ["planby", "플랜바이", "plana"]
+    keywords: []
     source: "플랜바이테크놀로지스_회사소개서.pdf 표지 색상 기반"
     css: |
       :root {
@@ -379,7 +379,7 @@ slide:
 render:
   wait_ms: 2000                   # 폰트 로딩 대기 시간 (ms)
   png_per_slide: false            # true면 슬라이드별 PNG도 저장
-  cleanup_html: true              # 렌더 후 HTML 임시 파일 제거
+  cleanup_html: false             # 렌더 후 HTML 임시 파일 제거
   cleanup_js:   true              # 렌더 후 JS 스크립트 제거
 
 # 디자인 규칙 (Claude가 HTML 생성 시 참조)

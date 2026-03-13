@@ -85,14 +85,8 @@ const path = require('path');
   console.log('PDF: ${PDF_PATH}');
 
 $(if [ "$PNG_PER_SLIDE" = "true" ]; then
-cat << 'PNGEOF'
-  const slides = await page.$('.slide');
-  // note: $$ not $ for all matches
-PNGEOF
-fi)
-$(if [ "$PNG_PER_SLIDE" = "true" ]; then
 cat << PNGEOF2
-  const allSlides = await page.$$('.slide');
+  const allSlides = await page['\$\$']('.slide');
   for (let i = 0; i < allSlides.length; i++) {
     const p = '${OUTPUT_DIR}/${OUTPUT_NAME}-slide-' + String(i+1).padStart(2,'0') + '.png';
     await allSlides[i].screenshot({ path: p });
