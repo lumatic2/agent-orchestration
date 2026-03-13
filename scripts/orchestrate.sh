@@ -27,6 +27,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
+LOCAL_VAULT_PATH="${LOCAL_VAULT_PATH:-$HOME/vault}" # Default to ~/vault, user can override
 LOG_DIR="$REPO_DIR/logs"
 QUEUE_DIR="$REPO_DIR/queue"
 TEMPLATE_DIR="$REPO_DIR/templates"
@@ -571,12 +572,13 @@ run_gemini() {
     fi
     local vault_file="${TASK_NAME}_$(date +%Y-%m-%d).md"
     local clean_result
-    clean_result=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$" | sed '/^$/d')
+    clean_result=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$")
     ssh m1 "mkdir -p ~/vault/${vault_dir} && cat > ~/vault/${vault_dir}/${vault_file}" << VAULTEOF
 ---
 type: knowledge
 domain: ${VAULT_DOMAIN}
 source: gemini
+generated-by: gemini-2.5-flash
 date: $(date +%Y-%m-%d)
 status: inbox
 task: ${TASK_NAME}
