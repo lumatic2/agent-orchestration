@@ -75,6 +75,15 @@ START_DATE="$(date_7_days_ago)"
 SLUG="$(date +%Y%m%d)"
 TASK_NAME="github-trends-classify-$SLUG"
 REPORT_FILE="$REPORTS_DIR/github-trends-$RUN_DATE.md"
+LOCK_FILE="$LOGS_DIR/.github-trends-$RUN_DATE.lock"
+
+if [[ -f "$LOCK_FILE" && "$DRY_RUN" == "false" ]]; then
+  echo "[SKIP] 오늘($RUN_DATE) 이미 실행됨 — 중복 실행 방지"
+  exit 0
+fi
+if [[ "$DRY_RUN" == "false" ]]; then
+  touch "$LOCK_FILE"
+fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -230,47 +239,25 @@ fi
 TELEGRAM_ITEMS="$TMP_DIR/telegram_items.txt"
 APPLY_CMDS="$TMP_DIR/apply_cmds.txt"
 
-head -n 5 "$IMMEDIATE_FILE" 2>/dev/null | while IFS= read -r line; do
+head -n 3 "$IMMEDIATE_FILE" 2>/dev/null | while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   line="${line#- }"
   IFS='|' read -r repo stars reason point <<< "$line"
   repo="$(trim "${repo:-}")"
   reason="$(trim "${reason:-}")"
-  point="$(trim "${point:-}")"
-  if [[ "$point" == 적용\ 포인트:* ]]; then
-    point="${point#적용 포인트: }"
-  fi
-  echo "• $repo"
-  echo "  $reason"
-  [[ -n "$point" ]] && echo "  → $point"
-  echo ""
+  echo "• $repo — $reason"
 done > "$TELEGRAM_ITEMS"
 
-# 적용 명령어: repo 이름만 추출 (owner/repo → repo)
-head -n 5 "$IMMEDIATE_FILE" 2>/dev/null | while IFS= read -r line; do
-  [[ -z "$line" ]] && continue
-  line="${line#- }"
-  IFS='|' read -r repo _ <<< "$line"
-  repo="$(trim "${repo:-}")"
-  name="${repo##*/}"
-  [[ -n "$name" ]] && echo "  \"$name 적용해줘\""
-done > "$APPLY_CMDS"
 
 if [[ ! -s "$TELEGRAM_ITEMS" ]]; then
   echo "• 즉시적용 항목 없음" > "$TELEGRAM_ITEMS"
 fi
 
-APPLY_SECTION=""
-if [[ -s "$APPLY_CMDS" ]]; then
-  APPLY_SECTION="
-💬 Claude Code에 붙여넣기:
-$(cat "$APPLY_CMDS")"
-fi
 
 TELEGRAM_MESSAGE="[GitHub 트렌드] $RUN_DATE
 즉시적용 ${IMMEDIATE_COUNT}개 | 참고 ${REFERENCE_COUNT}개
 
-$(cat "$TELEGRAM_ITEMS")${APPLY_SECTION}
+$(cat "$TELEGRAM_ITEMS")
 📄 reports/github-trends-$RUN_DATE.md"
 
 send_telegram "$TELEGRAM_MESSAGE" || fail "텔레그램 알림 전송 실패"

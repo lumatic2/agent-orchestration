@@ -15,7 +15,7 @@ set -- "${args[@]}"
 
 if [ "$#" -lt 1 ] || [ "$#" -gt 3 ]; then
   echo "Usage: bash slides-bridge.sh [--dry-run] \"주제명\" [슬라이드수=9] [출력=local]" >&2
-  echo "출력 옵션: local | telegram | notion" >&2
+  echo "출력 옵션: local | telegram | notion | gws" >&2
   exit 1
 fi
 
@@ -268,6 +268,15 @@ case "$OUTPUT" in
       bash "$SCRIPT_DIR/notion-upload.sh" "$PDF_PATH" "$TOPIC"
     else
       echo "[INFO] notion-upload.sh 미설치. PDF 경로: $PDF_PATH" >&2
+    fi
+    ;;
+  gws)
+    echo "[5b/5] Google Slides 생성 중..." >&2
+    if [ -f "$SCRIPT_DIR/gws-slides.sh" ]; then
+      bash "$SCRIPT_DIR/gws-slides.sh" "$TOPIC" "$SLIDE_N"
+    else
+      echo "[WARN] gws-slides.sh 없음. PDF만 저장: $PDF_PATH" >&2
+      echo "PDF: $PDF_PATH"
     fi
     ;;
   local|*)

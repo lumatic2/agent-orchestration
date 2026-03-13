@@ -151,7 +151,7 @@ color_presets:
   planby_dark:
     name: "플랜바이 공식 (다크 차콜 + 인디고 퍼플)"
     theme: dark
-    keywords: ["planby", "플랜바이", "plana"]
+    keywords: []
     source: "플랜바이테크놀로지스_회사소개서.pdf 표지 색상 기반"
     css: |
       :root {
@@ -349,6 +349,21 @@ color_rules:
 # 최종 PDF 저장 위치
 output_dir: ~/Desktop
 
+# ── Google Workspace Slides 설정 ─────────────────────────────────────
+gws:
+  enabled: false
+  template_id: ""           # 복제할 Google Slides 템플릿 프레젠테이션 ID
+  output_folder_id: ""      # Drive 폴더 ID (비워두면 My Drive 루트)
+  default_preset: "light_navy"
+  layout_map:
+    title_slide:    "TITLE"
+    content:        "TITLE_AND_BODY"
+    two_column:     "TITLE_AND_TWO_COLUMNS"
+    section:        "SECTION_HEADER"
+    big_number:     "BIG_NUMBER"
+    main_point:     "MAIN_POINT"
+    closing:        "BLANK"
+
 # 테마
 theme: light                    # dark | light
 
@@ -379,7 +394,7 @@ slide:
 render:
   wait_ms: 2000                   # 폰트 로딩 대기 시간 (ms)
   png_per_slide: false            # true면 슬라이드별 PNG도 저장
-  cleanup_html: true              # 렌더 후 HTML 임시 파일 제거
+  cleanup_html: false             # 렌더 후 HTML 임시 파일 제거
   cleanup_js:   true              # 렌더 후 JS 스크립트 제거
 
 # 디자인 규칙 (Claude가 HTML 생성 시 참조)
