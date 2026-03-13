@@ -349,6 +349,21 @@ color_rules:
 # 최종 PDF 저장 위치
 output_dir: ~/Desktop
 
+# ── Google Workspace Slides 설정 ─────────────────────────────────────
+gws:
+  enabled: false
+  template_id: ""           # 복제할 Google Slides 템플릿 프레젠테이션 ID
+  output_folder_id: ""      # Drive 폴더 ID (비워두면 My Drive 루트)
+  default_preset: "light_navy"
+  layout_map:
+    title_slide:    "TITLE"
+    content:        "TITLE_AND_BODY"
+    two_column:     "TITLE_AND_TWO_COLUMNS"
+    section:        "SECTION_HEADER"
+    big_number:     "BIG_NUMBER"
+    main_point:     "MAIN_POINT"
+    closing:        "BLANK"
+
 # 테마
 theme: light                    # dark | light
 
