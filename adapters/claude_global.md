@@ -235,3 +235,16 @@ Queue entries persist across sessions in `~/projects/agent-orchestration/queue/`
 - Shared principles: `~/projects/agent-orchestration/SHARED_PRINCIPLES.md`
 - Config (models/flags): `~/projects/agent-orchestration/agent_config.yaml`
 - Handoff templates: `~/projects/agent-orchestration/templates/handoff_*.md`
+
+### Knowledge Vault
+
+- **Location**: `luma2@m1:~/vault/` (MCP: `obsidian-vault`)
+- **Entry point**: `00-System/VAULT_INDEX.md` — 에이전트가 vault 작업 전 반드시 읽을 것
+- **Write rules**:
+  - 리서치 결과 → `10-knowledge/{domain}/`
+  - 전문가 AI 업데이트 → `20-experts/{name}.md`
+  - 프로젝트 노트 → `30-projects/{project}/`
+  - 미분류/급할 때 → `00-inbox/`
+  - 날짜 로그 → `40-log/YYYY-MM-DD.md`
+- **Frontmatter 필수**: type, domain, source, date, status
+- Gemini 리서치 완료 후 → vault에 저장 (SHARED_MEMORY.md 덮어쓰기 금지)

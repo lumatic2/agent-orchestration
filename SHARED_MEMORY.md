@@ -291,6 +291,7 @@
 | 시스템 | Mac mini (주) | Windows PC | 비고 |
 |---|---|---|---|
 | Claude Code + MCP | ✅ | git pull → sync.sh | notion/figma MCP 별도 등록 필요 |
+| Obsidian vault MCP | ✅ (로컬) | ✅ (SSH→M1) | `obsidian-vault` MCP 등록 완료: Windows/M1/M4/MacBook Air |
 | AnythingLLM RAG | ~~✅ localhost:3001~~ ❌ 사용 중단 | ❌ | 수치 오류로 제거. PDF 직접 Read로 대체 |
 | Google Drive (개인) | ✅ 마운트됨 | ❓ 확인 필요 | ~/Library/CloudStorage/ |
 | Google Drive (회사) | ✅ 마운트됨 | ❓ 확인 필요 | steven.jun@planby.us |
@@ -355,6 +356,19 @@ gemini mcp add --scope user --trust \
 
 # 환경변수: PERSONAL_NOTION_TOKEN, COMPANY_NOTION_TOKEN → ~/.zshenv
 # AnythingLLM: 별도 설치 후 scripts/planby_ask.sh의 API key 재생성 필요
+
+# Obsidian vault MCP (M1이 아닌 기기)
+python3 -c "
+import json, os
+path = os.path.expanduser('~/.claude.json')
+config = json.load(open(path)) if os.path.exists(path) else {}
+config.setdefault('mcpServers', {})['obsidian-vault'] = {
+    'type': 'stdio', 'command': 'ssh',
+    'args': ['m1', 'source ~/.nvm/nvm.sh && npx -y @bitbonsai/mcpvault@latest ~/vault']
+}
+json.dump(config, open(path, 'w'), indent=2)
+print('obsidian-vault MCP added')
+"
 ```
 
 ## 에이전트 확장 (2026-03-05)
