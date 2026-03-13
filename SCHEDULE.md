@@ -49,9 +49,9 @@
 - [/] [높] Cap table 초안 작성 — 초안 완료(`planby-cap-table.md`), 주주명부 수령 후 완성 `완료 03-13`
 - [x] [높] 월별 MRR 12개월 데이터 시각화 — `planby-mrr-analysis.md` 완료. 구독MRR 0→279만, 프로젝트 포함 월 최대 6,709만. 3월 공백 주의. `완료 03-13`
 - [/] [높] Gross Margin 가시화 — `planby-gross-margin.md` 초안 완료. 지급수수료 170M 성격 확인 후 완성 (외주면 39%, 간접비면 98%)
-- [ ] [높] Burn Multiple 월별 모니터링 체계 — Notion 대시보드 구성
-- [ ] [높] 고객당 평균 계약 규모 + 갱신율 정리 — 세그먼트별 (LTV 계산 근거)
-- [ ] [높] 자본잠식 해소 방법론 — 유상증자 시나리오 (VC 투자 전 자본 정상화 대응)
+- [/] [높] Burn Multiple 월별 모니터링 체계 — `planby-burn-multiple.md` 초안 완료. Net Burn ~2,350만/월, Burn Multiple 1.15x(매출 기준). Notion 대시보드 구성 필요 `완료 03-13`
+- [x] [높] 고객당 평균 계약 규모 + 갱신율 정리 — `planby-ltv-cac.md` 완료. 건당 평균 1,314만, 갱신율 50~60%, LTV:CAC 전체평균 5.5:1 `완료 03-13`
+- [x] [높] 자본잠식 해소 방법론 — `planby-capital-structure.md` 완료. 방법D(자잉→결손상계) 단기 권장, Series A로 완전 정상화 `완료 03-13`
 
 **[Phase 2 — 따뜻한 네트워크] 5~6월** *(삼성 E&A 재계약 또는 현대리바트/LG전자 클로즈 후)*
 - [ ] [중] LTV:CAC Unit Economics 완성 — LTV 계산 + CAC 계산 + 3:1 기준 대비 현황
