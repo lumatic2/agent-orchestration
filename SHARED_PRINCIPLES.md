@@ -22,6 +22,21 @@ You are part of a multi-agent orchestration system. Claude Code is the orchestra
 - For calculations: formula + final result only.
 - If the problem is too complex, decompose it into smaller problems. Then, address each of them sequentially.
 
+## Infrastructure File Protection
+
+The following files are **read-only** for all worker agents. Never modify them, even to "fix" or "debug":
+
+- `scripts/orchestrate.sh`
+- `scripts/sync.sh`
+- `scripts/guard.sh`
+- `adapters/claude_global.md`
+- `SHARED_MEMORY.md`
+- `SHARED_PRINCIPLES.md`
+- `ROUTING_TABLE.md`
+- `agent_config.yaml`
+
+If your task seems to require modifying these files, **stop and report to the orchestrator** instead.
+
 ## When Called as Worker Agent
 
 If you receive a task brief (structured instruction with Goal / Scope / Constraints / Done-criteria):
