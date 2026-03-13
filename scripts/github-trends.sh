@@ -81,7 +81,9 @@ if [[ -f "$LOCK_FILE" && "$DRY_RUN" == "false" ]]; then
   echo "[SKIP] 오늘($RUN_DATE) 이미 실행됨 — 중복 실행 방지"
   exit 0
 fi
-touch "$LOCK_FILE"
+if [[ "$DRY_RUN" == "false" ]]; then
+  touch "$LOCK_FILE"
+fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -237,20 +239,13 @@ fi
 TELEGRAM_ITEMS="$TMP_DIR/telegram_items.txt"
 APPLY_CMDS="$TMP_DIR/apply_cmds.txt"
 
-head -n 5 "$IMMEDIATE_FILE" 2>/dev/null | while IFS= read -r line; do
+head -n 3 "$IMMEDIATE_FILE" 2>/dev/null | while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   line="${line#- }"
   IFS='|' read -r repo stars reason point <<< "$line"
   repo="$(trim "${repo:-}")"
   reason="$(trim "${reason:-}")"
-  point="$(trim "${point:-}")"
-  if [[ "$point" == 적용\ 포인트:* ]]; then
-    point="${point#적용 포인트: }"
-  fi
-  echo "• $repo"
-  echo "  $reason"
-  [[ -n "$point" ]] && echo "  → $point"
-  echo ""
+  echo "• $repo — $reason"
 done > "$TELEGRAM_ITEMS"
 
 
