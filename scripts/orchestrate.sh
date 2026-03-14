@@ -662,6 +662,59 @@ do_boot() {
     echo "$found task(s) need attention. Run --resume to re-dispatch oldest, or --status for details."
   fi
 
+  # ── Auto-pull: 모든 레포 최신화 ──────────────────────────────
+  echo ""
+  echo "=== Auto-pull ==="
+  # 기기별 레포 목록 (공백 구분, HOME 기준)
+  case "$(hostname)" in
+    DESKTOP*|PC*|*windows*|LUMA*)   # Windows
+      PULL_REPOS=(
+        "$HOME/Desktop/agent-orchestration"
+        "$HOME/Desktop/content-automation"
+        "$HOME/Desktop/portfolio"
+      ) ;;
+    *m4*|Mac-mini-M4*)              # M4
+      PULL_REPOS=(
+        "$HOME/vault"
+        "$HOME/Desktop/agent-orchestration"
+        "$HOME/Desktop/content-automation"
+      ) ;;
+    *air*|MacBook*)                 # MacBook Air
+      PULL_REPOS=(
+        "$HOME/vault"
+        "$HOME/Desktop/agent-orchestration"
+      ) ;;
+    *)                              # M1 (기본/기타)
+      PULL_REPOS=(
+        "$HOME/vault"
+        "$HOME/Desktop/agent-orchestration"
+        "$HOME/Desktop/content-automation"
+      ) ;;
+  esac
+
+  for repo in "${PULL_REPOS[@]}"; do
+    [ -d "$repo/.git" ] || continue
+    local branch
+    branch=$(git -C "$repo" symbolic-ref --short HEAD 2>/dev/null || echo "HEAD")
+    git -C "$repo" fetch origin "$branch" --quiet 2>/dev/null || { echo "[SKIP] $repo — fetch 실패 (오프라인?)"; continue; }
+    local behind
+    behind=$(git -C "$repo" rev-list HEAD..origin/"$branch" --count 2>/dev/null || echo 0)
+    if [ "$behind" -gt 0 ]; then
+      # 로컬 변경 있으면 stash 후 pull
+      local dirty
+      dirty=$(git -C "$repo" status --porcelain 2>/dev/null | grep -c "^[^?]" || true)
+      [ "$dirty" -gt 0 ] && git -C "$repo" stash push -m "auto-boot-stash" --quiet 2>/dev/null
+      if git -C "$repo" pull --ff-only origin "$branch" --quiet 2>/dev/null; then
+        echo "[PULLED] $(basename "$repo") ← $behind commit(s)"
+      else
+        echo "[WARN] $(basename "$repo") — fast-forward 불가, 수동 확인 필요"
+      fi
+      [ "$dirty" -gt 0 ] && git -C "$repo" stash pop --quiet 2>/dev/null || true
+    else
+      echo "[OK] $(basename "$repo") 최신"
+    fi
+  done
+
   # Knowledge file refresh (최근 1일 이내 갱신된 경우 스킵)
   REFRESH_SCRIPT="$SCRIPT_DIR/refresh_knowledge.sh"
   REFRESH_STAMP="$SCRIPT_DIR/.refresh_last_run"
