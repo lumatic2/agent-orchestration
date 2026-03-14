@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-14 저녁 — M1 닉 봇 개선]
+**한 일**: claude-code-slack-bot ANTHROPIC_API_KEY OAuth 강제 수정, Block Kit 뉴스 구독 버튼 action_id 중복 해결, ClaudeError/circuit breaker 도입, obsidian-vault nvm 충돌 수정, 다중 인스턴스 정리
+**진행 중**: 봇 재시작 완료 (5:18 PM) — Slack 실테스트 결과 다음 세션에 확인
+**주요 결정**: subprocess env에서 ANTHROPIC_API_KEY 완전 삭제로 OAuth 강제 (빈 문자열 X)
+---
+
 ## [2026-03-14 오후 — M1]
 **한 일**: events-tracker 개인/회사 분리+Slack 연동, 4개 기기 git pull 자동화, auto-stage 훅, session-end 개선, 책 주제 브레인스토밍+공통 골격 설계
 **진행 중**: 책 주제 확정 — Windows 세션에서 배경 인터뷰 후 주제 선정 예정
