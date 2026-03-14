@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-14]
+**한 일**: 텔레그램 cron 미작동 수정(PATH+환경변수), @NewsFairy_bot으로 채팅방 4개 분리, IT콘텐츠 72h+중복제거, events-tracker 소스 확대+우선순위 정렬+설명 2줄, 3개 스크립트 vault 저장 추가
+**진행 중**: events-tracker 실운영 결과 확인 (전국민AI경진대회 포함 여부)
+**주요 결정**: 투자 포트폴리오 봇은 분리하지 않고 현행 유지
+---
+
 ## [2026-03-12 오후]
 **한 일**:
 - OpenClaw 완전 제거 → claude-code-telegram 설치 및 설정 (E2E 테스트 완료)

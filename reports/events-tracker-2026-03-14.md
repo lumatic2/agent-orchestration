@@ -1,226 +1,381 @@
 # 행사·공모전 — 2026-03-14
 
-> 수집: 115개 | 개인참여 31개 | 회사참여 24개
+> 수집: 78개 | 개인참여 39개 | 회사참여 36개
 
-## 👤 개인참여 (31개)
-- **NIA** | 2026년 디지털정부 해외진출 컨설턴트 경력자 과정 교육생 모집 | ~2026-04-01
-  컨설턴트 경력자 개인 역량 강화
-  `https://www.nia.or.kr`
+## 👤 개인참여 (39개)
+- **과기정통부** | March Machine Learning Mania 2026 | ~2026.03.19
+  스포츠 데이터 기반 머신러닝 예측 모델 개발
+  데이터 분석 및 머신러닝 모델 개발 역량 강화, 상금
+  https://www.kaggle.com/competitions
 
-- **AI-Hub** | K-ICT 빅데이터센터의 새로운 이름 아이디어 공모전 | ~미정
-  아이디어 공모전
-  `https://www.aihub.or.kr`
+- **Kaggle** | Deep Past Challenge - Translate Akkadian to English | ~2026.03.24
+  고대 아카드어 문자를 영어로 번역하는 AI 모델 개발
+  자연어 처리 및 AI 모델 개발 역량 강화, 상금
+  https://www.kaggle.com/competitions
 
-- **서울특별시** | 2026 서울시 빅데이터 활용 경진대회 | ~2026-05-13
-  빅데이터 활용 경진대회
-  `https://data.seoul.go.kr`
+- **Kaggle** | Stanford RNA 3D Folding Part 2 | ~2026.03.26
+  RNA 3D 폴딩 예측 모델 개발을 위한 Kaggle 경진대회
+  생물정보학 데이터 분석 역량 강화, 연구 기여 및 상금
+  https://www.kaggle.com/competitions
 
-- **서초구청** | 2026 청년 AI 디자인 공모전 (NEXT 서초) | ~2026-04-30
-  AI 디자인 공모전
-  `https://www.seocho.go.kr`
+- **데이콘(Dacon)** | 월간 해커톤: 긴급 인수인계 해커톤 문서만 남기고 사라졌다 | ~2026.03.30
+  데이터 분석 및 AI 모델 개발을 통한 문제 해결 해커톤
+  상금, 실력 검증 및 기업 협력 기회 제공
+  https://dacon.io
 
-- **포스코** | 광양제철소 생성형 AI 경진대회 | ~2026-06-24
-  생성형 AI 경진대회
-  `https://newsroom.posco.co.kr`
+- **데이콘(Dacon)** | 구조물 안정성 물리 추론 AI 경진대회 | ~2026.03.30
+  물리 추론 기반 AI 모델 개발을 위한 구조물 안정성 예측 경진대회
+  상금, AI 모델 개발 역량 강화 및 실력 검증 기회
+  https://dacon.io/competitions
 
-- **대한상공회의소** | 2026년 AI 콘텐츠 마케팅 챌린지 공모전 | ~미정
-  AI 콘텐츠 마케팅 챌린지 공모전
-  `https://www.korcham.net`
+- **진주 지역 10개 공공기관 공동** | 제5회 인공지능·공공데이터 활용 및 창업경진대회 | ~2026.03.31
+  AI와 공공데이터를 활용한 아이디어 및 서비스 개발 경진대회
+  창업 지원 및 상금, 공공기관과의 협력 기회
+  https://bigtori.kalis.or.kr
 
-- **미상** | 2026년 엔지니어링산업 경진대회 | ~미정
-  엔지니어링 산업 경진대회
-  `https://www.contestkorea.com`
+- **한국산업기술시험원(KTL) 등 10개 기관 공동** | 제5회 AI·공공데이터 활용 및 창업 경진대회 | ~2026.03.31
+  AI와 공공데이터를 활용한 아이디어 및 서비스 개발 경진대회
+  창업 지원 및 상금, 공공기관과의 협력 기회
+  https://www.aihub.or.kr
 
-- **안전보건공단** | 제13회 산업안전보건 논문 경진대회 | ~미정
-  산업안전보건 논문 경진대회
-  `https://www.kosha.or.kr`
+- **Kaggle** | AI Mathematical Olympiad - Progress Prize 3 | ~2026.04.14
+  수학적 문제 해결을 위한 AI 모델 개발 경진대회 (Kaggle)
+  글로벌 경쟁 및 AI 수학 분야 연구 기여, 상금
+  https://www.kaggle.com/competitions
 
-- **영주시** | 2026년 영주시 공공데이터 창업경진대회 | ~2026-05-06
-  공공데이터 창업경진대회
-  `https://www.yeongju.go.kr`
+- **Kaggle** | WiDS Global Datathon 2026 | ~2026.05.01
+  여성 데이터 과학자들을 위한 글로벌 데이터 분석 경진대회
+  데이터 과학 역량 강화, 글로벌 커뮤니티 참여 및 상금
+  https://www.kaggle.com/competitions
 
-- **Xangle** | 스타트업 커리어 챌린지 AI·블록체인 아이디어 공모전 | ~2026-03-25
-  AI·블록체인 아이디어 공모전
-  미정
+- **Kaggle** | BirdCLEF+ 2026 | ~2026.06.03
+  조류 소리를 분석하여 종을 식별하는 AI 모델 개발 경진대회
+  음향 데이터 처리 및 AI 모델 개발, 환경 보호 기여 및 상금
+  https://www.kaggle.com/competitions
 
-- **스마일게이트** | 2026 스마일게이트 인디게임 창작 공모전 <IndieGo> | ~미정
-  인디게임 창작 공모전
-  미정
+- **GAMFF** | GAMFF 2026 AI 영상 공모전 | ~2026.06.30
+  AI 기술로 제작된 독창적인 영상 콘텐츠 공모전
+  상금, 영상 상영 기회 및 국내외 영상 전문가 네트워킹
+  https://www.aihub.or.kr
 
-- **DACON** | 구조물 안정성 물리 추론 AI 경진대회 | ~2026-03-30
-  AI 경진대회
-  `https://dacon.io/competitions`
+- **교육부** | 제8회 교육 공공데이터 인공지능(AI) 활용대회 | ~미정
+  교육 공공데이터 및 AI 활용 아이디어/서비스 개발 경진대회
+  교육 혁신 기여 및 상금, 교육부와의 협력 기회
+  https://www.aihub.or.kr
 
-- **Hecto / DACON** | HAI(하이)! - Hecto AI Challenge | ~미정
-  AI 챌린지
-  `https://dacon.io/competitions`
+- **커널아카데미** | 26H AI X 로보틱스 융합 해커톤 | ~미정
+  AI와 로보틱스 기술을 융합한 솔루션 개발 해커톤
+  AI/로보틱스 전문가 멘토링, 상금 및 기술 상용화 기회
+  news.hada.io
 
-- **DACON x BDA** | 데이콘 x BDA 제 2회 학습자 수료 예측 AI 경진대회 | ~미정
-  AI 경진대회
-  `https://dacon.io/competitions`
+- **헥토(Hecto)** | 헥토(Hecto) 2차 채용 AI 경진대회 | ~미정
+  AI 기술 역량 검증 및 채용 연계를 위한 AI 경진대회
+  상금, 헥토그룹 채용 우대 및 AI 전문가 네트워킹 기회
+  https://dacon.io/competitions
 
-- **K리그 / 서울시립대 / DACON** | K리그-서울시립대 공개 AI 경진대회 (Track 1 & 2) | ~미정
-  AI 경진대회
-  `https://dacon.io/competitions`
+- **서울시립대학교** | 서울시립대학교 AI 경진대회 | ~미정
+  AI 기술 및 데이터 분석 역량 강화를 위한 교내 경진대회
+  상금, 교내 수상 실적 및 AI 분야 학습 동기 부여
+  https://dacon.io/competitions
 
-- **DACON** | 제2회 Medical AI (MAI) 경진대회 | ~미정
-  Medical AI 경진대회
-  `https://dacon.io/competitions`
+- **국민대학교** | 국민대학교 AI 빅데이터 분석 경진대회 | ~미정
+  AI 및 빅데이터 분석을 활용한 문제 해결 경진대회
+  상금, 교내 수상 실적 및 데이터 전문가와의 교류 기회
+  https://dacon.com/competitions
 
-- **DACON** | 스마트 제조 AI Agent 해커톤 2025 | ~미정
-  AI 해커톤
-  `https://dacon.io/competitions`
+- **고려대학교병원** | 고려대학교병원 의료 AI 경진대회 | ~미정
+  의료 데이터를 활용한 AI 모델 개발 및 의료 혁신 경진대회
+  상금, 의료AI 분야 전문가 멘토링 및 병원과의 협력 기회
+  https://dacon.io/competitions
 
-- **국민대학교 / DACON** | 제3회 국민대학교 AI빅데이터 분석 경진대회 | ~미정
-  AI빅데이터 분석 경진대회
-  `https://dacon.io/competitions`
+- **Kaggle** | Scientific Image Forgery Detection (Recod.ai/LUC) | ~미정
+  과학 이미지 위변조 탐지를 위한 AI 모델 개발 경진대회
+  이미지 처리 AI 기술 개발, 윤리적 AI 활용 및 상금
+  https://www.kaggle.com/competitions
 
-- **파주시 / DACON** | 파주 시민 AI 혁신 아이디어 경진대회 | ~미정
-  AI 혁신 아이디어 경진대회
-  `https://dacon.io/competitions`
+- **Kaggle** | CAFA 6 Protein Function Prediction | ~미정
+  단백질 기능 예측을 위한 생물정보학 데이터 분석 경진대회
+  생물정보학 및 AI 활용 역량 강화, 연구 기여 및 상금
+  https://www.kaggle.com/competitions
 
-- **롯데이노베이트 / DACON** | 2025 롯데이노베이트 프롬프트 엔지니어링 해커톤 | ~미정
-  프롬프트 엔지니어링 해커톤
-  `https://dacon.io/competitions`
+- **Kaggle** | Hull Tactical - Market Prediction | ~미정
+  금융 시장 예측 모델 개발을 위한 AI 경진대회
+  금융 AI 기술 개발 및 예측 모델 역량 강화, 상금
+  https://www.kaggle.com/competitions
 
-- **Kaggle** | AI Mathematical Olympiad - Progress Prize 3 | ~2026-04-14
-  AI 경진대회
-  `https://www.kaggle.com/competitions`
+- **과기정통부** | 2026 전 국민 AI 경진대회 (AI 챔피언 대회) | ~미정
+  AI 전문가 및 개발자를 위한 심화 AI 기술 경진대회
+  최고 수준 AI 기술력 검증, 상금 및 국가대표 선발 기회
+  https://www.msit.go.kr
 
-- **Kaggle** | Hull Tactical - Market Prediction | ~2026-06-14
-  시장 예측 경진대회
-  `https://www.kaggle.com/competitions`
+- **과기정통부** | 2026 전 국민 AI 경진대회 (AI 루키 대회) | ~미정
+  AI 입문자 및 학습자를 위한 기초 AI 역량 경진대회
+  AI 학습 동기 부여, 기본 기술 습득 및 상금
+  https://www.msit.go.kr
 
-- **Kaggle** | Stanford RNA 3D Folding Part 2 | ~2026-03-26
-  과학 연구 경진대회
-  `https://www.kaggle.com/competitions`
+- **과기정통부** | 2026 전 국민 AI 경진대회 (AI 창작/로보틱스 챌린지) | ~미정
+  AI 기술 기반 창작 및 로보틱스 솔루션 개발 챌린지
+  창의적 AI 기술 활용 및 로보틱스 개발 역량 강화, 상금
+  https://www.msit.go.kr
 
-- **Kaggle** | Deep Past Challenge | ~2026-03-24
-  데이터 과학 챌린지
-  `https://www.kaggle.com/competitions`
+- **과기정통부** | 2026 전 국민 AI 경진대회 (국민행복 AI 경진대회) | ~미정
+  국민 삶의 질 향상을 위한 AI 아이디어 및 솔루션 개발
+  사회 문제 해결 기여, 상금 및 아이디어 구현 지원
+  https://www.msit.go.kr
 
-- **Kaggle** | March Machine Learning Mania 2026 | ~2026-03-20
-  머신러닝 경진대회
-  `https://www.kaggle.com/competitions`
+- **과기정통부** | 2026 전 국민 AI 경진대회 (AI 사례 공모 및 퀴즈대회) | ~미정
+  AI 활용 성공 사례 발굴 및 AI 지식 검증 퀴즈대회
+  AI 대중화 기여, 상금 및 AI 관련 지식 확산
+  https://www.msit.go.kr
 
-- **Kaggle** | Recod.ai/LUC - Scientific Image Forgery Detection | ~2026-05-14
-  이미지 위조 탐지 경진대회
-  `https://www.kaggle.com/competitions`
+- **NIPA** | 2026년 AI컴퓨팅자원 활용기반 강화사업 (GPU 확보·구축·운용지원) | ~미정
+  AI 컴퓨팅 자원 확보 및 활용을 위한 기술 지원
+  AI 개발 환경 최적화, GPU 자원 지원 및 기술 컨설팅
+  https://www.nipa.kr
 
-- **Kaggle** | CAFA 6 Protein Function Prediction | ~2026-06-14
-  단백질 기능 예측 경진대회
-  `https://www.kaggle.com/competitions`
+- **인천공항** | 인천공항 AI-PORT 대국민 아이디어 공모전 | ~2026.04.03
+  인천공항 운영 및 서비스 혁신을 위한 AI 아이디어 공모전
+  상금, 인천공항과의 협력 및 아이디어 실제 적용 기회
+  news.hada.io
 
-- **Kaggle** | BirdCLEF+ 2026 | ~2026-06-14
-  조류 식별 경진대회
-  `https://www.kaggle.com/competitions`
+- **국방부** | 2026 대한민국 드론 공방전 | ~2026.03.31
+  드론 기술 개발 및 운용 역량 강화를 위한 경진대회
+  상금, 국방 기술 발전 기여 및 관련 분야 전문가 네트워킹
+  news.hada.io
 
-- **Kaggle** | Predict Customer Churn (Playground S6E3) | ~2026-04-01
-  고객 이탈 예측 경진대회
-  `https://www.kaggle.com/competitions`
+- **Red Bull** | Red Bull Basement 2026 | ~2026.03.29
+  사회 문제 해결을 위한 기술 기반 혁신 아이디어 공모전
+  글로벌 네트워킹, 멘토링, 시제품 개발 지원
+  https://www.aihub.or.kr
 
-- **Kaggle** | Jaguar Re-Identification Challenge | ~2026-03-15
-  이미지 재식별 챌린지
-  `https://www.kaggle.com/competitions`
+- **서초구** | 2026 청년 AI 디자인 공모전 (서초구) | ~2026.04.30
+  AI 기술을 활용한 창의적인 디자인 작품 공모전
+  상금, 디자인 전문가 멘토링 및 서초구 홍보 기회
+  news.hada.io
 
-- **Kaggle** | WiDS Global Datathon 2026 | ~미정
-  글로벌 데이터톤
-  `https://www.kaggle.com/competitions`
+- **서초구** | 2026 청년 디자인캠프 NEXT 서초 AI 공모전 | ~2026.04.30
+  AI 기술을 접목한 창의적인 디자인 아이디어 공모전
+  상금, 전문가 멘토링 및 서초구와의 협력 기회
+  https://www.aihub.or.kr
 
-## 🏢 회사참여 (24개)
-- **중소벤처기업부** | 2026년 온라인 수출 중소기업 물류 지원 사업 (수행기관 모집) | ~미정
-  중소기업 지원 사업
-  `https://www.k-startup.go.kr/web/contents/bizpbanc-list.do`
+- **초록뱀미디어 등 협업** | 2026 대한민국 AI 콘텐츠 페스티벌 (광고 부문) | ~2026.03.29
+  AI 기술을 활용한 혁신적인 광고 콘텐츠 제작 공모전
+  상금, 유명 미디어/광고 전문가 멘토링 및 네트워킹
+  https://www.aihub.or.kr
 
-- **중소벤처기업부** | 2026년 스마트상점 기술보급사업 (소상공인 모집) | ~2026-04-01
-  소상공인 대상 기술보급사업
-  `https://www.k-startup.go.kr/web/contents/bizpbanc-list.do`
+- **구름(Goorm)** | 구름톤 in JEJU (13기) | ~2026.03.17
+  개발 역량 강화 및 아이디어 구현을 위한 해커톤 프로그램
+  개발 전문가 멘토링, 팀 빌딩 및 상금/수료증 지급
+  news.hada.io
 
-- **중소벤처기업부** | 2026년 소상공인 협업활성화 공동사업 | ~2026-04-03
-  소상공인 대상 공동사업
-  `https://www.k-startup.go.kr/web/contents/bizpbanc-list.do`
+- **과기정통부** | 제7기 과기정통부 LMO SAFETY 기자단 모집 | ~2026.04.05
+  LMO 안전 관리 및 과학기술 홍보를 위한 기자단 모집
+  활동비, 취재 지원 및 과기정통부 명의 수료증 발급
+  https://www.msit.go.kr
 
-- **중소벤처기업부** | 2026년 민관공동 기술사업화 R&D (상생협력형) | ~2026-04-03
-  R&D 지원 사업
-  `https://www.k-startup.go.kr/web/contents/bizpbanc-list.do`
+- **KISTEP** | 2026년 KISTEP 위탁연구과제 공모 | ~2026.04.10
+  KISTEP의 국가 연구개발 사업을 위한 위탁 연구과제 공모
+  연구비 지원, 국가 R&D 참여 기회 및 연구 성과 활용
+  https://www.msit.go.kr
 
-- **산업통상자원부** | 2026년도 전략기술형 국제공동기술개발사업 | ~미정
-  국제공동기술개발 사업
-  `https://www.motie.go.kr`
+- **초록뱀미디어 등 협업** | 2026 대한민국 AI 콘텐츠 페스티벌 (뮤직비디오/숏폼 부문) | ~2026.04.12
+  AI 기술로 제작된 뮤직비디오 및 숏폼 콘텐츠 공모전
+  상금, 유명 미디어 전문가 멘토링 및 홍보 기회
+  https://www.aihub.or.kr
 
-- **중소벤처기업부** | 소상공인 경영안정 바우처 | ~미정
-  소상공인 지원 바우처
-  `https://www.k-startup.go.kr/web/contents/bizpbanc-list.do`
+- **미추홀구** | 제1회 미추홀구 AI 영화제 공모전 | ~2026.05.29
+  AI 기술을 활용하여 제작한 단편 영화 공모전
+  상금, 영화 상영 기회 및 영화제 네트워킹
+  https://www.aihub.or.kr
 
-- **IITP** | 2026년도 AI 통합 바우처 지원사업 | ~미정
-  AI 바우처 지원 사업
-  `https://www.iitp.kr`
+- **초록뱀미디어 등 협업** | 2026 대한민국 AI 콘텐츠 페스티벌 (미드폼 부문) | ~2026.05.31
+  AI 기술로 제작된 미드폼 콘텐츠 공모전 (드라마, 다큐 등)
+  상금, 유명 미디어 전문가 멘토링 및 제작 지원
+  https://www.aihub.or.kr
 
-- **IITP** | 2026년도 ICT R&D 기술사업화 지원사업 신규과제 | ~미정
-  R&D 기술사업화 지원
-  `https://www.iitp.kr`
+- **미정** | 제2회 녹색성장 실천 아이디어 해커톤 | ~미정
+  녹색성장 및 환경 문제 해결을 위한 아이디어 해커톤
+  환경 전문가 멘토링, 상금 및 아이디어 구현 지원
+  news.hada.io
 
-- **IITP** | 2026년도 정보통신·방송 기술개발사업 및 표준화사업 신규지원 대상과제 | ~미정
-  기술개발 및 표준화 지원
-  `https://www.iitp.kr`
+## 🏢 회사참여 (36개)
+- **NIPA** | 2026년 AI 바우처 지원사업 (공급기업 POOL 2차 모집) | ~2026.03.16
+  AI 바우처 사업에 참여할 공급기업(솔루션 보유 기업) 모집
+  최대 1.6억 바우처 매출, AI 솔루션 확산 및 사업 확장
+  https://nxt.nipa.kr
 
-- **NIA** | 2026년 AI 네트워크 기반 조성 등 6개 주요 사업 공모 (설명회 개최) | ~미정
-  AI 네트워크 기반 조성 사업 공모
-  `https://www.nia.or.kr`
+- **NIPA** | 2026년 공공 AX 프로젝트 | ~2026.03.16
+  공공 분야 AI 전환(AX) 프로젝트 수행 기업 모집
+  공공 DX 시장 참여, 정부 사업 레퍼런스 확보 및 기술력 검증
+  https://nxt.nipa.kr
 
-- **NIA** | 2026년 초거대 AI 학습용 데이터 구축 사업 (의견 수렴) | ~2026-03-15
-  AI 학습용 데이터 구축 사업
-  `https://www.nia.or.kr`
+- **중소벤처기업부** | 2026년 예비창업패키지 (예비창업자 모집) | ~2026.03.24
+  예비 창업가를 위한 사업화 지원 프로그램
+  최대 1억원 사업화 자금 및 창업 교육, 멘토링 제공
+  https://www.mss.go.kr
 
-- **NIA** | AI 기반 안전관리 분야 디지털 트윈 선도 사업 (공모 임박 시사) | ~미정
-  디지털 트윈 선도 사업
-  `https://www.nia.or.kr`
+- **K-Startup** | 2026년도 예비창업패키지 예비창업자 모집 | ~2026.03.24
+  예비 창업가를 위한 사업화 지원 프로그램
+  최대 1억원 사업화 자금 및 창업 교육, 멘토링 제공
+  https://www.k-startup.go.kr
 
-- **KISA** | 2026년 마이데이터 서비스 지원사업 | ~미정
-  마이데이터 서비스 지원
-  `https://www.kisa.or.kr`
+- **과기정통부** | K-Global 프로젝트 - AI-반도체 해외실증 지원 사업 | ~2026.03.25
+  AI 반도체 관련 기업의 해외 시장 진출 및 실증 지원
+  해외 시장 개척, 글로벌 파트너십 구축 및 기술 경쟁력 강화
+  https://www.msit.go.kr
 
-- **NIPA** | 2026년도 AI 통합 바우처 지원사업 | ~2026-03-30
-  AI 바우처 지원 사업
-  `https://www.nipa.kr/main/selectBbsList.do?bbsId=BBS_0000000000000001`
+- **중소벤처기업부** | 2026 벤처창업진흥 유공 포상 | ~2026.03.25
+  벤처·창업 활성화에 기여한 유공자를 포상
+  대통령 표창, 국무총리 표창 등 명예로운 포상
+  https://www.mss.go.kr
 
-- **NIPA** | 2026년 AI바우처 지원사업 공급기업 POOL 모집 (2차) | ~2026-03-16
-  AI 바우처 사업 공급기업 모집
-  `https://www.nipa.kr/main/selectBbsList.do?bbsId=BBS_0000000000000001`
+- **NIA** | 2026년 디지털 혁신기업 글로벌 성장 바우처 (Solution 바우처) | ~2026.03.27
+  디지털 혁신 기업의 글로벌 시장 진출 지원 바우처
+  해외 진출 컨설팅, 마케팅 지원 및 글로벌 네트워킹 기회
+  https://propose.nia.or.kr
 
-- **과학기술정보통신부** | 2026년 나눔장비 이전지원사업 | ~예산 소진 시
-  장비 이전 지원 사업
-  `https://www.bizinfo.go.kr`
+- **NIPA (협력)** | AI AGENT 융합·확산 지원 | ~2026.03.30
+  AI 에이전트 기술 융합 및 산업 확산 프로젝트 지원
+  AI 기술 사업화, 시장 확대 및 선도 기업 성장 기회
+  https://nxt.nipa.kr
 
-- **경기콘텐츠진흥원** | 2026년 경기 지역자원 활용 콘텐츠 제작지원 (AI 숏폼 부문) | ~2026-04-08
-  콘텐츠 제작 지원 사업
-  `https://www.gca.or.kr`
+- **NIA** | 2026년 AX디바이스 개발·실증(정규트랙) 운영기관 모집 | ~2026.03.30
+  AI 전환(AX) 디바이스 개발 및 실증을 위한 운영기관 모집
+  AX 디바이스 시장 선점, 기술 경쟁력 강화 및 정부 지원
+  https://propose.nia.or.kr
 
-- **산업통상자원부** | 수출지원기반활용사업 (긴급바우처 2차) | ~미정
-  수출 지원 바우처
-  `https://www.bizinfo.go.kr`
+- **NIPA** | 2026년 AI 통합 바우처 지원사업 (AI바우처) | ~2026.03.30
+  AI 도입을 희망하는 중소기업을 위한 AI 바우처 지원
+  AI 솔루션 도입 비용 지원, 디지털 전환 가속화
+  https://www.nipa.kr
 
-- **중소벤처기업부** | 2026년 M&A 활성화 지원사업 | ~미정
-  M&A 지원 사업
-  `https://www.mss.go.kr`
+- **NIA** | 2026년 AI 통합 바우처 지원사업 (수정공고) | ~2026.03.30
+  AI 도입을 희망하는 중소기업을 위한 AI 바우처 지원
+  AI 솔루션 도입 비용 지원, 디지털 전환 가속화
+  https://propose.nia.or.kr
 
-- **중소벤처기업부, 과학기술정보통신부, 산업통상자원부** | AX(AI 전환) 사업 통합 공고 | ~미정
-  AI 전환 사업
-  `https://www.mss.go.kr`
+- **경기콘텐츠진흥원** | 2026 남부권역 초기성장 스케일업 패키지 | ~2026.04.01
+  초기 창업기업의 성장을 위한 스케일업 지원 프로그램
+  사업화 자금, 멘토링, 투자 유치 지원 및 네트워킹
+  https://www.gcon.or.kr
 
-- **중소벤처기업부** | 2026 판로지원사업 (판판대로) | ~2026-03-17
-  판로 지원 사업
-  `https://www.fanfandaero.kr`
+- **NIA** | 2026 가상융합산업허브(메타버스허브) 입주기업 모집 (1차) | ~2026.04.08
+  가상융합산업(메타버스) 관련 기업의 입주 공간 지원
+  저렴한 사무공간, 네트워킹 및 기술/사업화 멘토링 제공
+  https://propose.nia.or.kr
 
-- **중소벤처기업부** | 중소기업 혁신바우처 사업 | ~미정
-  중소기업 혁신바우처
-  `https://www.mss.go.kr`
+- **NIA** | 2026년도 AX 원스톱 바우처 지원사업 (운영기관 모집) | ~2026.04.09
+  AI 전환(AX) 바우처 사업을 운영할 기관 모집
+  AX 시장 리더십 확보, 정부 사업 참여 및 기술 확산 기여
+  https://propose.nia.or.kr
 
-- **한국언론진흥재단** | 2026 미디어 스타트업 지원사업 공모 | ~2026-04-03
-  스타트업 지원 사업
-  미정
+- **NIA** | 2026년 공급망 보안 모델 구축 지원사업 | ~2026.04.09
+  공급망 보안 강화 및 위협 대응 모델 구축 지원 사업
+  보안 기술 개발 및 상용화, 시장 경쟁력 강화 및 정부 지원
+  https://propose.nia.or.kr
 
-- **서울대학교** | 2026년 SNU 빅 스케일업 (스타트업 육성) | ~2026-04-15
-  스타트업 육성
-  미정
+- **NIA** | 2026년 디지털트윈 3D프린팅 의료공동제조소 실증 지원 | ~2026.04.10
+  디지털트윈 및 3D 프린팅 의료 분야 실증 지원 사업
+  의료 기술 혁신, 시장 경쟁력 확보 및 정부 지원
+  https://propose.nia.or.kr
+
+- **NIA** | 의료AI 교육 확산 신규과제 공모 | ~2026.04.07
+  의료 AI 교육 콘텐츠 개발 및 확산을 위한 신규 과제 공모
+  의료 AI 인력 양성 기여, 교육 시장 확대 및 정부 지원
+  https://propose.nia.or.kr
+
+- **NIPA** | 2026년 강원의료AX산업실증허브조성 총괄운영 | ~2026.04.13
+  강원 지역 의료 AI 전환(AX) 산업 허브 운영 총괄 기관 모집
+  지역 의료 AX 생태계 조성, 정부 사업 참여 및 리더십 확보
+  https://www.nipa.kr
+
+- **중소벤처기업부** | TIPS (민간주도형 기술창업지원) | ~2026.12.31
+  민간 투자 주도로 유망 기술 창업 기업을 발굴, 육성
+  최대 7억원 R&D 자금 및 창업 사업화 지원, VC 투자 연계
+  https://www.mss.go.kr
+
+- **K-Startup** | 2026년도 경기도 양자-반도체 팹 융합활용 R&D 지원사업 | ~미정
+  양자 및 반도체 팹 기술 융합 활용 R&D 과제 지원
+  첨단 기술 개발, 기술 상용화 및 정부 R&D 자금 지원
+  https://www.k-startup.go.kr
+
+- **IITP (과학기술정보통신부)** | 2026년 AX(인공지능 전환) 사업 통합 공고 - 실세계 능동행동형 에이전틱 AI 기술개발 | ~미정
+  실세계 적용 가능한 에이전트 AI 기술 개발 지원
+  AI 기술 R&D 자금 지원 및 기술 상용화 기회 제공
+  https://www.iitp.kr
+
+- **IITP (과학기술정보통신부)** | 2026년 AX(인공지능 전환) 사업 통합 공고 - AX 혁신기업 창의기술개발 | ~미정
+  AI 전환(AX) 혁신 기업의 창의적인 기술 개발 지원
+  AI 기술 R&D 자금 지원, 혁신 기술 사업화 및 성장 지원
+  https://www.iitp.kr
+
+- **과기정통부·산업부·중기부 합동** | 2026년 AX(AI 전환) 사업 통합 공고 | ~미정
+  AI 전환(AX) 분야 기술 개발 및 사업화 통합 공고
+  AI 기술 R&D 자금 지원, 사업화 연계 및 정부 지원
+  https://www.msit.go.kr
+
+- **NIA (과기정통부·산업부·중기부 합동)** | 2026년 AX(인공지능 전환) 사업 통합 공고 및 공동 설명회 (NIA 주관 AI 응용제품 신속 상용화 지원 포함) | ~미정
+  AI 응용제품의 신속한 상용화를 위한 개발 및 사업화 지원
+  AI 기술 상용화, 시장 경쟁력 확보 및 정부 지원
+  https://propose.nia.or.kr
+
+- **NIPA** | 2026년 XaaS 선도 프로젝트 개발지원 신규과제 | ~미정
+  XaaS(Everything as a Service) 분야 선도 프로젝트 개발 지원
+  신기술 개발, 시장 선점 및 정부 R&D 자금 지원
+  https://www.nipa.kr
+
+- **IITP/NIPA** | 글로벌 ICT 미래 유니콘 육성(ICT GROWTH) | ~미정
+  글로벌 유니콘 기업으로 성장할 ICT 기업 지원
+  해외 진출 지원, 투자 유치 연계 및 기술 사업화 지원
+  https://www.iitp.kr
+
+- **K-Startup** | 대학생 융합기술 창업 지원사업 | ~미정
+  대학생의 융합기술 기반 혁신 창업 지원 프로그램
+  창업 교육, 멘토링 및 초기 사업화 자금 지원
+  https://www.k-startup.go.kr
+
+- **K-Startup** | 2026년 분당서울대학교병원 창업보육센터 신규 입주기업 모집(추가) | ~미정
+  의료 분야 창업 기업을 위한 분당서울대병원 창업보육센터 입주 지원
+  저렴한 사무공간, 의료 전문가 멘토링 및 병원 인프라 활용
+  https://www.k-startup.go.kr
+
+- **K-Startup** | 2026 K-콘텐츠 IP융복합 제작지원 사업 | ~미정
+  K-콘텐츠 IP를 활용한 융복합 콘텐츠 제작 지원 사업
+  제작 자금 지원, IP 활용 기회 및 콘텐츠 사업화 지원
+  https://www.k-startup.go.kr
+
+- **K-Startup** | 2026년 K-스타트업 센터(KSC) 해외진출 지원사업 | ~미정
+  국내 스타트업의 해외 시장 진출을 위한 종합 지원 프로그램
+  현지 네트워킹, 법률/회계 자문 및 해외 사업 개발 지원
+  https://www.k-startup.go.kr
+
+- **K-Startup** | 기창업자 경영개선자금 지원사업 | ~미정
+  기창업 기업의 경영 어려움 해소를 위한 자금 지원
+  경영 컨설팅, 사업 재편 지원 및 운영 자금 확보
+  https://www.k-startup.go.kr
+
+- **중소벤처기업부** | 제조 중소기업 혁신바우처 (2차 공고) | ~미정
+  제조 중소기업의 혁신 역량 강화를 위한 바우처 지원
+  컨설팅, 기술 개발, 마케팅 등 맞춤형 서비스 지원
+  https://www.mss.go.kr
+
+- **중소벤처기업부 (지자체)** | 지역별 특화 지원사업 (각 지자체 신규 공고) | ~미정
+  지역별 특화 산업 육성을 위한 중소기업 지원 사업
+  지역 경제 활성화, 맞춤형 지원 및 사업 확장 기회
+  https://www.mss.go.kr
+
+- **중소벤처기업부** | 해외규격인증획득지원사업 (차수별 모집) | ~미정
+  중소기업의 해외 시장 진출을 위한 인증 획득 지원
+  인증 비용 지원, 컨설팅 및 해외 시장 진출 기반 마련
+  https://www.mss.go.kr
+
+- **과기정통부** | 지역 AX(AI 전환) 사업 추가 공고 | ~미정
+  지역 산업의 AI 전환(AX) 가속화를 위한 사업 지원
+  지역 균형 발전, AI 기술 도입 및 생산성 향상 기여
+  https://www.msit.go.kr
+
+- **호반** | 2026 호반 넥스트 스타트업 공모전 | ~2026.03.22
+  건설 및 미래 기술 분야 스타트업 발굴 및 육성 프로그램
+  투자 유치, 사업화 지원 및 호반그룹과의 협력 기회
+  news.hada.io
 
