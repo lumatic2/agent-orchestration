@@ -26,7 +26,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-BASE_DIR="$HOME/Desktop/agent-orchestration"
+# GitHub 트렌드 전용 채팅방 우선 사용
+if [[ -n "${TELEGRAM_BOT_TOKEN_IT:-}" ]]; then
+  export TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN_IT"
+fi
+if [[ -n "${TELEGRAM_CHAT_ID_GITHUB:-}" ]]; then
+  export TELEGRAM_CHAT_ID="$TELEGRAM_CHAT_ID_GITHUB"
+fi
+
+BASE_DIR="$HOME/projects/agent-orchestration"
 SCRIPTS_DIR="$BASE_DIR/scripts"
 LOGS_DIR="$BASE_DIR/logs"
 REPORTS_DIR="$BASE_DIR/reports"
@@ -261,6 +269,18 @@ $(cat "$TELEGRAM_ITEMS")
 📄 reports/github-trends-$RUN_DATE.md"
 
 send_telegram "$TELEGRAM_MESSAGE" || fail "텔레그램 알림 전송 실패"
+
+# vault 저장
+if [[ "$DRY_RUN" == "false" ]]; then
+  VAULT_DIR="$HOME/vault/10-knowledge/research"
+  mkdir -p "$VAULT_DIR"
+  VAULT_FILE="$VAULT_DIR/github-trends-$RUN_DATE.md"
+  {
+    printf -- "---\ntype: research\ndomain: github\nsource: github-trends\ndate: %s\nstatus: done\n---\n\n" "$RUN_DATE"
+    cat "$REPORT_FILE"
+  } > "$VAULT_FILE"
+  echo "[VAULT] Saved → $VAULT_FILE"
+fi
 
 echo "[DONE] Report: $REPORT_FILE"
 echo "[DONE] Immediate: $IMMEDIATE_COUNT | Reference: $REFERENCE_COUNT | Skip: $SKIP_COUNT"

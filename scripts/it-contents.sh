@@ -26,7 +26,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-BASE_DIR="$HOME/Desktop/agent-orchestration"
+# IT 콘텐츠 전용 봇 토큰 우선 사용
+if [[ -n "${TELEGRAM_BOT_TOKEN_IT:-}" ]]; then
+  export TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN_IT"
+fi
+if [[ -n "${TELEGRAM_CHAT_ID_IT:-}" ]]; then
+  export TELEGRAM_CHAT_ID="$TELEGRAM_CHAT_ID_IT"
+fi
+
+BASE_DIR="$HOME/projects/agent-orchestration"
 SCRIPTS_DIR="$BASE_DIR/scripts"
 LOGS_DIR="$BASE_DIR/logs"
 REPORTS_DIR="$BASE_DIR/reports"
@@ -64,6 +72,8 @@ fail() {
 RUN_DATE="$(date +%Y-%m-%d)"
 SLUG="$(date +%Y%m%d_%H%M%S)"
 REPORT_FILE="$REPORTS_DIR/it-contents-$RUN_DATE.md"
+SENT_URLS_FILE="$REPORTS_DIR/it-contents-sent-urls.txt"
+touch "$SENT_URLS_FILE"
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -182,7 +192,7 @@ except Exception as e:
     print(f"feed parse error: {e}", file=sys.stderr)
     sys.exit(1)
 now_utc = datetime.now(timezone.utc)
-cutoff = now_utc - timedelta(hours=24)
+cutoff = now_utc - timedelta(hours=72)
 rows = []
 
 for elem in root.iter():
@@ -231,7 +241,7 @@ collect_web_sources() {
   local task_name="it-contents-web-$SLUG"
   local prompt
   prompt=$(cat <<'PROMPT'
-다음 사이트들에서 오늘 또는 최근 24시간 내 발행된 글/영상 제목과 링크를 찾아줘:
+다음 사이트들에서 최근 3일 이내 발행된 글/영상 제목과 링크를 찾아줘:
 - soylab AI: https://www.soylab.ai/
 - 달파 블로그: https://app.dalpha.so/blog/
 - litmers: https://litmers.com/blogs
@@ -386,11 +396,17 @@ collect_web_sources
 
 cat "$RSS_ITEMS" "$WEB_ITEMS" > "$ALL_ITEMS"
 
-python3 - "$ALL_ITEMS" "$UNIQUE_ITEMS" <<'PYEOF'
+python3 - "$ALL_ITEMS" "$UNIQUE_ITEMS" "$SENT_URLS_FILE" <<'PYEOF'
 import sys
 
 in_path = sys.argv[1]
 out_path = sys.argv[2]
+sent_urls_path = sys.argv[3]
+
+# 이미 전송한 URL 로드
+with open(sent_urls_path, "r", encoding="utf-8", errors="ignore") as f:
+    sent_urls = {line.strip() for line in f if line.strip()}
+
 seen = set()
 rows = []
 
@@ -405,6 +421,8 @@ with open(in_path, "r", encoding="utf-8", errors="ignore") as f:
         source, title, url, date_text = [p.strip() for p in parts[:4]]
         key = (title, url)
         if key in seen:
+            continue
+        if url in sent_urls:
             continue
         seen.add(key)
         rows.append((source, title, url, date_text))
@@ -504,6 +522,35 @@ $(cat "$TELEGRAM_PREVIEW")
 📄 reports/it-contents-$RUN_DATE.md"
 
 send_telegram "$TELEGRAM_MESSAGE" || fail "텔레그램 알림 전송 실패"
+
+# 전송 완료된 URL 기록 (dry-run 제외)
+if [[ "$DRY_RUN" == "false" ]]; then
+  awk -F '\t' '{print $3}' "$UNIQUE_ITEMS" >> "$SENT_URLS_FILE"
+  # 30일치만 유지 (오래된 URL 제거)
+  python3 - "$SENT_URLS_FILE" <<'PYEOF'
+import sys, os
+from datetime import datetime, timedelta
+path = sys.argv[1]
+with open(path) as f:
+    lines = [l.strip() for l in f if l.strip()]
+# URL은 날짜 정보 없이 저장되므로 최근 5000개만 유지
+lines = lines[-5000:]
+with open(path, "w") as f:
+    f.write("\n".join(lines) + "\n" if lines else "")
+PYEOF
+fi
+
+# vault 저장
+if [[ "$DRY_RUN" == "false" ]]; then
+  VAULT_DIR="$HOME/vault/10-knowledge/research"
+  mkdir -p "$VAULT_DIR"
+  VAULT_FILE="$VAULT_DIR/it-contents-$RUN_DATE.md"
+  {
+    printf -- "---\ntype: research\ndomain: it-contents\nsource: it-contents\ndate: %s\nstatus: done\n---\n\n" "$RUN_DATE"
+    cat "$REPORT_FILE"
+  } > "$VAULT_FILE"
+  echo "[VAULT] Saved → $VAULT_FILE"
+fi
 
 echo "[DONE] Report: $REPORT_FILE"
 echo "[DONE] Total: $TOTAL_COUNT | Immediate: $IMMEDIATE_COUNT | Later: $LATER_COUNT"

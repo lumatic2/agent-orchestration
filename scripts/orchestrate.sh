@@ -162,7 +162,7 @@ read_meta_field_raw() {
 is_rate_limited() {
   local output="$1"
   # Check only last 30 lines to avoid false positives from file contents read by agents
-  if echo "$output" | tail -30 | grep -qEi "rate.?limit|429|quota|exceeded|too.?many.?requests|resource.?exhausted"; then
+  if echo "$output" | tail -10 | grep -qEi "rate.?limit|429|too.?many.?requests" && ! echo "$output" | tail -5 | grep -qEi "Retrying|success|완료|saved|VAULT"; then
     return 0
   fi
   return 1
@@ -202,7 +202,7 @@ parse_codex_result() {
 # Ensures minimum 3s gap between consecutive dispatches to same agent family
 dispatch_guard() {
   local agent_family="$1"  # "codex" or "gemini"
-  local min_gap=3
+  local min_gap=15
   local stamp_file="$QUEUE_DIR/.last_dispatch_${agent_family}"
   if [ -f "$stamp_file" ]; then
     local last_ts now_ts elapsed
