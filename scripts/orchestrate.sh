@@ -673,7 +673,7 @@ do_boot() {
         "$HOME/Desktop/content-automation"
         "$HOME/Desktop/portfolio"
       ) ;;
-    *Mac-mini*luma3*|*m4*)          # M4 (회사)
+    *luma3*|*Macmini*luma3*|*m4*)   # M4 (회사)
       PULL_REPOS=(
         "$HOME/vault"
         "$HOME/Desktop/agent-orchestration"
@@ -684,7 +684,7 @@ do_boot() {
         "$HOME/vault"
         "$HOME/Desktop/agent-orchestration"
       ) ;;
-    *luma2*|*Mac-mini*)             # M1 (~/projects/)
+    *luma2*|*luma2s*)               # M1 (~/projects/)
       PULL_REPOS=(
         "$HOME/vault"
         "$HOME/projects/agent-orchestration"
