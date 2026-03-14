@@ -1,133 +1,97 @@
 # GitHub Trends — 2026-03-13
 
-> 수집 기간: 2026-03-06 ~ 2026-03-13 | 즉시적용 26개 | 참고 7개
+> 수집 기간: 2026-03-06 ~ 2026-03-13 | 즉시적용 17개 | 참고 7개
 
-## 즉시적용 (26개)
-- **HKUDS/CLI-Anything** ★9972 this week
-  CLI 자동화 및 에이전트 네이티브 소프트웨어 구현에 유용
-  → 적용 포인트: 기존 CLI 도구 에이전트 통합 및 확장
+## 즉시적용 (17개)
+- **HKUDS/CLI-Anything** ★10725 this week
+  모든 소프트웨어를 에이전트 네이티브로 전환하는 CLI 도구.
+  → 적용 포인트: 기존 도구들을 에이전트 워크플로우에 통합하여 자동화 범위 확장.
 
-- **tanweai/pua** ★5951 this week
-  에이전트의 고능동성 스킬 개발 아이디어 제공
-  → 적용 포인트: 에이전트의 복잡한 작업 처리 능력 향상 연구
+- **garrytan/gstack** ★4233 this week
+  Claude Code 기반의 고수준 에이전트 역할 세팅.
+  → 적용 포인트: Claude Code의 에이전트 역할 설정을 벤치마킹하여 에이전트의 작업 지능화.
 
-- **garrytan/gstack** ★3520 this week
-  LLM 오케스트레이션 및 다중 에이전트 역할 분담 시스템
-  → 적용 포인트: Claude Code 기반 다중 에이전트 시스템 아키텍처 참고
+- **FreedomIntelligence/OpenClaw-Medical-Skills** ★1110 this week
+  OpenClaw를 위한 의료 AI 스킬 라이브러리.
+  → 적용 포인트: 특정 도메인(의료)에 특화된 스킬 라이브러리 구성을 참고하여 도메인별 에이전트 스킬 개발.
 
-- **FreedomIntelligence/OpenClaw-Medical-Skills** ★1097 this week
-  특정 도메인 AI 에이전트 스킬 라이브러리 구축 사례
-  → 적용 포인트: 도메인 특화 에이전트 스킬셋 설계 및 확장
+- **gsd-build/gsd-2** ★878 this week
+  에이전트의 장기 자율 작업을 위한 메타 프롬프팅 및 컨텍스트 엔지니어링 시스템.
+  → 적용 포인트: 에이전트의 지속적인 작업 수행 능력 향상을 위한 컨텍스트 관리 및 메타 프롬프팅 전략 도입.
 
-- **gsd-build/gsd-2** ★820 this week
-  에이전트의 장기 자율 작업 및 컨텍스트 엔지니어링 시스템
-  → 적용 포인트: 에이전트의 지속적인 작업 수행 및 컨텍스트 유지 기법 연구
+- **aiming-lab/MetaClaw** ★861 this week
+  에이전트가 학습하고 진화하는 기능.
+  → 적용 포인트: 에이전트의 자기 학습 및 개선 메커니즘 구축 아이디어 확보.
 
-- **aiming-lab/MetaClaw** ★800 this week
-  학습하고 진화하는 AI 에이전트 구현 아이디어 제공
-  → 적용 포인트: 에이전트의 자율 학습 및 개선 메커니즘 개발
+- **TianyiDataScience/openclaw-control-center** ★818 this week
+  OpenClaw 에이전트 관제 센터.
+  → 적용 포인트: 다수 에이전트의 작업 모니터링 및 제어를 위한 관제 시스템 설계 참고.
 
-- **larksuite/openclaw-lark** ★795 this week
-  OpenClaw 에이전트 프레임워크 확장 플러그인
-  → 적용 포인트: 에이전트 시스템의 채널 통합 및 확장성 확보
+- **knowsuchagency/mcp2cli** ★738 this week
+  MCP 서버 또는 OpenAPI 스펙을 CLI로 전환.
+  → 적용 포인트: MCP를 통해 기존 API를 CLI로 빠르게 자동화하여 에이전트 활용성 증대.
 
-- **knowsuchagency/mcp2cli** ★717 this week
-  MCP 서버 및 OpenAPI 스펙을 CLI로 자동 변환하는 도구
-  → 적용 포인트: MCP를 활용한 CLI 자동화 및 개발 워크플로우 최적화
+- **Emanuele-web04/remodex** ★709 this week
+  Codex 원격 제어.
+  → 적용 포인트: Codex 에이전트의 원격 관리 및 제어 시스템 구축을 통해 효율성 증대.
 
-- **TianyiDataScience/openclaw-control-center** ★715 this week
-  OpenClaw 에이전트 시스템의 제어 및 관리 센터
-  → 적용 포인트: 에이전트 시스템의 중앙 관리 및 모니터링 기능 구현
+- **kamranahmedse/claude-statusline** ★565 this week
+  Claude Code를 위한 최소한의 상태 표시줄 설정.
+  → 적용 포인트: Claude Code 사용 시 터미널 환경 개선 및 정보 가시화.
 
-- **chrisworsey55/atlas-gic** ★675 this week
-  자기 개선 AI 에이전트 및 자동 연구 워크플로우
-  → 적용 포인트: 에이전트의 자율적인 성능 향상 및 연구 프로세스 자동화
+- **uluckyXH/OpenMOSS** ★491 this week
+  OpenClaw를 위한 자율 조직형 다중 에이전트 협업 플랫폼.
+  → 적용 포인트: 다중 에이전트 간의 자율적인 협업 및 작업 분배 시스템 설계에 참고.
 
-- **Emanuele-web04/remodex** ★655 this week
-  Codex 원격 제어 및 통합 솔루션
-  → 적용 포인트: Codex를 활용한 코드 생성 및 관리 자동화
+- **onecli/onecli** ★489 this week
+  AI 에이전트의 서비스 접근을 위한 자격 증명 금고.
+  → 적용 포인트: 에이전트의 안전한 자격 증명 관리를 통해 보안 강화 및 외부 서비스 연동 간소화.
 
-- **trevin-creator/autoresearch-mlx** ★616 this week
-  Apple Silicon 기반 자율 AI 연구 루프 구현
-  → 적용 포인트: 로컬 환경에서의 AI 연구 자동화 및 워크플로우 구축
+- **wanshuiyin/Auto-claude-code-research-in-sleep** ★375 this week
+  Claude Code를 활용한 자율 ML 연구 스킬 및 Codex MCP를 통한 실험 자동화.
+  → 적용 포인트: Claude Code의 ML 연구 자동화 및 MCP 연동을 통한 워크플로우 구축 벤치마킹.
 
-- **davebcn87/pi-autoresearch** ★597 this week
-  자율 실험 루프 확장 기능 제공
-  → 적용 포인트: 에이전트 기반 실험 설계 및 자동화 워크플로우 개발
+- **f/agentlytics** ★318 this week
+  AI 코딩 에이전트를 위한 종합 분석 대시보드.
+  → 적용 포인트: 다양한 AI 코딩 에이전트의 성능 및 활동을 모니터링하고 분석하는 대시보드 구축에 참고.
 
-- **kamranahmedse/claude-statusline** ★557 this week
-  Claude Code 워크플로우 효율화를 위한 상태 표시줄 설정
-  → 적용 포인트: Claude Code 사용 환경 최적화 및 생산성 향상
-
-- **RightNow-AI/autokernel** ★533 this week
-  AI를 활용한 GPU 커널 자동 최적화 연구
-  → 적용 포인트: 에이전트를 이용한 성능 최적화 및 코드 자동 개선
-
-- **uluckyXH/OpenMOSS** ★488 this week
-  자체 조직 멀티 에이전트 협업 플랫폼
-  → 적용 포인트: 다중 에이전트의 협업 및 작업 분담 모델 연구
-
-- **twostraws/Swift-Agent-Skills** ★415 this week
-  Swift 및 Apple 플랫폼용 AI 에이전트 스킬 디렉토리
-  → 적용 포인트: 특정 플랫폼에서의 에이전트 스킬 개발 및 활용
-
-- **onecli/onecli** ★408 this week
-  AI 에이전트 보안을 위한 자격 증명 관리 금고
-  → 적용 포인트: 에이전트 시스템의 보안 강화 및 자격 증명 안전 관리
-
-- **EveryInc/proof-sdk** ★363 this week
-  에이전트 HTTP 브리지 및 공동 편집 기능 제공
-  → 적용 포인트: 에이전트 간 통신 및 외부 시스템 연동 아키텍처
-
-- **wanshuiyin/Auto-claude-code-research-in-sleep** ★342 this week
-  Claude Code 및 Codex MCP를 활용한 자율 ML 연구
-  → 적용 포인트: LLM 오케스트레이션을 통한 연구 및 실험 자동화
-
-- **f/agentlytics** ★314 this week
-  AI 코딩 에이전트 종합 분석 대시보드
-  → 적용 포인트: 다중 AI 에이전트의 성능 및 활동 모니터링 시스템 구축
+- **UniRound-Tec/Aurogen** ★308 this week
+  OpenClaw의 다중 에이전트 진화.
+  → 적용 포인트: 다중 에이전트 시스템의 발전 방향 및 진화 메커니즘 연구.
 
 - **holysheep123/holysheep-cli** ★305 this week
-  다양한 AI 코딩 도구 통합 구성을 위한 CLI 자동화
-  → 적용 포인트: 여러 AI 도구 환경 설정 및 관리의 효율화
+  모든 AI 코딩 도구를 한 번에 구성하는 CLI.
+  → 적용 포인트: 다양한 AI 코딩 도구의 초기 설정을 간소화하고 표준화.
 
-- **UniRound-Tec/Aurogen** ★286 this week
-  OpenClaw 기반 멀티 에이전트 진화 시스템
-  → 적용 포인트: 진화형 멀티 에이전트 시스템 설계 및 구현 연구
+- **manuelschipper/nah** ★264 this week
+  Claude Code를 위한 컨텍스트 인식 안전 가드 및 권한 시스템.
+  → 적용 포인트: 에이전트의 안전한 실행 환경을 구축하고 권한을 세밀하게 제어.
 
-- **manuelschipper/nah** ★259 this week
-  Claude Code를 위한 컨텍스트 인식 안전 가드 및 권한 시스템
-  → 적용 포인트: 에이전트 시스템의 보안 정책 및 권한 제어 메커니즘
-
-- **nagisanzenin/skyclaw** ★256 this week
-  자율 AI 에이전트 런타임 및 자원 인식 컨텍스트 관리
-  → 적용 포인트: 에이전트 런타임 최적화 및 효율적인 컨텍스트 관리 기법
-
-- **get-Lucid/Lucid** ★248 this week
-  자율 에이전트 지식 기반 및 실시간 지식 연동 레이어
-  → 적용 포인트: 에이전트의 지식 관리 시스템 및 실시간 정보 활용
+- **nagisanzenin/skyclaw** ★261 this week
+  Rust로 구현된 자율 AI 에이전트 런타임.
+  → 적용 포인트: LLM을 두뇌로 활용하는 에이전트 아키텍처 및 컨텍스트 관리 방식 참고.
 
 ## 참고 (7개)
-- **ParthJadhav/app-store-screenshots** ★2274
-  AI 기반 이미지 생성 및 디자인 자동화 도구
+- **tanweai/pua** ★6376
+  에이전트의 고능동성 스킬에 대한 추상적인 접근.
 
-- **imbue-bit/OpenClaw-PwnKit** ★647
-  OpenClaw 보안 취약점 관련 연구
+- **davebcn87/pi-autoresearch** ★862
+  자율 실험 루프 확장.
 
-- **HumeAI/tada** ★599
-  오픈 소스 음성 언어 모델 구현
+- **chrisworsey55/atlas-gic** ★713
+  Karpathy 스타일 자율 연구를 사용하는 AI 트레이딩 에이전트.
 
-- **lauraevz6y70/gnark-crypto** ★525
-  암호화 라이브러리 및 대화형 CLI
+- **trevin-creator/autoresearch-mlx** ★634
+  Apple Silicon (MLX) 포트의 Karpathy 자율 연구.
 
-- **joeseesun/qiaomu-mondo-poster-design** ★445
-  AI 기반 디자인 작품 자동 생성 도구
+- **RightNow-AI/autokernel** ★559
+  GPU 커널을 위한 자율 연구.
 
-- **shenhao-stu/ohmycaptcha** ★314
-  AI 기반 캡챠 자동 솔버 구현
+- **twostraws/Swift-Agent-Skills** ★452
+  Swift 및 Apple 플랫폼 개발을 위한 AI 에이전트 스킬 디렉토리.
 
-- **vasilytrofimchuk/domainsearcher-app** ★266
-  AI 기반 도메인 이름 추천 및 분석 서비스
+- **EveryInc/proof-sdk** ★385
+  오픈소스 협업 에디터, 프로버넌스 모델 및 에이전트 HTTP 브릿지.
 
 ## 스킵
-jackwener/xiaohongshu-cli, photon-hq/qclaw-wechat-client, Kaleighc793/freqtrade-bot, Justi1980/Dawn-Validator-BOT, dongsheng123132/u-claw, steipete/discrawl, HenryXiaoYang/wechat-access-unqclawed, Rohit24567/HyperLiquid-Claw, deborahikssv/Antigravity-claw, Minecraft-Community-Edition/client, schibsted/videofy_minimal, raxx21/rajesh-portfolio, EthanLipnik/Loom, jzOcb/xhs-note-health-checker, visualizevalue/jackbutcher.md, marilyn4120shaz3/KiteAI, khanhduytran0/coruna
+ParthJadhav/app-store-screenshots, jackwener/xiaohongshu-cli, larksuite/openclaw-lark, photon-hq/qclaw-wechat-client, imbue-bit/OpenClaw-PwnKit, HumeAI/tada, dongsheng123132/u-claw, Kaleighc793/freqtrade-bot, lauraevz6y70/gnark-crypto, Justi1980/Dawn-Validator-BOT, steipete/discrawl, joeseesun/qiaomu-mondo-poster-design, HenryXiaoYang/wechat-access-unqclawed, Rohit24567/HyperLiquid-Claw, deborahikssv/Antigravity-claw, shenhao-stu/ohmycaptcha, Minecraft-Community-Edition/client, schibsted/videofy_minimal, vasilytrofimchuk/domainsearcher-app, raxx21/rajesh-portfolio, EthanLipnik/Loom, jzOcb/xhs-note-health-checker, khanhduytran0/coruna, visualizevalue/jackbutcher.md, marilyn4120shaz3/KiteAI, tokoroten/prompt-review

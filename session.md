@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-14 오후 — M1]
+**한 일**: events-tracker 개인/회사 분리+Slack 연동, 4개 기기 git pull 자동화, auto-stage 훅, session-end 개선, 책 주제 브레인스토밍+공통 골격 설계
+**진행 중**: 책 주제 확정 — Windows 세션에서 배경 인터뷰 후 주제 선정 예정
+**주요 결정**: Slack Webhook은 본인 DM으로 연결 (회사 미공개), events-tracker 매주 월 08:00 발송
+---
+
 ## [2026-03-14]
 **한 일**: 텔레그램 cron 미작동 수정(PATH+환경변수), @NewsFairy_bot으로 채팅방 4개 분리, IT콘텐츠 72h+중복제거, events-tracker 소스 확대+우선순위 정렬+설명 2줄, 3개 스크립트 vault 저장 추가
 **진행 중**: events-tracker 실운영 결과 확인 (전국민AI경진대회 포함 여부)
