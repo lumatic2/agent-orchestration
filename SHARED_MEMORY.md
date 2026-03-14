@@ -8,6 +8,16 @@
 
 ---
 
+## 냉장고를 부탁해 (ingredient-bot) — 개인 프로젝트 (2026-03-13~)
+
+**경로**: `~/ingredient-bot/`
+**스택**: Python, Telegram Bot API, SQLite, Notion API
+**기능**: 냉장고 재고 관리, 유통기한 알림, 쇼핑리스트, 레시피 추천, 영수증/바코드 스캔, 사용 통계
+**오늘 개선**: `min_quantity` 컬럼 추가 → 품목별 재고 부족 기준 설정 가능 (`/minstock`)
+**방향**: 물류 재고 관리 시스템의 개인 버전 → 경영학 포트폴리오 연계 → 장기적으로 스마트 냉장고 업체 API 연동 가능성
+
+---
+
 ## Planby ICP 확정 (2026-03-13)
 
 ### 2-트랙 ICP
@@ -29,6 +39,11 @@
 **계약 구조 (공통)**: PoC 1,500만원(4~6주) → 커스텀 모델 납품 5천만~1.5억원
 
 ---
+
+## 시스템 업데이트 (2026-03-14)
+- **Gemini 리서치 → vault 자동 저장**: `orchestrate.sh gemini` 실행 시 결과가 자동으로 `~/vault/10-knowledge/research/`에 저장됨 (--vault 플래그 불필요). 도메인 지정 시 `--vault gtm` 등 사용.
+- **슬래시 커맨드 크로스 디바이스 동기화**: `claude-code-setup` 레포(`github.com/Mod41529/claude-code-setup`)로 관리. `~/.claude/commands/`는 심링크. 새 디바이스 세팅: `git clone git@github.com:Mod41529/claude-code-setup.git && ./install.sh`
+- **book-journal.md**: `~/projects/agent-orchestration/book-journal.md` — "AI는 회계사를 대체할 수 있을까?" 책 원고 재료. `/session-end` 시 자동 3줄 추가.
 
 ## Personal Task Management System (2026-03-13)
 
@@ -52,7 +67,7 @@
 - `/done 항목명` — 완료 처리 + daily 로그 기록
 - `/filter 카테고리` — 카테고리 필터
 - `/weekly-review` — 주간 회고 (SOMEDAY.md 승격 검토 포함)
-- `/session-end` — 세션 마무리 + session.md 업데이트
+- `/session-end` — 세션 마무리: daily 로그 → SCHEDULE.md → session.md → book-journal.md → git commit+push (~/projects/* 전체 스캔)
 - `/github-trends` — 최신 GitHub 트렌드 브리핑 + TOP 3 적용 추천
 
 **모바일 대시보드 (M1)**
