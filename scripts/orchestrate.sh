@@ -673,7 +673,7 @@ do_boot() {
         "$HOME/Desktop/content-automation"
         "$HOME/Desktop/portfolio"
       ) ;;
-    *m4*|Mac-mini-M4*)              # M4
+    *Mac-mini*luma3*|*m4*)          # M4 (회사)
       PULL_REPOS=(
         "$HOME/vault"
         "$HOME/Desktop/agent-orchestration"
@@ -684,10 +684,17 @@ do_boot() {
         "$HOME/vault"
         "$HOME/Desktop/agent-orchestration"
       ) ;;
-    *)                              # M1 (기본/기타)
+    *luma2*|*Mac-mini*)             # M1 (~/projects/)
+      PULL_REPOS=(
+        "$HOME/vault"
+        "$HOME/projects/agent-orchestration"
+        "$HOME/Desktop/content-automation"
+      ) ;;
+    *)                              # fallback
       PULL_REPOS=(
         "$HOME/vault"
         "$HOME/Desktop/agent-orchestration"
+        "$HOME/projects/agent-orchestration"
         "$HOME/Desktop/content-automation"
       ) ;;
   esac
