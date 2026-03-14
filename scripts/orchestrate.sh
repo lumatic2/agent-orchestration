@@ -562,23 +562,23 @@ run_gemini() {
   [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
   [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
 
-  # Save to vault if --vault flag was passed
-  if [ -n "${VAULT_DOMAIN:-}" ]; then
-    local vault_dir
-    if [ "$VAULT_DOMAIN" = "inbox" ]; then
-      vault_dir="00-inbox"
-    else
-      vault_dir="10-knowledge/${VAULT_DOMAIN}"
-    fi
-    local vault_file="${TASK_NAME}_$(date +%Y-%m-%d).md"
-    local clean_result
-    clean_result=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$")
-    ssh m1 "mkdir -p ~/vault/${vault_dir} && cat > ~/vault/${vault_dir}/${vault_file}" << VAULTEOF
+  # Save to vault — always (VAULT_DOMAIN defaults to "research")
+  local effective_domain="${VAULT_DOMAIN:-research}"
+  local vault_dir
+  if [ "$effective_domain" = "inbox" ]; then
+    vault_dir="00-inbox"
+  else
+    vault_dir="10-knowledge/${effective_domain}"
+  fi
+  local vault_file="${TASK_NAME}_$(date +%Y-%m-%d).md"
+  local clean_result
+  clean_result=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$")
+  ssh m1 "mkdir -p ~/vault/${vault_dir} && cat > ~/vault/${vault_dir}/${vault_file}" << VAULTEOF
 ---
 type: knowledge
-domain: ${VAULT_DOMAIN}
+domain: ${effective_domain}
 source: gemini
-generated-by: gemini-2.5-flash
+generated-by: ${model}
 date: $(date +%Y-%m-%d)
 status: inbox
 task: ${TASK_NAME}
@@ -586,8 +586,7 @@ task: ${TASK_NAME}
 
 ${clean_result}
 VAULTEOF
-    echo "[VAULT] Saved → ~/vault/${vault_dir}/${vault_file}"
-  fi
+  echo "[VAULT] Saved → ~/vault/${vault_dir}/${vault_file}"
 
   # Strip YOLO noise lines, show clean output
   echo ""
