@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 심야 — 텔레그램 알림 전수 개선]
+**한 일**: 11개 알림 시스템 전수 점검 및 개선 — 투자봇(실시간 환율·장시작/마감 알림·현재가 표시), content-automation(HTML 포맷·해시태그), 식재료봇(HTML 포맷·Notion URL), /investment·/content 스킬 생성
+**진행 중**: 투자봇 daily_open 09:00 KST 실제 수신 확인, content-automation --dry-run 테스트
+**주요 결정**: 30분마다 포트폴리오 Telegram 알림 → silent(DB/Notion만) 변경, 장시작/마감 알림으로 대체
+---
+
 ## [2026-03-15 — AI 팁 총정리 문서화]
 **한 일**: vault/30-projects/ai-tips/ 전체 초안 완성(braindump→outline→draft v0.8→blog v0.2), 4장 GCP Secret Manager 심화 박스·유료 전환 타이밍·보안 섹션 개선, 마무리 수미상관 추가, 바탕화면에 MD+PDF 생성
 **진행 중**: 블로그(브런치/네이버) 실제 포스팅, PDF 공유 채널 결정
