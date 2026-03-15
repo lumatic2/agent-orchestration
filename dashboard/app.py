@@ -264,7 +264,8 @@ def cycle_status(status: str) -> str:
 
 def apply_write_and_sync(lines: list[str]) -> dict[str, Any]:
     write_lines(lines)
-    return git_commit_push()
+    threading.Thread(target=git_commit_push, daemon=True).start()
+    return {"ok": True, "output": "saved (git push in background)"}
 
 
 @app.get("/")
