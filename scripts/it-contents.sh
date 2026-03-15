@@ -93,7 +93,8 @@ IMMEDIATE_ITEMS="$TMP_DIR/immediate.tsv"
 LATER_ITEMS="$TMP_DIR/later.tsv"
 OVERVIEW_FILE="$TMP_DIR/overview.txt"
 
-touch "$RSS_ITEMS" "$WEB_ITEMS" "$ALL_ITEMS" "$UNIQUE_ITEMS" "$IMMEDIATE_ITEMS" "$LATER_ITEMS" "$OVERVIEW_FILE"
+NEWSAPI_ITEMS="$TMP_DIR/newsapi_items.tsv"
+touch "$RSS_ITEMS" "$WEB_ITEMS" "$ALL_ITEMS" "$UNIQUE_ITEMS" "$IMMEDIATE_ITEMS" "$LATER_ITEMS" "$OVERVIEW_FILE" "$NEWSAPI_ITEMS"
 
 run_orchestrate() {
   local prompt="$1"
@@ -436,6 +437,47 @@ with open(out_path, "w", encoding="utf-8") as f:
 PYEOF
 }
 
+
+collect_newsapi_sources() {
+  local api_key="${NEWSAPI_KEY:-}"
+  if [[ -z "$api_key" ]]; then
+    echo "[WARN] NEWSAPI_KEY 미설정 — NewsAPI 수집 건너뜀" >&2
+    return 0
+  fi
+  python3 - "$api_key" "$NEWSAPI_ITEMS" << 'INNEREOF'
+import sys, json, urllib.request
+from datetime import datetime
+api_key, out_path = sys.argv[1], sys.argv[2]
+def fetch(url):
+    req = urllib.request.Request(url, headers={"User-Agent":"Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=15) as r:
+        return json.loads(r.read())
+rows = []
+today = datetime.now().strftime("%Y-%m-%d")
+try:
+    data = fetch(f"https://newsapi.org/v2/top-headlines?category=technology&language=en&pageSize=20&apiKey={api_key}")
+    for a in (data.get("articles") or []):
+        t = (a.get("title") or "").split(" - ")[0].strip()
+        u = a.get("url") or ""
+        if t and u and "[Removed]" not in t:
+            rows.append(("NewsAPI/기술", t, u, today))
+except Exception as e:
+    print(f"[WARN] NewsAPI 기술: {e}", file=sys.stderr)
+try:
+    data = fetch(f"https://newsapi.org/v2/top-headlines?country=kr&pageSize=20&apiKey={api_key}")
+    for a in (data.get("articles") or []):
+        t = (a.get("title") or "").split(" - ")[0].strip()
+        u = a.get("url") or ""
+        if t and u and "[Removed]" not in t:
+            rows.append(("NewsAPI/일반", t, u, today))
+except Exception as e:
+    print(f"[WARN] NewsAPI 일반: {e}", file=sys.stderr)
+with open(out_path, "w", encoding="utf-8") as f:
+    for row in rows: f.write("\t".join(row) + "\n")
+print(f"[NewsAPI] {len(rows)}개 수집")
+INNEREOF
+}
+
 collect_rss_sources() {
   local -a ALL_FEEDS=(
     # 개인 기술 블로그
@@ -466,8 +508,9 @@ collect_rss_sources() {
 
 collect_rss_sources
 collect_web_sources
+collect_newsapi_sources
 
-cat "$RSS_ITEMS" "$WEB_ITEMS" > "$ALL_ITEMS"
+cat "$RSS_ITEMS" "$WEB_ITEMS" "$NEWSAPI_ITEMS" > "$ALL_ITEMS"
 
 python3 - "$ALL_ITEMS" "$UNIQUE_ITEMS" "$SENT_URLS_FILE" <<'PYEOF'
 import sys
