@@ -132,7 +132,7 @@
 
 ### #개발
 - [ ] [중] 법제처 Open API 승인 확인 → https://open.law.go.kr/LSO/openApi/cuAskList.do — 승인 시 M1 `.env`에 `LAW_API_OC=값` 추가 + `ssh m1 "python3 ~/Desktop/law-check.py --discover"` 실행
-- [ ] [중] law-check M1 배포 — `context/law-automation.md` 배포 명령어 참고 (API 승인 전 미리 가능) #개발
+- [x] [중] law-check M1 배포 — `context/law-automation.md` 배포 명령어 참고 (API 승인 전 미리 가능) #개발
 - [ ] [중] investment 도메인 보강 — vault 3개뿐. KVCA 벤처투자 가이드·IPO 실무·VC 심사 기준 PDF 수집 후 pdf-input 처리
 - [ ] [낮] expert 페르소나 법령 연결 점검 — 20-experts/*.md가 이번에 추가된 법령 원문 참조하는지 확인 및 knowledge_refs 추가
 - [x] [중] 텔레그램 매일 아침 알림 복구 + 채팅방 주제별 분리 (@NewsFairy_bot 4채널) + events-tracker 소스·기준 강화 + vault 저장 `완료 03-14`

@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-16 심야 — Public APIs Batch 2~4 + 식재료봇 버튼 버그 수정]
+**한 일**: 식재료봇 키보드 버튼 버그 수정(다중인스턴스+키워드매칭), Batch2 레시피 수량/날씨 표시, Batch3 NewsAPI it-contents 연동, Batch4 Pexels 썸네일 자동화+Wikipedia→vault 도구
+**진행 중**: 법제처 API 승인 확인, investment vault 보강, expert 법령 연결 점검, Slack AI 에이전트 버그 안정화(플랜바이 마감 03-19)
+**주요 결정**: Edamam 건너뛰고 Gemini 강화로 대체, data.go.kr 포기, 버튼 매칭은 키워드 포함 방식으로
+---
+
 ## [2026-03-15 심야6 — 포트폴리오 Business 섹션 개선]
 **한 일**: works.ts에 s3(Startup Financial Intelligence)·s4(GTM Automation Pipeline)·s5(AI Consulting Delivery Framework) 추가/교체; HubSection 생산→운영 rename + 4개 패널 전면 재작성; YouTube 링크 @luma_nico 변경
 **진행 중**: 포트폴리오 dev/video/music 섹션 추가 콘텐츠 보강
