@@ -581,6 +581,40 @@ run_codex() {
   return 0
 }
 
+# --- Vault check (skip Gemini if recent cached result exists) ---
+vault_check() {
+  # Returns 0 = vault hit (use cache, skip Gemini), 1 = no hit (run Gemini)
+  if [ "${FORCE:-false}" = "true" ]; then return 1; fi
+
+  local pattern="${TASK_NAME}_"
+  local hit
+  hit=$(ssh -o ConnectTimeout=5 m1 "
+    cutoff=\$(date -v-7d +%Y-%m-%d 2>/dev/null || date -d '7 days ago' +%Y-%m-%d 2>/dev/null || echo '1970-01-01')
+    find ~/vault -name '${pattern}*.md' -type f 2>/dev/null | while IFS= read -r f; do
+      fname=\$(basename \"\$f\" .md)
+      fdate=\${fname##*_}
+      [[ \"\$fdate\" > \"\$cutoff\" || \"\$fdate\" == \"\$cutoff\" ]] && echo \"\$f\" && break
+    done
+  " 2>/dev/null || echo "")
+
+  [ -z "$hit" ] && return 1
+
+  echo "[VAULT_HIT] 기존 리서치 발견 (7일 이내): $hit"
+
+  local cached_content
+  cached_content=$(ssh -o ConnectTimeout=5 m1 "cat '$hit'" 2>/dev/null || echo "")
+  [ -z "$cached_content" ] && return 1
+
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$cached_content" > "$QUEUE_TASK_DIR/result.md"
+
+  echo "[VAULT_HIT] Gemini 호출 생략 — vault 캐시 사용 (--force로 강제 재실행 가능)"
+  echo ""
+  echo "--- Vault Cache Result ---"
+  echo "$cached_content" | sed '/^---$/,/^---$/d'
+  return 0
+}
+
 # --- Run Gemini ---
 run_gemini() {
   local model="${1:-gemini-2.5-flash}"
@@ -590,6 +624,9 @@ run_gemini() {
     print_dry_run "$AGENT" "$model"
     return 0
   fi
+
+  # Vault check — skip Gemini if recent result cached in vault
+  if vault_check; then return 0; fi
 
   dispatch_guard "gemini"
   echo "[DISPATCH] Gemini ($model) — task: $TASK_NAME"
@@ -1277,10 +1314,12 @@ fi
 # --- Parse arguments ---
 DRY_RUN="false"
 VAULT_DOMAIN=""
+FORCE="false"
 while [[ "${1:-}" == --* ]]; do
   case "${1:-}" in
     --dry-run) DRY_RUN="true"; shift ;;
     --vault)   VAULT_DOMAIN="${2:-inbox}"; shift 2 ;;
+    --force)   FORCE="true"; shift ;;
     *) break ;;
   esac
 done

@@ -131,8 +131,10 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
 
 | 작업 도메인 | 주 에이전트 | 보조 | 이유 |
 |---|---|---|---|
-| Google 생태계 (YouTube, Drive, Docs) | Gemini | Claude(정리) | Google API 네이티브, 1M 컨텍스트, 영상 자막 분석 |
-| 미디어 분석 (이미지/영상/오디오) | Gemini | Codex(구현) | 멀티모달 입력 처리 → 분석 결과로 코드 생성 |
+| Google 생태계 — 콘텐츠 분석 (YouTube 자막, Drive 대용량 문서) | Gemini | Claude(정리) | Google API 네이티브, 1M 컨텍스트, 영상 자막 분석 |
+| Google Workspace — 직접 조작 (Gmail/Calendar/Sheets/Drive/Tasks) | Claude(MCP 직접) | — | google-workspace MCP 114개 도구, Codex/Gemini는 MCP 접근 불가 |
+| 미디어 분석 — 이미지/스크린샷 | Claude(Read 직접) | — | Claude Read 툴이 이미지 처리 가능, 위임 불필요 |
+| 미디어 분석 — 영상/오디오 | Gemini API 직접 (수동) | Codex(구현) | Gemini CLI는 파일 첨부 미지원 — API 호출 필요 (비용 고지 후) |
 | 데이터 파이프라인 (CSV, DB, 시각화) | Claude(소규모) / Codex(대규모) | Gemini(분석) | 스크립트 크기에 따라 분기 |
 | Notion 조사+작성 (개인/내부용) | Gemini(MCP 직접) | — | 원스톱, 검토 없음. 사후 수정 필요 시 Claude fetch→edit |
 | Notion 외부공유·공식 문서 | Claude(MCP 직접) | — | 품질 중요 → 처음부터 Claude |
@@ -145,6 +147,7 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
 | **전문직 Q&A** | expert_agent.sh | — | `doctor`/`lawyer` + 동일 플래그 지원 |
 | **콘텐츠 집필** | content_pipeline.sh | — | 기본=Gemini Flash / `--codex`=gpt-5.2(문장품질↑) |
 | **이미지 프롬프트** | image_agent.sh | — | Gemini Flash → DALL-E 3 / MJ / SD 3종 프롬프트 생성 |
+| **이미지 직접 생성** (빠른 썸네일·간단 에셋) | Gemini 웹 (수동) | — | gemini.google.com — 플랜 포함, CLI/MCP 미지원. Nanobanana는 API 과금으로 미사용 |
 | **영상 편집** | video_edit.sh (FFmpeg) | Gemini(ai 명령) | `brew install ffmpeg` 필요, `ai` 명령은 설치 없이도 가능 |
 
 ## Task → Agent → Model (when orchestrating)
@@ -166,6 +169,11 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
 | **Summarization** | Codex CLI | gpt-5.2 | 텍스트 처리, 검색 불필요 |
 | **Data processing** | Codex CLI | gpt-5.1 | 가공/변환, 코딩 모델 불필요 |
 | **Translation (bulk)** | Codex CLI | gpt-5 | 대량 텍스트, 경량 모델 |
+| **Gmail 읽기/쓰기/발송/검색** | Claude Code | Sonnet / MCP 직접 | google-workspace MCP — Codex/Gemini 불가 |
+| **Calendar 조회/생성/Meet** | Claude Code | Sonnet / MCP 직접 | google-workspace MCP — Codex/Gemini 불가 |
+| **Sheets 읽기/쓰기** | Claude Code | Sonnet / MCP 직접 | google-workspace MCP — Codex/Gemini 불가 |
+| **Drive 파일 조작/공유** | Claude Code | Sonnet / MCP 직접 | google-workspace MCP — Codex/Gemini 불가 |
+| **Google Slides 생성** | gws-slides.sh | Gemini→Claude MCP | Gemini JSON 생성 → Claude MCP 실행 |
 | **Research (web search)** | Gemini | 2.5 Flash | 웹 검색 필요한 리서치 |
 | **Deep analysis** | Gemini | 2.5 Pro | Max 100/day, use sparingly |
 | **Data analysis** | Claude Code | Sonnet | Direct execution |
@@ -188,6 +196,12 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
 
 **판단 기준**: "실패했을 때 비용"이 큰 작업 → Heavy, 그 외 → Default or Light
 
+> **spark 실전 트리거** (이 중 하나라도 해당하면 spark 사용):
+> - 파일 읽고 요약만 하면 되는 작업 (코드 수정 없음)
+> - 단일 파일 내 텍스트/설정 수정 (로직 변경 없음)
+> - Claude quota 부족 시 경량 탐색 위임
+> - 이미 완성된 코드의 문서/주석 정리
+
 ## Codex 운영 룰
 
 1. **실패 시 모델 업그레이드보다 태스크 분할 우선** — 태스크를 더 쪼개고 done-criteria를 구체화
@@ -198,7 +212,17 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
 
 1. **리서치 결과는 글머리 기호 위주** — 에세이/산문 금지. 표와 bullet points로 구조화.
 2. **코딩 관련 리서치 → Tactical Map 모드** — 리서치 결과를 Codex가 바로 실행할 수 있는 구조(파일별 변경사항 + 검증 커맨드)로 출력. Orchestrator가 task_brief에 바로 붙여 넣기 가능.
-3. **Flash가 기본, Pro는 예외적** — "교차 검증 + 추론 필요"할 때만 Pro. 대부분 Flash로 충분.
+3. **Flash가 기본, Pro는 아래 기준으로 판단:**
+
+   | Pro 사용 | Flash로 충분 |
+   |---|---|
+   | 독립 리서치 섹션 4개 이상을 한 프롬프트에 | 단일 주제 웹 검색 |
+   | 복수 문서 교차 분석 + 모순 탐지 | 라이브러리/도구 1-2개 비교 |
+   | 아키텍처·전략 결정 근거 (장기 영향 분석) | 트렌드/뉴스 확인 |
+   | 비즈니스 플랜·재무·기술스택 선정 리서치 | 단순 요약·번역 분석 |
+   | 50페이지 이상 문서의 심층 분석·합성 | API 문서 특정 항목 검색 |
+
+   Pro 100/day 한도 — Flash로 가능한 작업에 쓰지 말 것.
 4. **코드 직접 작성보다 Tactical Map 우선** — Gemini가 코드를 쓰는 것보다 실행 계획을 작성하여 Codex에 넘기는 것이 품질과 효율 모두 우수.
 
 ## Trigger System 활용 (Orchestrator → Agent)
@@ -311,7 +335,8 @@ To prevent file conflicts during parallel execution:
 | Notion DB·복잡한 편집 | 스키마 설계, 판단 필요 작업 | Claude(MCP 직접) |
 | Notion 자동화 저장 | AI 없이 결과 저장 | notion_db.py(비용 0) |
 | Slack | 메시지 조회/작성 | Claude(MCP 직접) |
-| Google 생태계 | YouTube 자막 분석, Drive 문서, Docs | Gemini(네이티브) |
+| Google 생태계 — 콘텐츠 분석 | YouTube 자막, Drive 대용량 문서, Docs 요약 | Gemini(네이티브) |
+| Google Workspace — 직접 조작 | Gmail 발송/검색, 캘린더 생성/Meet, Sheets 데이터, Drive 조작, Tasks | Claude(MCP 직접) |
 | 대용량 문서 처리 | 50+ 페이지 PDF, PPT, 스펙 문서 | Gemini(분석) → Claude(요약) |
 
 ### 반자동 (Handoff — 사용자 실행 필요)

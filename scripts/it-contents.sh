@@ -251,7 +251,6 @@ collect_web_sources() {
 - 달파 블로그: https://app.dalpha.so/blog/
 - litmers: https://litmers.com/blogs
 - brunch 성대리: https://brunch.co.kr/@sungdairi
-- 긱뉴스: https://news.hada.io
 - 조코딩 유튜브: https://www.youtube.com/@jocoding
 - bkamp_ai 유튜브: https://www.youtube.com/@bkamp_ai
 - maker-evan 유튜브: https://www.youtube.com/@maker-evan
@@ -370,30 +369,31 @@ PYEOF
 }
 
 collect_rss_sources() {
-  local -a TISTORY_FEEDS=(
+  local -a ALL_FEEDS=(
+    # 개인 기술 블로그
     "망나니개발자|https://mangkyu.tistory.com/rss"
     "twofootdog|https://twofootdog.tistory.com/rss"
     "bongman|https://bongman.tistory.com/rss"
     "조대협|https://bcho.tistory.com/rss"
+    # 뉴스/큐레이션
+    "긱뉴스|https://news.hada.io/rss"
+    # 기업 테크 블로그
+    "SK C&C|https://rss.blog.naver.com/skcc_official.xml"
+    "네이버 D2|https://d2.naver.com/d2.atom"
+    "우아한형제들|https://techblog.woowahan.com/feed"
+    "토스테크|https://toss.tech/rss.xml"
+    "카카오테크|https://tech.kakao.com/feed"
   )
-  local NAVER_FEED="SK C&C|https://rss.blog.naver.com/skcc_official.xml"
 
-  local feed item source url
+  local feed source url
 
-  for feed in "${TISTORY_FEEDS[@]}"; do
+  for feed in "${ALL_FEEDS[@]}"; do
     source="${feed%%|*}"
     url="${feed#*|}"
     if ! fetch_feed "$source" "$url" "$RSS_ITEMS"; then
       echo "[WARN] RSS 수집 실패: $source ($url)" >&2
     fi
   done
-
-  source="${NAVER_FEED%%|*}"
-  url="${NAVER_FEED#*|}"
-  if ! fetch_feed "$source" "$url" "$RSS_ITEMS"; then
-    echo "[WARN] RSS 수집 실패: $source ($url)" >&2
-  fi
-
 }
 
 collect_rss_sources
@@ -408,9 +408,15 @@ in_path = sys.argv[1]
 out_path = sys.argv[2]
 sent_urls_path = sys.argv[3]
 
-# 이미 전송한 URL 로드
+# 이미 전송한 URL 로드 ("YYYY-MM-DD URL" 또는 plain URL 형식 모두 지원)
 with open(sent_urls_path, "r", encoding="utf-8", errors="ignore") as f:
-    sent_urls = {line.strip() for line in f if line.strip()}
+    sent_urls = set()
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split(' ', 1)
+        sent_urls.add(parts[1] if len(parts) == 2 else parts[0])
 
 seen = set()
 rows = []
@@ -453,9 +459,7 @@ if [[ "$TOTAL_COUNT" -eq 0 ]]; then
   } > "$REPORT_FILE"
 
   send_telegram "[IT 콘텐츠] $RUN_DATE
-오늘 새 항목 없음
-
-📄 reports/it-contents-$RUN_DATE.md" || fail "텔레그램 알림 전송 실패"
+오늘 새 항목 없음" || fail "텔레그램 알림 전송 실패"
 
   echo "[DONE] Report: $REPORT_FILE"
   echo "[DONE] No new items."
@@ -506,9 +510,13 @@ fi
 
 TELEGRAM_PREVIEW="$TMP_DIR/telegram_preview.txt"
 if [[ "$IMMEDIATE_COUNT" -gt 0 ]]; then
-  head -n 5 "$IMMEDIATE_ITEMS" | while IFS=$'\t' read -r source title summary _url; do
+  head -n 5 "$IMMEDIATE_ITEMS" | while IFS=$'\t' read -r source title summary url; do
     [[ -z "${source:-}" ]] && continue
-    echo "• $source | $title"
+    if [[ -n "${url:-}" ]]; then
+      echo "• <b>$source</b> | <a href=\"$url\">$title</a>"
+    else
+      echo "• <b>$source</b> | $title"
+    fi
     if [[ -n "${summary:-}" ]]; then
       echo "  $summary"
     fi
@@ -522,24 +530,22 @@ TELEGRAM_MESSAGE="[IT 콘텐츠] $RUN_DATE
 즉시읽기 ${IMMEDIATE_COUNT}개 | 나중에 ${LATER_COUNT}개
 
 $(cat "$TELEGRAM_PREVIEW")
-💬 Claude Code에 붙여넣기:
-  \"/it-contents 읽어줘\"
-📄 reports/it-contents-$RUN_DATE.md"
+💬 AI 분석: 이 봇에 <code>/it-contents</code> 전송"
 
 send_telegram "$TELEGRAM_MESSAGE" || fail "텔레그램 알림 전송 실패"
 
 # 전송 완료된 URL 기록 (dry-run 제외)
 if [[ "$DRY_RUN" == "false" ]]; then
-  awk -F '\t' '{print $3}' "$UNIQUE_ITEMS" >> "$SENT_URLS_FILE"
-  # 30일치만 유지 (오래된 URL 제거)
+  awk -v date="$RUN_DATE" -F '\t' '{print date " " $3}' "$UNIQUE_ITEMS" >> "$SENT_URLS_FILE"
+  # 30일치만 유지 (날짜 기준 정리)
   python3 - "$SENT_URLS_FILE" <<'PYEOF'
-import sys, os
+import sys
 from datetime import datetime, timedelta
 path = sys.argv[1]
+cutoff = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 with open(path) as f:
     lines = [l.strip() for l in f if l.strip()]
-# URL은 날짜 정보 없이 저장되므로 최근 5000개만 유지
-lines = lines[-5000:]
+lines = [l for l in lines if l.split(' ', 1)[0] >= cutoff]
 with open(path, "w") as f:
     f.write("\n".join(lines) + "\n" if lines else "")
 PYEOF

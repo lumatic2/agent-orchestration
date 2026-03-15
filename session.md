@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 야간 — 오케스트레이션 미활용 영역 전수 점검]
+**한 일**: T115/T118 큐 정리, MoviePy v2 API 패치+push, GWS MCP 라우팅 추가, vault_check() 7일 캐시(orchestrate.sh), Gemini Pro 기준 테이블·멀티모달·spark 정교화, Nanobanana→Gemini 웹 정정, vault→SHARED_MEMORY 승격 기준 추가
+**진행 중**: M1 git pull (content-automation MoviePy 패치), content-automation --dry-run 테스트
+**주요 결정**: Perplexity/Grok CLI 추가 불필요 — 기존 스택 활용도 개선이 먼저. Gemini CLI 이미지 생성 불가(텍스트 전용), 이미지는 Gemini 웹 수동 생성 유지.
+---
+
 ## [2026-03-15 오후 — GitHub 트렌드 오케스트레이션 적용]
 **한 일**: nah 보안가드+claude-statusline 설치, task_brief.md Context Budget/Stop Triggers, progress.md 자동생성, --status --json / schema --json, SHARED_MEMORY 673→67줄 구조개선(context/ 분리), 블루프린트 시스템(slides/feature-dev/research-to-vault)
 **진행 중**: 슬라이드 블루프린트 실전 테스트, OpenClaw 대시보드 패턴 적용, 동적 컨텍스트 주입
