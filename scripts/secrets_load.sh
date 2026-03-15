@@ -51,7 +51,8 @@ fi
 
 # 2) gcloud 실패 시 Python ADC 폴백 (ADC 구성된 기기에서 작동)
 if [ "$_loaded" -eq 0 ] && command -v python3 &>/dev/null; then
-  _py_exports=$(python3 - <<'PYEOF' 2>/dev/null
+  _tmp_py=$(mktemp /tmp/gcp_adc_XXXX.py)
+  cat > "$_tmp_py" << 'PYEOF'
 import sys, os, json, base64, urllib.request
 try:
     import google.auth, google.auth.transport.requests
@@ -73,7 +74,9 @@ try:
                 if v: print(f"export {s}='{v}'")
         except: pass
 except: pass
-PYEOF)
+PYEOF
+  _py_exports=$(python3 "$_tmp_py" 2>/dev/null)
+  rm -f "$_tmp_py"
   if [ -n "$_py_exports" ]; then
     eval "$_py_exports"
     _loaded=$(echo "$_py_exports" | wc -l | tr -d ' ')
