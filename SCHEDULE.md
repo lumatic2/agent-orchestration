@@ -141,12 +141,12 @@
 - [x] [중] 유튜브 영상 자동화 프로그램 만들어 보기 `완료 03-14`
 - [ ] [중] 키우기류 앱 유니티로 제작 #게임
 - [ ] [중] 개인 포트폴리오 사이트 개선 및 내용 추가 (luma3-portfolio.vercel.app)
-- [ ] [중] GWS CLI처럼 내가 만들면 좋을 거 있는지 분석해보기
+- [x] [중] GWS CLI처럼 내가 만들면 좋을 거 있는지 분석해보기 — MCP로 충분. 자율 파이프라인 필요 시에만 CLI 고려 `완료 03-15`
 - [x] [중] content-automation 루마 파이프라인 재구성 — HTML+Playwright 슬라이드, 캐릭터 오버레이, 2단계 파이프라인, commit+push 완료 `완료 03-15`
 - [ ] [중] content-automation --dry-run 전체 파이프라인 테스트 검증
 - [ ] [중] content-automation Instagram 파이프라인 (Meta Graph API)
 - [ ] [중] 유튜브 채널 분석: @vibecoderloopy — AI 영상 자동 제작 방식, content-automation 참고용
-- [ ] [중] OpenClaw GitHub 오픈소스 분석 — 내 오케스트레이션 시스템에 적용 가능한 기능 추출 및 통합
+- [x] [중] OpenClaw GitHub 오픈소스 분석 — 내 오케스트레이션 시스템에 적용 가능한 기능 추출 및 통합 `완료 03-15`
 - [ ] [중] 타워디펜스 게임 제작 — 풍선타워디펜스 레퍼런스, GPT 활용 #게임
 - [ ] [중] 리듬게임 제작 — 얼불춤·리듬닥터 레퍼런스, GPT 활용 #게임
 - [ ] [중] Claude Code 슬라이드 생성 파이프라인 완성 — 오픈소스 참고, 일정한 템플릿·퀄리티 보장, 팀원 사용 가능한 형태로 소스 공개 #회사

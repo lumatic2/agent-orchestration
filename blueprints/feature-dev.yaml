@@ -1,0 +1,15 @@
+name: feature-dev
+description: 반복 기능 개발 파이프라인 (리서치 → 구현)
+vars:
+  task: null
+  project_path: null
+steps:
+  - id: research
+    agent: gemini
+    task: "다음 기능 구현을 위한 기술 리서치와 구현 전략을 작성하라. 작업: {{task}}. 프로젝트 경로: {{project_path}}"
+    name: "feature-research"
+  - id: implement
+    agent: codex
+    task: "다음 기능을 구현하라. 작업: {{task}}. 프로젝트 경로: {{project_path}}. 리서치 결과: {{steps.research.result}}"
+    name: "feature-implement"
+    depends_on: research

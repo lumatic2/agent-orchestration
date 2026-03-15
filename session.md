@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 오후 — GitHub 트렌드 오케스트레이션 적용]
+**한 일**: nah 보안가드+claude-statusline 설치, task_brief.md Context Budget/Stop Triggers, progress.md 자동생성, --status --json / schema --json, SHARED_MEMORY 673→67줄 구조개선(context/ 분리), 블루프린트 시스템(slides/feature-dev/research-to-vault)
+**진행 중**: 슬라이드 블루프린트 실전 테스트, OpenClaw 대시보드 패턴 적용, 동적 컨텍스트 주입
+**주요 결정**: luma3 CLI 불필요 (MCP로 충분). 블루프린트는 orchestrate.sh run으로 실행.
+---
+
 ## [2026-03-15 저녁 — GCP Secret Manager 기기 통합]
 **한 일**: secrets_load.sh Python ADC 폴백 추가, content-automation common.py GCP SDK 연동, MacBook Air gcloud+pyenv Python 3.11 설치, M1 CLOUDSDK_PYTHON 설정, broken stitch MCP 엔트리 제거
 **진행 중**: content-automation --dry-run 테스트, slide.html 디자인 검토, Instagram 파이프라인
