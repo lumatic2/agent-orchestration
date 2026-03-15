@@ -23,12 +23,10 @@ done
 
 [[ -z "$MESSAGE_TEXT" ]] && { echo "[ERROR] --message 필요" >&2; exit 1; }
 
-# .env에서 Webhook URL 로드
-ENV_FILE="$(dirname "$0")/../.env"
-if [[ -f "$ENV_FILE" ]]; then
-  # shellcheck disable=SC1090
-  set -a; source "$ENV_FILE"; set +a
-fi
+# Load secrets: GCP Secret Manager → .env fallback
+_S="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/secrets_load.sh"
+# shellcheck disable=SC1090
+[ -f "$_S" ] && source "$_S" 2>/dev/null; unset _S
 
 if [[ -z "${SLACK_WEBHOOK_URL:-}" ]]; then
   echo "[ERROR] SLACK_WEBHOOK_URL 미설정 (.env 또는 환경변수 확인)" >&2

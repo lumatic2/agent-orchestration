@@ -2,6 +2,11 @@
 
 set -uo pipefail
 
+# Load secrets: GCP Secret Manager → .env fallback
+_S="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/secrets_load.sh"
+# shellcheck disable=SC1090
+[ -f "$_S" ] && source "$_S" 2>/dev/null; unset _S
+
 DRY_RUN=false
 MODE="file"
 MESSAGE_TEXT=""
