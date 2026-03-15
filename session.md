@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 심야2 — 슬라이드·문서 파이프라인 완성]
+**한 일**: 슬라이드 Option B 완성 (8컴포넌트+SVG 아이콘 24개+before_after, E2E 와인의역사 성공), 문서 파이프라인 구축 (7섹션 타입, 5가지 type, --word DOCX 지원), 레이아웃 버그 수정 (섹션 강제 페이지→자연 흐름)
+**진행 중**: 회사소개서 docs.sh 제작, content-automation M1 git pull + dry-run
+**주요 결정**: slides.sh/docs.sh SHARED_MEMORY 등록 — 다음 세션부터 자동 사용
+---
+
 ## [2026-03-15 심야 — 텔레그램 알림 전수 개선]
 **한 일**: 11개 알림 시스템 전수 점검 및 개선 — 투자봇(실시간 환율·장시작/마감 알림·현재가 표시), content-automation(HTML 포맷·해시태그), 식재료봇(HTML 포맷·Notion URL), /investment·/content 스킬 생성
 **진행 중**: 투자봇 daily_open 09:00 KST 실제 수신 확인, content-automation --dry-run 테스트

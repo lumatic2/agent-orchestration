@@ -1,0 +1,31 @@
+{
+  "meta": { "title": "Before/After 테스트" },
+  "slides": [
+    {
+      "type": "title_panel",
+      "data": {
+        "title": "플랜바이 도입 사례",
+        "subtitle": "공간이 바뀌면 일하는 방식이 바뀐다",
+        "points": ["낭비 공간 제거", "협업 동선 최적화", "직원 만족도 향상"]
+      }
+    },
+    {
+      "type": "before_after",
+      "data": {
+        "left_label": "도입 전",
+        "right_label": "플랜바이 적용 후",
+        "left_image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
+        "right_image": "https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=800",
+        "caption": "유휴 공간 34% 감소 · 회의실 예약률 2.1배 향상"
+      }
+    },
+    {
+      "type": "quote_close",
+      "data": {
+        "quote": "공간 데이터가 없으면 공간 낭비는 보이지 않는다.",
+        "author": "Planby",
+        "cta": "planby.io"
+      }
+    }
+  ]
+}

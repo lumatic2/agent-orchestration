@@ -86,7 +86,8 @@ COLLECT_LOG_NAME="events-collect-$SLUG"
 CLASSIFY_LOG_NAME="events-classify-$SLUG"
 PERSONAL_FILE="$TMP_DIR/personal.txt"
 COMPANY_FILE="$TMP_DIR/company.txt"
-touch "$PERSONAL_FILE" "$COMPANY_FILE"
+OVERVIEW_FILE="$TMP_DIR/overview.txt"
+touch "$PERSONAL_FILE" "$COMPANY_FILE" "$OVERVIEW_FILE"
 
 echo "[1/3] 행사 수집 중... (Gemini → K-Startup, IITP, NIA, AI Hub, NIPA, 과기정통부, 중기부, 긱뉴스 외)"
 # --- 1단계: Gemini로 행사 수집 ---
@@ -184,6 +185,58 @@ section=="c" && /^[-*] / { sub(/^[-*] /, ""); print >> c; next }
 PERSONAL_COUNT=$(wc -l < "$PERSONAL_FILE" 2>/dev/null | tr -d ' ')
 COMPANY_COUNT=$(wc -l < "$COMPANY_FILE" 2>/dev/null | tr -d ' ')
 echo "[2/3] 분류 완료 — 개인참여 ${PERSONAL_COUNT}개 / 회사참여 ${COMPANY_COUNT}개"
+
+# 종합 분석 생성
+OVERVIEW_TASK="events-overview-$SLUG"
+OVERVIEW_PROMPT="$TMP_DIR/overview_prompt.txt"
+{
+  cat <<'PROMPT'
+아래는 이번 주 수집된 공모전·행사·지원사업 목록이다.
+개인 참가자 시각에서 이번 주 기회의 풍경을 하나의 짧은 칼럼 형식으로 써줘.
+
+조건:
+- 번호나 불릿 없이, 자연스럽게 이어지는 문단 형태
+- 총 8-10문장
+- 이번 주 어떤 분야(AI/개발/창업/해커톤 등)가 특히 활발한지
+- 개인 참가자가 주목해야 할 유형의 기회와 그 이유
+- 마감이 임박한 행사가 있으면 자연스럽게 언급
+- 마지막 문장은 이번 주를 한 문장으로 마무리
+- 딱딱한 공문서 말투 X, 읽히는 글투로
+
+개인참여 항목:
+PROMPT
+  if [[ -s "$PERSONAL_FILE" ]]; then
+    awk -F'|' '{printf "- %s | %s | 마감: %s\n", $2, $4, $3}' "$PERSONAL_FILE" | head -15
+  fi
+} > "$OVERVIEW_PROMPT"
+
+OVERVIEW_RUN_OK=true
+bash "$ORCH_SCRIPT" gemini "$(cat "$OVERVIEW_PROMPT")" "$OVERVIEW_TASK" >/dev/null 2>&1 \
+  || OVERVIEW_RUN_OK=false
+
+OVERVIEW_LOG="$(ls -t "$LOGS_DIR"/gemini_"$OVERVIEW_TASK"_*.txt 2>/dev/null | head -1 || true)"
+if [[ -n "$OVERVIEW_LOG" ]]; then
+  python3 - "$OVERVIEW_LOG" "$OVERVIEW_FILE" <<'PYEOF'
+import sys, re
+log_path, out_path = sys.argv[1], sys.argv[2]
+lines = []
+with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+    for raw in f:
+        line = raw.rstrip()
+        if re.match(r'^\s*(#{1,6}\s|---|===|```)', line):
+            continue
+        line = re.sub(r'^\s*(?:\d+[.)]\s*|[•\-\*]\s*)', '', line).strip()
+        if len(line) > 15:
+            lines.append(line)
+text = re.sub(r'\s{2,}', ' ', ' '.join(lines).strip())
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(text + "\n")
+PYEOF
+  [[ "$OVERVIEW_RUN_OK" != "true" ]] && echo "[WARN] Gemini overview 호출 종료 지연. 생성된 로그 사용." >&2
+else
+  echo "[WARN] Gemini overview 로그 없음, 스킵" >&2
+fi
+
 echo "[3/3] 리포트 생성 및 발송 중..."
 
 # 리포트 출력 헬퍼
@@ -214,6 +267,11 @@ print_section() {
   echo
   echo "> 수집: ${TOTAL_COUNT}개 | 개인참여 ${PERSONAL_COUNT}개 | 회사참여 ${COMPANY_COUNT}개"
   echo
+  if [[ -s "$OVERVIEW_FILE" ]]; then
+    echo "## 이번 주 동향"
+    cat "$OVERVIEW_FILE"
+    echo
+  fi
   echo "## 👤 개인참여 (${PERSONAL_COUNT}개)"
   print_section "$PERSONAL_FILE"
   echo "## 🏢 회사참여 (${COMPANY_COUNT}개)"
@@ -231,10 +289,13 @@ make_preview() {
       deadline="$(echo "${deadline:-}" | xargs)"
       desc1="$(echo "${desc1:-}" | xargs)"; desc2="$(echo "${desc2:-}" | xargs)"
       url="$(echo "${url:-}" | xargs)"
-      echo "• $name (~$deadline)"
+      if [[ -n "$url" ]]; then
+        echo "• <a href=\"$url\">$name</a> (~$deadline)"
+      else
+        echo "• $name (~$deadline)"
+      fi
       [[ -n "$desc1" ]] && echo "  $desc1"
       [[ -n "$desc2" ]] && echo "  $desc2"
-      [[ -n "$url" ]]   && echo "  $url"
       echo ""
     done
   else
@@ -247,17 +308,22 @@ COMPANY_PREVIEW="$TMP_DIR/company_preview.txt"
 make_preview "$PERSONAL_FILE" "$PERSONAL_COUNT" > "$PERSONAL_PREVIEW"
 make_preview "$COMPANY_FILE"  "$COMPANY_COUNT"  > "$COMPANY_PREVIEW"
 
+OVERVIEW_TEXT=""
+[[ -s "$OVERVIEW_FILE" ]] && OVERVIEW_TEXT="$(cat "$OVERVIEW_FILE")"
+
 # --- 텔레그램: 개인참여 ---
 send_telegram "[행사·공모전] $RUN_DATE — 개인참여 ${PERSONAL_COUNT}개
 
+<b>📊 이번 주 동향</b>
+${OVERVIEW_TEXT}
+<b>📌 개인참여 TOP 5</b>
 $(cat "$PERSONAL_PREVIEW")
-📄 reports/events-tracker-$RUN_DATE.md" || fail "텔레그램 발송 실패"
+💬 AI 분석: 이 봇에 <code>/events</code> 전송" || fail "텔레그램 발송 실패"
 
 # --- Slack: 회사참여 ---
 send_slack "[행사·공모전] $RUN_DATE — 회사참여 ${COMPANY_COUNT}개
 
-$(cat "$COMPANY_PREVIEW")
-📄 reports/events-tracker-$RUN_DATE.md" || fail "Slack 발송 실패"
+$(cat "$COMPANY_PREVIEW")" || fail "Slack 발송 실패"
 
 [[ "$DRY_RUN" == "false" ]] && touch "$LOCK_FILE"
 

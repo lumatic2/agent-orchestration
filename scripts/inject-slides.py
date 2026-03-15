@@ -174,6 +174,10 @@ def validate_schema(payload: Dict[str, Any]) -> List[str]:
             "required": ["quote", "author"],
             "lists": {},
         },
+        "before_after": {
+            "required": ["left_label", "right_label", "left_image", "right_image"],
+            "lists": {},
+        },
     }
 
     for index, slide in enumerate(slides, start=1):

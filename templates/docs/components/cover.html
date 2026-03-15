@@ -1,0 +1,60 @@
+<div class="page doc-cover">
+  <div class="cover-accent"></div>
+  <div class="cover-main">
+    <div class="cover-type">{{ type_label }}</div>
+    <h1 class="cover-title">{{ title }}</h1>
+    <p class="cover-subtitle">{{ subtitle }}</p>
+  </div>
+  <div class="cover-footer">{{ company }} | {{ date }}</div>
+</div>
+<style>
+.doc-cover {
+  display: flex;
+  flex-direction: column;
+}
+.doc-cover .cover-accent {
+  height: 8px;
+  background: var(--accent-1);
+  margin: -20mm -22mm 0;
+}
+.doc-cover .cover-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.doc-cover .cover-type {
+  display: inline-block;
+  width: fit-content;
+  padding: 4px 10px;
+  border: 1px solid var(--accent-1);
+  border-radius: 999px;
+  color: var(--accent-1);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.doc-cover .cover-title {
+  margin: 18px 0 10px;
+  font-size: 36px;
+  line-height: 1.35;
+  font-weight: 800;
+  color: var(--text-primary);
+  word-break: keep-all;
+}
+.doc-cover .cover-subtitle {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.doc-cover .cover-subtitle:empty {
+  display: none;
+}
+.doc-cover .cover-footer {
+  margin-top: 16mm;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+</style>

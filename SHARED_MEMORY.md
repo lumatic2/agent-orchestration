@@ -41,7 +41,7 @@ vault에 쌓인 리서치를 SHARED_MEMORY로 올리는 기준:
 | ingredient-bot (냉장고를 부탁해) | `context/ingredient-bot.md` | 개발 중 — 어머니 가구 연결 대기 |
 | Planby (ICP·온보딩·콘텐츠·재무) | `context/planby.md` | 진행 중 — TIPS 3차 2026-03-31 |
 | Slack ↔ Claude Code 봇 | `context/slack-bot.md` | 설정 중 — COMPANY_NOTION_TOKEN 필요 |
-| 슬라이드 생성 시스템 | `context/slides-system.md` | 실사용 중 — AP-09까지 누적 |
+| 슬라이드 생성 시스템 | `context/slides-system.md` | **Option B 완성** — `bash scripts/slides.sh "주제" 9` |
 | content-automation | MEMORY.md 참조 | launchd 실행 중 (화/목/토 10:00) |
 
 ---
@@ -52,7 +52,8 @@ vault에 쌓인 리서치를 SHARED_MEMORY로 올리는 기준:
 - **오케스트레이션 사용법**: `orchestrate.sh schema --json`
 - **기기 SSH·설정**: `context/system-setup.md`
 - **Knowledge Vault**: `luma2@m1:~/vault/` (MCP: `obsidian-vault`)
-- **슬라이드**: `context/slides-system.md` + `slides_config.yaml`
+- **슬라이드**: `bash scripts/slides.sh "주제" [슬라이드수]` → Gemini JSON → inject → PDF. 9타입(title_panel/card_grid/numbered_list/bar_chart/big_statement/comparison_table/timeline/quote_close/before_after). 아이콘 24개 내장.
+- **문서**: `bash scripts/docs.sh "주제" [type]` → PDF. `--word` 추가 시 DOCX도 생성. type: proposal/report/business_plan/summary/meeting. 7섹션 타입(cover/section/bullet_section/table_section/highlight_box/two_col/closing).
 - **Notion 개인**: `PERSONAL_NOTION_TOKEN` / 회사: `COMPANY_NOTION_TOKEN`
 
 ---

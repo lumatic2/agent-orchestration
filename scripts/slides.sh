@@ -40,8 +40,10 @@ RENDER="$SCRIPT_DIR/render-slides.sh"
 
 SLUG="$(slugify "$TOPIC")"
 [ -n "$SLUG" ] || SLUG="slides"
-SLIDES_JSON="/tmp/${SLUG}.json"
-OUT_HTML="/tmp/${SLUG}.html"
+# Windows에서 /tmp는 Node.js가 접근 못함 → AppData/Local/Temp 사용
+WIN_TEMP="${HOME}/AppData/Local/Temp"
+SLIDES_JSON="${WIN_TEMP}/${SLUG}.json"
+OUT_HTML="${WIN_TEMP}/${SLUG}.html"
 
 PROMPT=$(cat <<EOF
 주제: ${TOPIC}
@@ -54,7 +56,7 @@ PROMPT=$(cat <<EOF
   "meta": { "title": "슬라이드 제목" },
   "slides": [
     { "type": "title_panel", "data": { "title": "...", "subtitle": "...", "points": ["..."] } },
-    { "type": "card_grid", "data": { "badge": "섹션명", "title": "...", "cards": [{"icon": "🎯", "title": "...", "desc": "..."}] } },
+    { "type": "card_grid", "data": { "badge": "섹션명", "title": "...", "cards": [{"icon": "target", "title": "...", "desc": "..."}] } },
     { "type": "numbered_list", "data": { "badge": "...", "title": "...", "subtitle": "...", "items": [{"num": "01", "title": "...", "desc": "..."}] } },
     { "type": "bar_chart", "data": { "badge": "...", "title": "...", "bars": [{"label": "...", "value": 85, "max": 100}], "hero_number": "85%", "hero_label": "...", "sub_stats": [{"label": "...", "value": "..."}] } },
     { "type": "big_statement", "data": { "badge": "...", "line1": "...", "line2": "...", "line3": "..." } },
@@ -69,6 +71,7 @@ PROMPT=$(cat <<EOF
 - 마지막 슬라이드는 반드시 quote_close
 - 중간 슬라이드는 주제에 맞게 타입 선택 (같은 타입 3회 이상 연속 금지)
 - 모든 텍스트는 한국어
+- card_grid의 icon 필드는 반드시 다음 중 하나: check, rocket, target, chart, gear, star, lightning, shield, users, globe, clock, arrow, layers, code, database, flag, leaf, diamond, box, lock, search, graph, award, eye
 - JSON 외 다른 텍스트 출력 금지
 EOF
 )
