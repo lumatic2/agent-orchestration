@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 저녁 — GCP Secret Manager 기기 통합]
+**한 일**: secrets_load.sh Python ADC 폴백 추가, content-automation common.py GCP SDK 연동, MacBook Air gcloud+pyenv Python 3.11 설치, M1 CLOUDSDK_PYTHON 설정, broken stitch MCP 엔트리 제거
+**진행 중**: content-automation --dry-run 테스트, slide.html 디자인 검토, Instagram 파이프라인
+**주요 결정**: 모든 기기에서 gcloud CLI 실패 시 Python ADC(google.auth) 폴백으로 비밀 로드. Instagram 미설정은 정상 상태.
+---
+
 ## [2026-03-15 — content-automation 루마 채널 파이프라인]
 **한 일**: CLAUDE.md 모델 라우팅 추가, content-automation 파이프라인 전면 재구성(HTML+Playwright 슬라이드/캐릭터 오버레이/카라오케 자막/2단계 파이프라인), nanobanana MCP gemini-2.5-flash-image 패치, API 무단 호출 방지 규칙 memory+SHARED_MEMORY 추가
 **진행 중**: --dry-run 전체 파이프라인 테스트, slide.html 디자인 검토, Instagram 파이프라인

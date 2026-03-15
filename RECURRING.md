@@ -8,6 +8,9 @@
 
 ## 매주
 - 매주 월 | 주간 계획 수립 (SCHEDULE.md Today 섹션 정리) #라이프
+- 매주 월 | 글쓰기 — 서평 또는 주제 에세이 1편 (vault 30-projects/book-topics/) #크리에이티브
+- 매주 목 | 글쓰기 — 서평 또는 주제 에세이 1편 (vault 30-projects/book-topics/) #크리에이티브
+- 매주 토 | 글쓰기 — 서평 또는 주제 에세이 1편 (vault 30-projects/book-topics/) #크리에이티브
 - 매주 금 | 주간 회고 (/weekly-review) #라이프
 - 매주 | Coursera 강의 1개 이상 수강 #학습
 

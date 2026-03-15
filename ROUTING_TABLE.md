@@ -151,8 +151,8 @@ curl -s -X POST "https://api.notion.com/v1/pages" \
 
 | Task Type | Agent | Model | Reason |
 |---|---|---|---|
-| **Task decomposition** | Claude Code | Opus | Complex reasoning, short output |
-| **Final integration** | Claude Code | Opus | Judgment call, short output |
+| **Task decomposition** | Claude Code | Sonnet medium (기본) → Sonnet high (HIGH) → Opus high (ULTRA) | CLAUDE.md Model Routing 룰 적용 |
+| **Final integration** | Claude Code | Sonnet medium (기본) → Sonnet high (HIGH) → Opus high (ULTRA) | CLAUDE.md Model Routing 룰 적용 |
 | **Codebase exploration** | Claude subagent | Haiku | Cheap, Read/Grep/Glob only |
 | **File classification** | Claude subagent | Haiku | Simple pattern matching |
 | **Code generation** | Codex | gpt-5.3-codex | Most generous limits |
