@@ -8,6 +8,22 @@
 
 ---
 
+## [RULE] API 키 직접 호출 금지 (2026-03-15, 전 에이전트 적용)
+
+**규칙**: Gemini API, OpenAI API 등 외부 API 키를 사용자 승인 없이 직접 호출하지 말 것.
+
+**위반 사례**: 2026-03-15, 루마 캐릭터 이미지 생성 시 Claude가 GEMINI_API_KEY로 이미지 생성 API를 5회 무단 호출 → 잠재적 비용 발생.
+
+**올바른 우선순위**:
+1. Claude Code (MCP 도구, 내장 기능)
+2. Gemini CLI (`orchestrate.sh gemini`)
+3. Codex CLI (`orchestrate.sh codex`)
+4. API 직접 호출 → **반드시 사용자에게 먼저 확인 후 진행**
+
+**확인 형식**: "이 작업은 Gemini API를 N회 호출합니다. 비용이 발생할 수 있습니다. 진행할까요?"
+
+---
+
 ## 냉장고를 부탁해 (ingredient-bot) — 개인 프로젝트 (2026-03-13~)
 
 **경로**: `~/ingredient-bot/`
@@ -169,8 +185,20 @@
 - lazygit (alias: lg), fzf, Ruff, Poetry, VectorBT, google-genai
 - Ruff Claude Code 훅: Edit/Write 시 .py 자동 린트
 
+### CLI 도구 — 과금 구조 (중요)
+
+| CLI | 인증 방식 | 과금 | 모델 |
+|---|---|---|---|
+| **Gemini CLI** (`gemini.cmd`) | OAuth (Google 계정) | **무료** — Gemini Advanced 구독 내 | gemini-2.5-flash / pro |
+| **Codex CLI** (`codex`) | OAuth (OpenAI 계정) | **무료** — ChatGPT Pro 구독 내 | gpt-5.3-codex / spark |
+
+- 둘 다 REST API 호출 아님 → 토큰당 과금 없음
+- Gemini CLI: `--yolo` 자동승인, `-m` 모델 선택, stdin 프롬프트 지원
+- Codex CLI: `--full-auto` 자동승인, 코드 작업 최적화, 파일 읽기/편집 자율 수행
+- **Codex = 단순 코드 변환 아님**: 태스크 브리프 받아 파일 탐색·편집·테스트까지 자율 수행 가능
+
 ### API 키 현황
-- Gemini API: aistudio.google.com (무료 Flash 1,500/일)
+- Gemini API: aistudio.google.com (무료 Flash 1,500/일) — CLI와 별개
 - YouTube OAuth: credentials/youtube_token.json (M1 + Windows)
 - Moonshot/Kimi: ~/.zshrc MOONSHOT_API_KEY (M1, OpenClaw 사용)
 

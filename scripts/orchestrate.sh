@@ -93,6 +93,25 @@ create_queue_entry() {
 META_EOF
 
   echo "$task_content" > "$dir/brief.md"
+
+  cat > "$dir/progress.md" << PROGRESS_EOF
+# Progress: ${name}
+Created: ${ISO_NOW}
+Task ID: ${id}
+
+## Phases
+- [ ] 탐색 완료
+- [ ] 수정 완료
+- [ ] 검증 완료
+
+## Notes
+<!-- Codex: 발견한 사항, 결정, 막힌 지점을 여기에 기록 -->
+
+## Checkpoint (resume 시 여기서부터)
+<!-- Codex: 마지막으로 완료한 단계와 다음 시작 지점 기록 -->
+Not started.
+PROGRESS_EOF
+
   log_activity "$id" "created" "agent=$agent"
 }
 
@@ -748,24 +767,56 @@ do_boot() {
 }
 
 do_status() {
-  echo "=== Queue Status ==="
-  printf "%-6s %-25s %-12s %-12s %-8s\n" "ID" "NAME" "STATUS" "AGENT" "RETRIES"
-  printf "%-6s %-25s %-12s %-12s %-8s\n" "------" "-------------------------" "------------" "------------" "--------"
+  local json_mode=0
+  [ "${1:-}" = "--json" ] && json_mode=1
 
-  for dir in "$QUEUE_DIR"/T[0-9][0-9][0-9]_*/; do
-    [ -d "$dir" ] || continue
-    local meta="$dir/meta.json"
-    [ -f "$meta" ] || continue
+  if [ "$json_mode" = "1" ]; then
+    local entries="" total=0 pending=0 queued=0 completed=0 dispatched=0
+    for dir in "$QUEUE_DIR"/T[0-9][0-9][0-9]_*/; do
+      [ -d "$dir" ] || continue
+      local meta="$dir/meta.json"
+      [ -f "$meta" ] || continue
 
-    local id name status agent retries
-    id=$(read_meta_field "$meta" "id")
-    name=$(read_meta_field "$meta" "name")
-    status=$(read_meta_field "$meta" "status")
-    agent=$(read_meta_field "$meta" "agent")
-    retries=$(read_meta_field_raw "$meta" "retry_count")
+      local id name status agent retries created
+      id=$(read_meta_field "$meta" "id")
+      name=$(read_meta_field "$meta" "name")
+      status=$(read_meta_field "$meta" "status")
+      agent=$(read_meta_field "$meta" "agent")
+      retries=$(read_meta_field_raw "$meta" "retry_count")
+      created=$(read_meta_field "$meta" "created")
 
-    printf "%-6s %-25s %-12s %-12s %-8s\n" "$id" "$name" "$status" "$agent" "$retries"
-  done
+      [ -n "$entries" ] && entries="$entries,"
+      entries="$entries{\"id\":\"$id\",\"name\":\"$name\",\"status\":\"$status\",\"agent\":\"$agent\",\"retries\":$retries,\"created\":\"$created\"}"
+
+      total=$((total + 1))
+      case "$status" in
+        pending)    pending=$((pending + 1)) ;;
+        queued)     queued=$((queued + 1)) ;;
+        completed)  completed=$((completed + 1)) ;;
+        dispatched) dispatched=$((dispatched + 1)) ;;
+      esac
+    done
+    echo "{\"total\":$total,\"pending\":$pending,\"queued\":$queued,\"dispatched\":$dispatched,\"completed\":$completed,\"tasks\":[$entries]}"
+  else
+    echo "=== Queue Status ==="
+    printf "%-6s %-25s %-12s %-12s %-8s\n" "ID" "NAME" "STATUS" "AGENT" "RETRIES"
+    printf "%-6s %-25s %-12s %-12s %-8s\n" "------" "-------------------------" "------------" "------------" "--------"
+
+    for dir in "$QUEUE_DIR"/T[0-9][0-9][0-9]_*/; do
+      [ -d "$dir" ] || continue
+      local meta="$dir/meta.json"
+      [ -f "$meta" ] || continue
+
+      local id name status agent retries
+      id=$(read_meta_field "$meta" "id")
+      name=$(read_meta_field "$meta" "name")
+      status=$(read_meta_field "$meta" "status")
+      agent=$(read_meta_field "$meta" "agent")
+      retries=$(read_meta_field_raw "$meta" "retry_count")
+
+      printf "%-6s %-25s %-12s %-12s %-8s\n" "$id" "$name" "$status" "$agent" "$retries"
+    done
+  fi
   exit 0
 }
 
@@ -1149,7 +1200,7 @@ do_chain() {
 case "${1:-}" in
   schema)     shift; do_schema "$@" ;;
   --boot)     do_boot ;;
-  --status)   do_status ;;
+  --status)   shift; do_status "${1:-}" ;;
   --resume)   do_resume ;;
   --complete) shift; do_complete "$@" ;;
   --cost)     do_cost ;;

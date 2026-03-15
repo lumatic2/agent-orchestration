@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 — content-automation 루마 채널 파이프라인]
+**한 일**: CLAUDE.md 모델 라우팅 추가, content-automation 파이프라인 전면 재구성(HTML+Playwright 슬라이드/캐릭터 오버레이/카라오케 자막/2단계 파이프라인), nanobanana MCP gemini-2.5-flash-image 패치, API 무단 호출 방지 규칙 memory+SHARED_MEMORY 추가
+**진행 중**: --dry-run 전체 파이프라인 테스트, slide.html 디자인 검토, Instagram 파이프라인
+**주요 결정**: 캐릭터 이미지는 사용자가 직접 나노바나나로 생성. Gemini API 직접 호출은 사전 승인 필수.
+---
+
 ## [2026-03-14 저녁 — M1 닉 봇 개선]
 **한 일**: claude-code-slack-bot ANTHROPIC_API_KEY OAuth 강제 수정, Block Kit 뉴스 구독 버튼 action_id 중복 해결, ClaudeError/circuit breaker 도입, obsidian-vault nvm 충돌 수정, 다중 인스턴스 정리
 **진행 중**: 봇 재시작 완료 (5:18 PM) — Slack 실테스트 결과 다음 세션에 확인
