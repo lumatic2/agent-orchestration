@@ -107,6 +107,8 @@ IMMEDIATE_FILE="$TMP_DIR/immediate.txt"
 REFERENCE_FILE="$TMP_DIR/reference.txt"
 SKIP_FILE="$TMP_DIR/skip.txt"
 SKIP_REPOS_FILE="$TMP_DIR/skip_repos.txt"
+OVERVIEW_FILE="$TMP_DIR/overview.txt"
+touch "$OVERVIEW_FILE"
 
 QUERY="search/repositories?q=created:>$START_DATE&sort=stars&order=desc&per_page=50"
 
@@ -175,6 +177,64 @@ IMMEDIATE_COUNT=$(wc -l < "$IMMEDIATE_FILE" 2>/dev/null | tr -d ' ')
 REFERENCE_COUNT=$(wc -l < "$REFERENCE_FILE" 2>/dev/null | tr -d ' ')
 SKIP_COUNT=$(wc -l < "$SKIP_FILE" 2>/dev/null | tr -d ' ')
 
+# 종합 분석 생성
+OVERVIEW_SLUG="$(date +%Y%m%d_%H%M%S)"
+OVERVIEW_TASK="github-trends-overview-$OVERVIEW_SLUG"
+OVERVIEW_PROMPT="$TMP_DIR/overview_prompt.txt"
+
+{
+  cat <<'PROMPT'
+아래는 이번 주 GitHub에서 가장 빠르게 스타를 받은 레포 목록이다.
+이 목록을 바탕으로, 개발 생태계 전문 큐레이터의 시각에서 이번 주 오픈소스 트렌드를 하나의 짧은 칼럼 형식으로 써줘.
+
+조건:
+- 번호나 불릿 없이, 자연스럽게 이어지는 문단 형태
+- 총 10문장 내외
+- 이번 주 두드러진 기술 카테고리, AI·오픈소스 생태계 흐름, 주목할 레포/도구를 녹여서
+- 마지막 문장은 이번 주 전체를 아우르는 한 줄 결론으로 마무리
+- 딱딱한 보고서 말투 X, 읽히는 글투로
+
+즉시적용 레포:
+PROMPT
+  if [[ -s "$IMMEDIATE_FILE" ]]; then
+    cat "$IMMEDIATE_FILE"
+  fi
+  echo
+  echo "참고 레포 (상위 10개):"
+  head -n 10 "$REFERENCE_FILE" 2>/dev/null || true
+} > "$OVERVIEW_PROMPT"
+
+OVERVIEW_RUN_OK=true
+bash "$ORCH_SCRIPT" gemini "$(cat "$OVERVIEW_PROMPT")" "$OVERVIEW_TASK" >/dev/null 2>&1 \
+  || OVERVIEW_RUN_OK=false
+
+OVERVIEW_LOG="$(ls -t "$LOGS_DIR"/gemini_"$OVERVIEW_TASK"_*.txt 2>/dev/null | head -1 || true)"
+
+if [[ -n "$OVERVIEW_LOG" ]]; then
+  python3 - "$OVERVIEW_LOG" "$OVERVIEW_FILE" <<'PYEOF'
+import sys, re
+
+log_path, out_path = sys.argv[1], sys.argv[2]
+lines = []
+with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+    for raw in f:
+        line = raw.rstrip()
+        if re.match(r'^\s*(#{1,6}\s|---|===|```)', line):
+            continue
+        line = re.sub(r'^\s*(?:\d+[.)]\s*|[•\-\*]\s*)', '', line).strip()
+        if len(line) > 15:
+            lines.append(line)
+
+text = ' '.join(lines).strip()
+text = re.sub(r'\s{2,}', ' ', text)
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(text + "\n")
+PYEOF
+  [[ "$OVERVIEW_RUN_OK" != "true" ]] && echo "[WARN] Gemini overview 호출 종료 지연. 생성된 로그 사용." >&2
+else
+  echo "[WARN] Gemini overview 로그 없음, 스킵" >&2
+fi
+
 if [[ "$IMMEDIATE_COUNT" -eq 0 && "$REFERENCE_COUNT" -eq 0 && "$SKIP_COUNT" -eq 0 ]]; then
   fail "Gemini 분류 결과 파싱 실패"
 fi
@@ -196,6 +256,11 @@ fi
   echo
   echo "> 수집 기간: $START_DATE ~ $RUN_DATE | 즉시적용 ${IMMEDIATE_COUNT}개 | 참고 ${REFERENCE_COUNT}개"
   echo
+  if [[ -s "$OVERVIEW_FILE" ]]; then
+    echo "## 이번 주 동향"
+    cat "$OVERVIEW_FILE"
+    echo
+  fi
   echo "## 즉시적용 (${IMMEDIATE_COUNT}개)"
   if [[ "$IMMEDIATE_COUNT" -gt 0 ]]; then
     while IFS= read -r line; do
@@ -250,28 +315,35 @@ fi
 } > "$REPORT_FILE"
 
 TELEGRAM_ITEMS="$TMP_DIR/telegram_items.txt"
-APPLY_CMDS="$TMP_DIR/apply_cmds.txt"
 
-head -n 3 "$IMMEDIATE_FILE" 2>/dev/null | while IFS= read -r line; do
+head -n 5 "$IMMEDIATE_FILE" 2>/dev/null | while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   line="${line#- }"
   IFS='|' read -r repo stars reason point <<< "$line"
   repo="$(trim "${repo:-}")"
+  stars="$(trim "${stars:-}")"
   reason="$(trim "${reason:-}")"
-  echo "• $repo — $reason"
+  url="https://github.com/$repo"
+  echo "• <a href=\"$url\">$repo</a> $stars"
+  [[ -n "$reason" ]] && echo "  $reason"
+  echo ""
 done > "$TELEGRAM_ITEMS"
-
 
 if [[ ! -s "$TELEGRAM_ITEMS" ]]; then
   echo "• 즉시적용 항목 없음" > "$TELEGRAM_ITEMS"
 fi
 
+OVERVIEW_TEXT=""
+[[ -s "$OVERVIEW_FILE" ]] && OVERVIEW_TEXT="$(cat "$OVERVIEW_FILE")"
 
 TELEGRAM_MESSAGE="[GitHub 트렌드] $RUN_DATE
 즉시적용 ${IMMEDIATE_COUNT}개 | 참고 ${REFERENCE_COUNT}개
 
+<b>📊 이번 주 동향</b>
+${OVERVIEW_TEXT}
+<b>📌 즉시적용 TOP 5</b>
 $(cat "$TELEGRAM_ITEMS")
-📄 reports/github-trends-$RUN_DATE.md"
+💬 AI 분석: 이 봇에 <code>/github-trends</code> 전송"
 
 send_telegram "$TELEGRAM_MESSAGE" || fail "텔레그램 알림 전송 실패"
 

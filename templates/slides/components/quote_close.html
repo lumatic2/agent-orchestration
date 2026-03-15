@@ -1,0 +1,59 @@
+<div class="slide-inner quote-close-slide">
+  <svg class="quote-mark" viewBox="0 0 120 90" aria-hidden="true">
+    <path d="M0 52C0 28 17 9 42 9V30C29 30 20 39 20 52H42V88H0V52ZM58 52C58 28 75 9 100 9V30C87 30 78 39 78 52H100V88H58V52Z" fill="rgba(255,255,255,0.22)"/>
+  </svg>
+  <div class="content">
+    <blockquote>{{ quote }}</blockquote>
+    <p class="author">{{ author }}</p>
+  </div>
+  <div class="cta">{{ cta }}</div>
+</div>
+<style>
+.quote-close-slide {
+  background: var(--accent-1);
+  color: var(--bg-white);
+  padding: 64px 80px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+.quote-close-slide .quote-mark {
+  position: absolute;
+  top: 26px;
+  left: 34px;
+  width: 140px;
+  height: auto;
+}
+.quote-close-slide .content {
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.quote-close-slide blockquote {
+  margin: 0;
+  font-size: 36px;
+  line-height: 1.5;
+  font-weight: 700;
+}
+.quote-close-slide .author {
+  margin: 20px 0 0;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.8);
+}
+.quote-close-slide .cta {
+  margin: 34px auto 0;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--bg-white);
+  color: var(--accent-1);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+.quote-close-slide .cta:empty {
+  display: none;
+}
+</style>

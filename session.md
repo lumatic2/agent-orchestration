@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 — AI 팁 총정리 문서화]
+**한 일**: vault/30-projects/ai-tips/ 전체 초안 완성(braindump→outline→draft v0.8→blog v0.2), 4장 GCP Secret Manager 심화 박스·유료 전환 타이밍·보안 섹션 개선, 마무리 수미상관 추가, 바탕화면에 MD+PDF 생성
+**진행 중**: 블로그(브런치/네이버) 실제 포스팅, PDF 공유 채널 결정
+**주요 결정**: 심화 내용(GCP)은 본문 격리 박스로 처리 — 비개발자 독자 이탈 방지
+---
+
 ## [2026-03-15 야간 — 오케스트레이션 미활용 영역 전수 점검]
 **한 일**: T115/T118 큐 정리, MoviePy v2 API 패치+push, GWS MCP 라우팅 추가, vault_check() 7일 캐시(orchestrate.sh), Gemini Pro 기준 테이블·멀티모달·spark 정교화, Nanobanana→Gemini 웹 정정, vault→SHARED_MEMORY 승격 기준 추가
 **진행 중**: M1 git pull (content-automation MoviePy 패치), content-automation --dry-run 테스트

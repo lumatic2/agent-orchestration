@@ -91,8 +91,9 @@ COLLECTED_LIST="$TMP_DIR/collected_list.txt"
 SUMMARY_PROMPT="$TMP_DIR/summary_prompt.txt"
 IMMEDIATE_ITEMS="$TMP_DIR/immediate.tsv"
 LATER_ITEMS="$TMP_DIR/later.tsv"
+OVERVIEW_FILE="$TMP_DIR/overview.txt"
 
-touch "$RSS_ITEMS" "$WEB_ITEMS" "$ALL_ITEMS" "$UNIQUE_ITEMS" "$IMMEDIATE_ITEMS" "$LATER_ITEMS"
+touch "$RSS_ITEMS" "$WEB_ITEMS" "$ALL_ITEMS" "$UNIQUE_ITEMS" "$IMMEDIATE_ITEMS" "$LATER_ITEMS" "$OVERVIEW_FILE"
 
 run_orchestrate() {
   local prompt="$1"
@@ -368,6 +369,73 @@ with open(later_path, "w", encoding="utf-8") as f:
 PYEOF
 }
 
+generate_overview() {
+  local task_name="it-contents-overview-$SLUG"
+  local overview_prompt="$TMP_DIR/overview_prompt.txt"
+
+  {
+    cat <<'PROMPT'
+아래는 오늘 수집된 IT 콘텐츠 목록이다. 이 목록을 바탕으로, IT 전문 큐레이터의 시각에서 오늘의 기술 동향을 하나의 짧은 칼럼 형식으로 써줘.
+
+조건:
+- 번호나 불릿 없이, 자연스럽게 이어지는 문단 형태
+- 총 10문장 내외
+- 오늘 두드러진 테마, AI·자동화 흐름, 주목할 변화를 녹여서
+- 마지막 문장은 오늘 전체를 아우르는 한 줄 결론으로 마무리
+- 딱딱한 보고서 말투 X, 읽히는 글투로
+
+목록:
+PROMPT
+    if [[ -s "$IMMEDIATE_ITEMS" ]]; then
+      awk -F '\t' '{ printf "- %s (%s)\n", $2, $1 }' "$IMMEDIATE_ITEMS"
+    else
+      awk -F '\t' '{ printf "- %s (%s)\n", $2, $1 }' "$UNIQUE_ITEMS" | head -20
+    fi
+  } > "$overview_prompt"
+
+  local run_ok=true
+  if ! run_orchestrate "$(cat "$overview_prompt")" "$task_name" 120; then
+    run_ok=false
+  fi
+
+  local overview_log
+  overview_log="$(latest_gemini_log "$task_name")"
+  if [[ -z "$overview_log" ]]; then
+    echo "[WARN] Gemini 종합 분석 로그 없음, 스킵" >&2
+    return 0
+  fi
+  if [[ "$run_ok" != "true" ]]; then
+    echo "[WARN] Gemini 종합 분석 호출 종료 지연. 생성된 로그 사용: $overview_log" >&2
+  fi
+
+  # 로그에서 실제 본문만 추출 (마크다운 헤더·빈줄 제거, 앞뒤 정리)
+  python3 - "$overview_log" "$OVERVIEW_FILE" <<'PYEOF'
+import sys, re
+
+log_path, out_path = sys.argv[1], sys.argv[2]
+
+lines = []
+with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+    for raw in f:
+        line = raw.rstrip()
+        # 마크다운 헤더, 수평선, 코드블록 펜스 제거
+        if re.match(r'^\s*(#{1,6}\s|---|===|```)', line):
+            continue
+        # 번호/불릿으로 시작하는 줄은 불릿 제거 후 문장으로 편입
+        line = re.sub(r'^\s*(?:\d+[.)]\s*|[•\-\*]\s*)', '', line).strip()
+        if len(line) > 15:
+            lines.append(line)
+
+# 앞뒤 빈 덩어리 제거 후 하나의 문단으로 합치기
+text = ' '.join(lines).strip()
+# 과도한 공백 정리
+text = re.sub(r'\s{2,}', ' ', text)
+
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(text + "\n")
+PYEOF
+}
+
 collect_rss_sources() {
   local -a ALL_FEEDS=(
     # 개인 기술 블로그
@@ -469,6 +537,7 @@ fi
 awk -F '\t' '{ printf "%s | %s | %s\n", $1, $2, $3 }' "$UNIQUE_ITEMS" > "$COLLECTED_LIST"
 
 summarize_items
+generate_overview
 
 IMMEDIATE_COUNT=$(wc -l < "$IMMEDIATE_ITEMS" 2>/dev/null | tr -d ' ')
 LATER_COUNT=$(wc -l < "$LATER_ITEMS" 2>/dev/null | tr -d ' ')
@@ -482,6 +551,11 @@ fi
   echo
   echo "> 수집: ${TOTAL_COUNT}개 항목 | 즉시읽기 ${IMMEDIATE_COUNT}개 | 나중에 ${LATER_COUNT}개"
   echo
+  if [[ -s "$OVERVIEW_FILE" ]]; then
+    echo "## 오늘의 동향"
+    cat "$OVERVIEW_FILE"
+    echo
+  fi
   echo "## 즉시읽기 (${IMMEDIATE_COUNT}개)"
   if [[ "$IMMEDIATE_COUNT" -gt 0 ]]; then
     while IFS=$'\t' read -r source title summary url; do
@@ -526,9 +600,17 @@ else
   echo "• 즉시읽기 항목 없음" > "$TELEGRAM_PREVIEW"
 fi
 
+OVERVIEW_TEXT=""
+if [[ -s "$OVERVIEW_FILE" ]]; then
+  OVERVIEW_TEXT="$(cat "$OVERVIEW_FILE")"
+fi
+
 TELEGRAM_MESSAGE="[IT 콘텐츠] $RUN_DATE
 즉시읽기 ${IMMEDIATE_COUNT}개 | 나중에 ${LATER_COUNT}개
 
+<b>📊 오늘의 동향</b>
+${OVERVIEW_TEXT}
+<b>📌 즉시읽기 TOP 5</b>
 $(cat "$TELEGRAM_PREVIEW")
 💬 AI 분석: 이 봇에 <code>/it-contents</code> 전송"
 

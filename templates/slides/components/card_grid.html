@@ -1,0 +1,62 @@
+<div class="slide-inner card-grid-slide">
+  <div class="content">
+    <div class="badge">{{ badge }}</div>
+    <h2>{{ title }}</h2>
+    <div class="cards">
+{% for card in cards %}
+      <article class="card item">
+        <div class="icon">{{ card.icon }}</div>
+        <h3>{{ card.title }}</h3>
+        <p>{{ card.desc }}</p>
+      </article>
+{% endfor %}
+    </div>
+  </div>
+</div>
+<style>
+.card-grid-slide .content {
+  width: 100%;
+  height: 100%;
+  padding: 56px 64px;
+  display: flex;
+  flex-direction: column;
+}
+.card-grid-slide h2 {
+  margin: 16px 0 26px;
+  font-size: 28px;
+  line-height: 1.35;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+.card-grid-slide .cards {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-content: stretch;
+}
+.card-grid-slide .item {
+  width: calc((100% - 32px) / 3);
+  min-height: 170px;
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.card-grid-slide .item .icon {
+  font-size: 32px;
+  line-height: 1;
+}
+.card-grid-slide .item h3 {
+  margin: 12px 0 8px;
+  font-size: 20px;
+  line-height: 1.35;
+}
+.card-grid-slide .item p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+</style>
