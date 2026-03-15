@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-16 심야 — Nick 슬랙봇 PDF 파이프라인 시도 → ec58fdd 롤백]
+**한 일**: /slide·/doc JSON→PDF 파이프라인 전환 시도(6시간), 다중 인스턴스·haiku 모델 404·DM 스레딩 버그 등 복합 장애 수습 실패, ec58fdd hard reset으로 봇 원상복구
+**진행 중**: Nick 봇 PDF 파이프라인 — 내일 ec58fdd 기반에서 처음부터 재작성 (`memory/project_nick_bot_rebuild.md`)
+**주요 결정**: launchd KeepAlive 기기는 launchctl로만 재시작. 로그 경로 `logs/nick-bot.log`.
+---
+
 ## [2026-03-16 — 플랜바이 03-18 임원 미팅 자료 최종]
 **한 일**: meeting-prep-0318.md 전체 검토 및 최종 수정 (Clay 오류 수정·EOD→목요일·빈 줄 정리); summary-0318.md 생성 (임원진 전달용 4주 성과 요약); /ui-ux-review + /decide-deal 스킬 .claude/commands/ 등록
 **진행 중**: 03-18(화) 임원 미팅 진행, Slack AI 에이전트 버그 안정화 (03-19 마감)
