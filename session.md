@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 심야3 — Knowledge Vault + 법령 자동화 파이프라인]
+**한 일**: pdf-to-vault.py 분류기 6건 패치, Vault 229노트/25MB 달성, law_registry.yaml(36법령)+law-check.py(법제처 API 자동감지)+M1 launchd 파이프라인 완성, context/law-automation.md 문서화
+**진행 중**: M1 배포(law-check+plist), 법제처 API 승인 대기→OC값 추가→--discover, investment 도메인 보강(vault 3개)
+**주요 결정**: 법령 자동 업데이트는 M1 launchd로 실행(항상 켜짐+vault 로컬 저장). pdf-to-vault.py LOCAL_VAULT_PATH로 Windows/M1 공용화.
+---
+
 ## [2026-03-15 심야2 — 슬라이드·문서 파이프라인 완성]
 **한 일**: 슬라이드 Option B 완성 (8컴포넌트+SVG 아이콘 24개+before_after, E2E 와인의역사 성공), 문서 파이프라인 구축 (7섹션 타입, 5가지 type, --word DOCX 지원), 레이아웃 버그 수정 (섹션 강제 페이지→자연 흐름)
 **진행 중**: 회사소개서 docs.sh 제작, content-automation M1 git pull + dry-run

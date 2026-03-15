@@ -21,7 +21,7 @@
 - [ ] [중] 미팅 자료 슬라이드 제작 — MD → 슬라이드 변환 + 참석자 공유용 Claude Code 컨텍스트 삽입
 - [/] [높] lemlist 실발송 — Clay 16명 시퀀스 작성·발송 + 첫 데이터 확인 `마감: 03-18(화)` #회사
 - [ ] [높] Slack AI 에이전트 완성 — 버그 안정화 + 팀원 1명 실사용 `03-19(목)`
-- [ ] [중] 회사소개서 PDF 1벌 `03-19(목)`
+- [x] [중] 회사소개서 PDF 1벌 `03-19(목)` — slides.sh 이미지 한계로 보류, Gamma 핸드오프 또는 기존 소개서 직접 업데이트로 대체 결정
 
 ### #회사 — 언제든
 - [ ] [높] PoC 제안서 작성 — 신규 고객용 표준 템플릿 (1,500만원/4~6주)
@@ -132,6 +132,10 @@
 - [ ] [낮] 전 직원 바이브코딩 워크숍 기획 및 실행 — 비엔지니어 대상 Cursor·Claude·Gemini 실무 실습
 
 ### #개발
+- [ ] [중] 법제처 Open API 승인 확인 → https://open.law.go.kr/LSO/openApi/cuAskList.do — 승인 시 M1 `.env`에 `LAW_API_OC=값` 추가 + `ssh m1 "python3 ~/Desktop/law-check.py --discover"` 실행
+- [ ] [중] law-check M1 배포 — `context/law-automation.md` 배포 명령어 참고 (API 승인 전 미리 가능) #개발
+- [ ] [중] investment 도메인 보강 — vault 3개뿐. KVCA 벤처투자 가이드·IPO 실무·VC 심사 기준 PDF 수집 후 pdf-input 처리
+- [ ] [낮] expert 페르소나 법령 연결 점검 — 20-experts/*.md가 이번에 추가된 법령 원문 참조하는지 확인 및 knowledge_refs 추가
 - [x] [중] 텔레그램 매일 아침 알림 복구 + 채팅방 주제별 분리 (@NewsFairy_bot 4채널) + events-tracker 소스·기준 강화 + vault 저장 `완료 03-14`
 - [x] [중] 폰으로 보는 Task 대시보드 구현 방법 조사 및 적용 `완료 03-14`
 - [x] [중] 노트북 LM 활용법 + Obsidian/AnythingLLM 개선 방향 정리 `완료 03-14`
