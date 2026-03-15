@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 심야5 — 예비창업패키지 사업계획서 Copora 최종 보강]
+**한 일**: 1절 권도균 창직 인용+할루시네이션 법정 사례(Mata v. Avianca) 추가, 2-1절 자율 경영 에이전트 포지셔닝+모드1/2 2트랙+보고서/슬라이드 파이프라인+데이터 보안 추가, 2-2절~4-1절 연동 수정, 기계장치(SW) 지급수수료 편입, 표현 전면 정리
+**진행 중**: 사업계획서 양식 docx 타이핑 입력 (03-21~22 주말), K-Startup 제출 (03-24 16:00)
+**주요 결정**: Copora = 자율 경영 에이전트 (단순 Q&A 탈피), MVP = 신고기한 알림+파일 분석, Phase 2 = 홈택스/은행 Open API
+---
+
 ## [2026-03-15 심야4 — content-automation 영상 파이프라인 완성]
 **한 일**: 다크 테마+Noto Sans KR, CSS 애니메이션 영상화(12프레임), Whisper medium+단어수 기반 슬라이드 타이밍, Gemini sections 구조 개선, HTML 썸네일(Playwright), --thumbnail 플래그 추가, thumbnails().set() YouTube 자동 세팅
 **진행 중**: 월요일 저녁 E2E 테스트 (Whisper medium 모델 사전 다운로드 필요)
