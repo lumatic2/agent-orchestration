@@ -141,13 +141,13 @@
 - [x] [중] 노트북 LM 활용법 + Obsidian/AnythingLLM 개선 방향 정리 `완료 03-14`
 - [x] [중] Obsidian vault 구축 및 CLI·MCP 활용법 연구 — vault@M1, mcp-obsidian 연동 완료, 에이전트 파이프라인 통합 진행 중
 - [x] [중] Google AI 디자인 도구 분석 — Pomelli, Stitch 오케스트레이션 통합 가능성 `완료 03-15`
-- [ ] [중] 미드저니 MCP — Claude Code 연동 가능한지 확인
+- [x] [중] 미드저니 MCP — Claude Code 연동 가능한지 확인 → 비공식 Discord 우회만 존재, 불안정. 보류. `완료 03-15`
 - [x] [중] 유튜브 영상 자동화 프로그램 만들어 보기 `완료 03-14`
 - [ ] [중] 키우기류 앱 유니티로 제작 #게임
 - [ ] [중] 개인 포트폴리오 사이트 개선 및 내용 추가 (luma3-portfolio.vercel.app)
 - [x] [중] GWS CLI처럼 내가 만들면 좋을 거 있는지 분석해보기 — MCP로 충분. 자율 파이프라인 필요 시에만 CLI 고려 `완료 03-15`
 - [x] [중] content-automation 루마 파이프라인 재구성 — HTML+Playwright 슬라이드, 캐릭터 오버레이, 2단계 파이프라인, commit+push 완료 `완료 03-15`
-- [ ] [중] content-automation --dry-run 전체 파이프라인 테스트 검증
+- [ ] [중] content-automation E2E 테스트 — 실제 오디오+썸네일로 영상 생성+YouTube 업로드 검증 (월요일 저녁)
 - [ ] [중] content-automation Instagram 파이프라인 (Meta Graph API)
 - [ ] [중] 유튜브 채널 분석: @vibecoderloopy — AI 영상 자동 제작 방식, content-automation 참고용
 - [x] [중] OpenClaw GitHub 오픈소스 분석 — 내 오케스트레이션 시스템에 적용 가능한 기능 추출 및 통합 `완료 03-15`

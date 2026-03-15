@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 심야4 — content-automation 영상 파이프라인 완성]
+**한 일**: 다크 테마+Noto Sans KR, CSS 애니메이션 영상화(12프레임), Whisper medium+단어수 기반 슬라이드 타이밍, Gemini sections 구조 개선, HTML 썸네일(Playwright), --thumbnail 플래그 추가, thumbnails().set() YouTube 자동 세팅
+**진행 중**: 월요일 저녁 E2E 테스트 (Whisper medium 모델 사전 다운로드 필요)
+**주요 결정**: 썸네일은 직접 제작(Canva) + --thumbnail 플래그로 경로 지정, YouTube 업로드만 자동화
+---
+
 ## [2026-03-15 심야3 — Knowledge Vault + 법령 자동화 파이프라인]
 **한 일**: pdf-to-vault.py 분류기 6건 패치, Vault 229노트/25MB 달성, law_registry.yaml(36법령)+law-check.py(법제처 API 자동감지)+M1 launchd 파이프라인 완성, context/law-automation.md 문서화
 **진행 중**: M1 배포(law-check+plist), 법제처 API 승인 대기→OC값 추가→--discover, investment 도메인 보강(vault 3개)
