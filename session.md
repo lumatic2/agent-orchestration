@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-16 — content-automation 텔레그램 메시지 정리]
+**한 일**: 콘텐츠 메시지 투자봇→NewsFairy 콘텐츠 그룹채팅 라우팅 변경, 썸네일 사진 전송 제거, 블로그 알림 액션 지침 추가
+**진행 중**: 월요일 저녁 content-automation E2E 테스트
+**주요 결정**: 콘텐츠 관련 알림은 모두 NewsFairy_bot 유튜브/인스타 그룹채팅(-5274175959)으로 통일
+---
+
 ## [2026-03-16 심야 — Public APIs Batch 2~4 + 식재료봇 버튼 버그 수정]
 **한 일**: 식재료봇 키보드 버튼 버그 수정(다중인스턴스+키워드매칭), Batch2 레시피 수량/날씨 표시, Batch3 NewsAPI it-contents 연동, Batch4 Pexels 썸네일 자동화+Wikipedia→vault 도구
 **진행 중**: 법제처 API 승인 확인, investment vault 보강, expert 법령 연결 점검, Slack AI 에이전트 버그 안정화(플랜바이 마감 03-19)
