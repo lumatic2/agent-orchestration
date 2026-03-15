@@ -14,6 +14,7 @@
 #   bash orchestrate.sh --dry-run codex "task description" task-name
 #   bash orchestrate.sh codex --json '{"goal":"...","scope":"..."}' task-name
 #   bash orchestrate.sh schema [agent] [--json]
+#   bash orchestrate.sh run <blueprint_file> [--var key=value ...]
 #   bash orchestrate.sh --brief "goal" "scope" "constraints"
 #   bash orchestrate.sh --boot           # scan queue on session start
 #   bash orchestrate.sh --status         # show all queue entries
@@ -359,7 +360,43 @@ JSON_EOF
     fi
 
     cat << 'JSON_EOF'
-{"agents":[{"name":"codex","default_model":"gpt-5.3-codex","models":["gpt-5.3-codex","gpt-5.3-codex-spark"]},{"name":"codex-spark","default_model":"gpt-5.3-codex-spark","models":["gpt-5.3-codex-spark"]},{"name":"gemini","default_model":"gemini-2.5-flash","models":["gemini-2.5-flash"]},{"name":"gemini-pro","default_model":"gemini-2.5-pro","models":["gemini-2.5-pro"]}]}
+{
+  "agents": [
+    {"name":"codex","default_model":"gpt-5.3-codex","models":["gpt-5.3-codex","gpt-5.3-codex-spark"],"use_for":"code generation, refactoring, 4+ files or 50+ lines"},
+    {"name":"codex-spark","default_model":"gpt-5.3-codex-spark","models":["gpt-5.3-codex-spark"],"use_for":"quick edits, small patches"},
+    {"name":"gemini","default_model":"gemini-2.5-flash","models":["gemini-2.5-flash"],"use_for":"research, doc analysis, 1500 req/day"},
+    {"name":"gemini-pro","default_model":"gemini-2.5-pro","models":["gemini-2.5-pro"],"use_for":"deep analysis, max 100/day — use sparingly"}
+  ],
+  "dispatch": {
+    "usage": "orchestrate.sh <agent> \"<task>\" <task-name> [--dry-run]",
+    "flags": {
+      "--dry-run": "validate without executing",
+      "--pro": "use gemini-pro instead of flash",
+      "--save": "save result to vault",
+      "--resume": "re-attach to existing task by name"
+    }
+  },
+  "system": {
+    "--boot":     {"description":"scan queue on session start, re-dispatch stale tasks","returns":"pending count"},
+    "--status":   {"description":"show all queue entries","flags":{"--json":"machine-readable JSON output"},"returns":"table or {total,pending,queued,dispatched,completed,tasks[]}"},
+    "--resume":   {"description":"re-dispatch oldest pending/queued task","returns":"dispatch result"},
+    "--complete": {"usage":"--complete <ID> <summary>","description":"manually mark task as completed"},
+    "--cost":     {"description":"today's usage per model + limits","returns":"cost table"},
+    "--clean":    {"usage":"--clean [--dry]","description":"archive completed queue entries"},
+    "--chain":    {"usage":"--chain \"question\" agent1 [agent2...] [task-name]","description":"pipe output of one agent to next"},
+    "run":        {"usage":"run <blueprint_file> [--var key=value ...]","description":"execute YAML blueprint pipeline"}
+  },
+  "queue": {
+    "location": "queue/T###_<name>/",
+    "files": {
+      "meta.json":   "dispatch status, retry count, timestamps",
+      "brief.md":    "task spec (goal, scope, context budget, stop triggers)",
+      "progress.md": "phase checkpoints, notes, resume point",
+      "result.md":   "agent output"
+    },
+    "statuses": ["pending","dispatched","queued","completed"]
+  }
+}
 JSON_EOF
     exit 0
   fi
@@ -378,6 +415,7 @@ Usage:
   orchestrate.sh schema codex
   orchestrate.sh schema gemini
   orchestrate.sh schema --json
+  orchestrate.sh run blueprints/slides.yaml --var topic=커피
 SCHEMA_EOF
     exit 0
   fi
@@ -1198,6 +1236,7 @@ do_chain() {
 # ============================================================
 
 case "${1:-}" in
+  run)        shift; python /c/Users/1/Desktop/agent-orchestration/scripts/run_blueprint.py "$@"; exit $? ;;
   schema)     shift; do_schema "$@" ;;
   --boot)     do_boot ;;
   --status)   shift; do_status "${1:-}" ;;
@@ -1314,7 +1353,8 @@ case "$AGENT" in
   *)
     echo "[ERROR] Unknown agent: $AGENT"
     echo "Available: codex, codex-spark, chatgpt, chatgpt-mini, chatgpt-light, gemini, gemini-pro"
-    echo "Options:   --boot, --status, --resume, --complete <ID> <summary>, schema [agent] [--json]"
+    echo "Options:   run <blueprint_file> [--var key=value ...]"
+    echo "           --boot, --status, --resume, --complete <ID> <summary>, schema [agent] [--json]"
     echo "           --brief <goal> <scope> <constraints>"
     echo "           --dry-run, --json '{\"goal\":\"...\"}'"
     exit 1
