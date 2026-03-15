@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-15 심야6 — 포트폴리오 Business 섹션 개선]
+**한 일**: works.ts에 s3(Startup Financial Intelligence)·s4(GTM Automation Pipeline)·s5(AI Consulting Delivery Framework) 추가/교체; HubSection 생산→운영 rename + 4개 패널 전면 재작성; YouTube 링크 @luma_nico 변경
+**진행 중**: 포트폴리오 dev/video/music 섹션 추가 콘텐츠 보강
+**주요 결정**: Business 도메인 패널 포인트에서 Planby 내부 언어 제거 → 일반화된 포트폴리오 언어로 교체
+---
+
 ## [2026-03-15 심야5 — 예비창업패키지 사업계획서 Copora 최종 보강]
 **한 일**: 1절 권도균 창직 인용+할루시네이션 법정 사례(Mata v. Avianca) 추가, 2-1절 자율 경영 에이전트 포지셔닝+모드1/2 2트랙+보고서/슬라이드 파이프라인+데이터 보안 추가, 2-2절~4-1절 연동 수정, 기계장치(SW) 지급수수료 편입, 표현 전면 정리
 **진행 중**: 사업계획서 양식 docx 타이핑 입력 (03-21~22 주말), K-Startup 제출 (03-24 16:00)
