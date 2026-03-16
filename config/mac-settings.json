@@ -1,0 +1,67 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
+  "model": "sonnet",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,json,datetime; inp=json.loads(os.environ.get('TOOL_INPUT','{}')); cmd=inp.get('command','')[:150].replace('\\n',' '); f=open(os.path.expanduser('~/projects/agent-orchestration/logs/bash_audit.log'),'a'); f.write(f'[{datetime.datetime.now():%Y-%m-%d %H:%M:%S}] {cmd}\\n'); f.close()\" 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/projects/agent-orchestration/scripts/auto-stage.sh \"$TOOL_INPUT\""
+          },
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,json,subprocess; inp=json.loads(os.environ.get('TOOL_INPUT','{}')); fp=inp.get('file_path',''); subprocess.run(['ruff','check','--fix',fp],capture_output=True) if fp.endswith('.py') else None\" 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,json,subprocess; inp=json.loads(os.environ.get('TOOL_INPUT','{}')); fp=inp.get('file_path','').replace('\\\\','/'); targets=['SCHEDULE.md','RECURRING.md','session.md','daily/']; match=any(t in fp for t in targets); repo=os.path.expanduser('~/projects/agent-orchestration'); subprocess.run(['git','-C',repo,'add',fp],capture_output=True) if match else None; subprocess.run(['git','-C',repo,'commit','-m','auto: schedule update'],capture_output=True) if match else None\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import os,json,subprocess; inp=json.loads(os.environ.get('TOOL_INPUT','{}')); fp=inp.get('file_path','').replace('\\\\','/'); repo=os.path.expanduser('~/projects/agent-orchestration'); subprocess.run(['git','-C',repo,'pull','--rebase'],capture_output=True) if 'SCHEDULE.md' in fp else None\" 2>/dev/null || true"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/projects/agent-orchestration/scripts/guard.sh \"$TOOL_INPUT\""
+          }
+        ]
+      },
+      {
+        "matcher": "WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'RULE VIOLATION: WebSearch is blocked. Delegate research to Gemini instead: bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"<query>\" <task-name>' >&2 && exit 2"
+          }
+        ]
+      }
+    ]
+  },
+  "effortLevel": "medium",
+  "skipDangerousModePermissionPrompt": true
+}
