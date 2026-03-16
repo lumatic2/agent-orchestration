@@ -21,14 +21,15 @@ deploy_mac() {
   if [ "$host" = "local" ]; then
     cp "$CONFIG_DIR/mac-settings.json" ~/.claude/settings.json
     cp "$CONFIG_DIR/CLAUDE.md" ~/.claude/CLAUDE.md
-    cp "$REPO_DIR/.git/hooks/pre-commit" ~/.claude/../ 2>/dev/null || true
+    cp "$REPO_DIR/.githooks/pre-commit" "$REPO_DIR/.git/hooks/pre-commit" 2>/dev/null || true
+    chmod +x "$REPO_DIR/.git/hooks/pre-commit" 2>/dev/null || true
     echo "  ✓ $label (local)"
   else
     scp "$CONFIG_DIR/mac-settings.json" "$host:~/.claude/settings.json"
     scp "$CONFIG_DIR/CLAUDE.md" "$host:~/.claude/CLAUDE.md"
     # pre-commit hook
     ssh "$host" "mkdir -p ~/projects/agent-orchestration/.git/hooks"
-    scp "$REPO_DIR/.git/hooks/pre-commit" "$host:~/projects/agent-orchestration/.git/hooks/pre-commit"
+    scp "$REPO_DIR/.githooks/pre-commit" "$host:~/projects/agent-orchestration/.git/hooks/pre-commit"
     ssh "$host" "chmod +x ~/projects/agent-orchestration/.git/hooks/pre-commit"
     echo "  ✓ $label ($host)"
   fi
@@ -37,6 +38,8 @@ deploy_mac() {
 deploy_windows() {
   scp "$CONFIG_DIR/windows-settings.json" 'windows:C:\Users\1\.claude\settings.json'
   scp "$CONFIG_DIR/CLAUDE.md" 'windows:C:\Users\1\.claude\CLAUDE.md'
+  ssh windows "mkdir -p ~/projects/agent-orchestration/.git/hooks" 2>/dev/null || true
+  scp "$REPO_DIR/.githooks/pre-commit" "windows:~/projects/agent-orchestration/.git/hooks/pre-commit" 2>/dev/null || true
   echo "  ✓ Windows"
 }
 

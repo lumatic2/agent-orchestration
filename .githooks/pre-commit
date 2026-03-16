@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# pre-commit hook — scripts/*.sh 에서 env.sh source 누락 검사
+#
+# 우회: GIT_NO_ENV_CHECK=1 git commit ...
+
+[ "${GIT_NO_ENV_CHECK:-0}" = "1" ] && exit 0
+
+MISSING=()
+
+while IFS= read -r file; do
+  [[ "$file" == scripts/*.sh ]] || continue
+  [[ "$file" == "scripts/env.sh" ]] && continue
+  [ -f "$file" ] || continue
+
+  if ! grep -q 'source.*env\.sh' "$file"; then
+    MISSING+=("$file")
+  fi
+done < <(git diff --cached --name-only)
+
+if [ ${#MISSING[@]} -gt 0 ]; then
+  echo ""
+  echo "[pre-commit] env.sh가 누락된 스크립트:"
+  for f in "${MISSING[@]}"; do
+    echo "    $f"
+  done
+  echo ""
+  echo '  source "$SCRIPT_DIR/env.sh" 를 SCRIPT_DIR 직후에 추가하세요.'
+  echo "  플랫폼 분기 불필요 시: GIT_NO_ENV_CHECK=1 git commit ..."
+  echo ""
+  exit 1
+fi
+
+exit 0

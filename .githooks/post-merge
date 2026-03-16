@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# post-merge hook — git pull 후 sync.sh 자동 실행 안내
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../scripts" && pwd)"
+
+echo ""
+echo "[post-merge] 설정 동기화가 필요할 수 있습니다."
+echo "  실행: bash $SCRIPT_DIR/sync.sh"
+echo "  설정 배포: bash $SCRIPT_DIR/deploy-settings.sh local"
+echo ""
