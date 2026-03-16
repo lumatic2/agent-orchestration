@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-16 — slides 파이프라인 점검 + 기기 동기화] (Mac Air)
+**한 일**: slides.sh(Option B) 파이프라인 구조 파악, Windows 03-14 이후 미동기화 발견 → git pull 완료, session-end 기기 레이블 기능 추가
+**진행 중**: 없음
+**주요 결정**: session-end에 hostname 기반 기기 식별 추가 — 이후 세션 기록에 기기명 자동 표시
+---
+
 ## [2026-03-16 심야 — Nick 슬랙봇 PDF 파이프라인 시도 → ec58fdd 롤백]
 **한 일**: /slide·/doc JSON→PDF 파이프라인 전환 시도(6시간), 다중 인스턴스·haiku 모델 404·DM 스레딩 버그 등 복합 장애 수습 실패, ec58fdd hard reset으로 봇 원상복구
 **진행 중**: Nick 봇 PDF 파이프라인 — 내일 ec58fdd 기반에서 처음부터 재작성 (`memory/project_nick_bot_rebuild.md`)

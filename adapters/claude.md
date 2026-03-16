@@ -285,8 +285,9 @@ vault에 쌓인 리서치를 SHARED_MEMORY로 올리는 기준:
 | ingredient-bot (냉장고를 부탁해) | `context/ingredient-bot.md` | 개발 중 — 어머니 가구 연결 대기 |
 | Planby (ICP·온보딩·콘텐츠·재무) | `context/planby.md` | 진행 중 — TIPS 3차 2026-03-31 |
 | Slack ↔ Claude Code 봇 | `context/slack-bot.md` | 설정 중 — COMPANY_NOTION_TOKEN 필요 |
-| 슬라이드 생성 시스템 | `context/slides-system.md` | 실사용 중 — AP-09까지 누적 |
+| 슬라이드 생성 시스템 | `context/slides-system.md` | **Option B 완성** — `bash scripts/slides.sh "주제" 9` |
 | content-automation | MEMORY.md 참조 | launchd 실행 중 (화/목/토 10:00) |
+| law-automation | `context/law-automation.md` | 파이프라인 완성 — M1 배포 + 법제처 API 승인 대기 |
 
 ---
 
@@ -296,7 +297,8 @@ vault에 쌓인 리서치를 SHARED_MEMORY로 올리는 기준:
 - **오케스트레이션 사용법**: `orchestrate.sh schema --json`
 - **기기 SSH·설정**: `context/system-setup.md`
 - **Knowledge Vault**: `luma2@m1:~/vault/` (MCP: `obsidian-vault`)
-- **슬라이드**: `context/slides-system.md` + `slides_config.yaml`
+- **슬라이드**: `bash scripts/slides.sh "주제" [슬라이드수]` → Gemini JSON → inject → PDF. 9타입(title_panel/card_grid/numbered_list/bar_chart/big_statement/comparison_table/timeline/quote_close/before_after). 아이콘 24개 내장.
+- **문서**: `bash scripts/docs.sh "주제" [type]` → PDF. `--word` 추가 시 DOCX도 생성. type: proposal/report/business_plan/summary/meeting. 7섹션 타입(cover/section/bullet_section/table_section/highlight_box/two_col/closing).
 - **Notion 개인**: `PERSONAL_NOTION_TOKEN` / 회사: `COMPANY_NOTION_TOKEN`
 
 ---
@@ -319,6 +321,7 @@ _Tracked here when agents encounter blockers._
 
 ## 시스템 업데이트 로그
 
+- **2026-03-15 (2)**: Knowledge Vault 대규모 업데이트 — 229 노트 / 25MB. 법령 36개 자동 추적(law_registry.yaml), law-check.py + M1 launchd 파이프라인 완성. pdf-to-vault.py LOCAL_VAULT_PATH 추가. 도메인: accounting(~60) / tax(21) / legal(14) / finance(14) / medical(7) / investment(3, 보강 필요)
 - **2026-03-15**: GitHub 트렌드 적용 — nah 보안가드, claude-statusline, brief.md Context Budget/Stop Triggers, progress.md 자동생성, `--status --json`, `schema --json` 확장, SHARED_MEMORY 구조 개선
 - **2026-03-14**: Gemini 리서치 → vault 자동 저장 (--vault 불필요)
 - **2026-03-12**: Google Workspace MCP 4대 배포, GitHub 트렌드 자동 수신 시스템
