@@ -376,14 +376,24 @@ generate_overview() {
 
   {
     cat <<'PROMPT'
-아래는 오늘 수집된 IT 콘텐츠 목록이다. 이 목록을 바탕으로, IT 전문 큐레이터의 시각에서 오늘의 기술 동향을 하나의 짧은 칼럼 형식으로 써줘.
+아래는 오늘 수집된 IT 콘텐츠 목록이다. 주제별로 묶어서 오늘의 기술 동향을 정리해줘.
 
-조건:
-- 번호나 불릿 없이, 자연스럽게 이어지는 문단 형태
-- 총 10문장 내외
-- 오늘 두드러진 테마, AI·자동화 흐름, 주목할 변화를 녹여서
-- 마지막 문장은 오늘 전체를 아우르는 한 줄 결론으로 마무리
-- 딱딱한 보고서 말투 X, 읽히는 글투로
+출력 형식 (반드시 이 형식 그대로):
+
+## 🤖 AI/LLM
+2-3문장 요약
+
+## 🛠 개발/툴
+2-3문장 요약
+
+## 🏢 업계 동향
+2-3문장 요약
+
+규칙:
+- 해당 주제의 콘텐츠가 없으면 그 섹션은 생략
+- 섹션은 최소 2개, 최대 4개 (위 3개 외에 필요하면 🌐 플랫폼/서비스 추가 가능)
+- 각 섹션은 2-3문장, 읽히는 글투로
+- 딱딱한 보고서 말투 X
 
 목록:
 PROMPT
@@ -409,31 +419,44 @@ PROMPT
     echo "[WARN] Gemini 종합 분석 호출 종료 지연. 생성된 로그 사용: $overview_log" >&2
   fi
 
-  # 로그에서 실제 본문만 추출 (마크다운 헤더·빈줄 제거, 앞뒤 정리)
+  # 로그에서 ## 섹션 구조를 Telegram HTML로 변환
   python3 - "$overview_log" "$OVERVIEW_FILE" <<'PYEOF'
 import sys, re
 
 log_path, out_path = sys.argv[1], sys.argv[2]
 
-lines = []
+sections = []
+current_header = None
+current_body = []
+
 with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
     for raw in f:
         line = raw.rstrip()
-        # 마크다운 헤더, 수평선, 코드블록 펜스 제거
-        if re.match(r'^\s*(#{1,6}\s|---|===|```)', line):
+        if re.match(r'^\s*#{1,6}\s+', line):
+            if current_header is not None:
+                body = ' '.join(current_body).strip()
+                if body:
+                    sections.append((current_header, body))
+            current_header = re.sub(r'^\s*#{1,6}\s+', '', line).strip()
+            current_body = []
+        elif re.match(r'^\s*(---|===|```)', line):
             continue
-        # 번호/불릿으로 시작하는 줄은 불릿 제거 후 문장으로 편입
-        line = re.sub(r'^\s*(?:\d+[.)]\s*|[•\-\*]\s*)', '', line).strip()
-        if len(line) > 15:
-            lines.append(line)
+        else:
+            line = re.sub(r'^\s*(?:\d+[.)]\s*|[•\-\*]\s*)', '', line).strip()
+            if len(line) > 10:
+                current_body.append(line)
 
-# 앞뒤 빈 덩어리 제거 후 하나의 문단으로 합치기
-text = ' '.join(lines).strip()
-# 과도한 공백 정리
-text = re.sub(r'\s{2,}', ' ', text)
+if current_header is not None:
+    body = ' '.join(current_body).strip()
+    if body:
+        sections.append((current_header, body))
+
+out_parts = []
+for header, body in sections:
+    out_parts.append(f"<b>{header}</b>\n{body}")
 
 with open(out_path, "w", encoding="utf-8") as f:
-    f.write(text + "\n")
+    f.write("\n\n".join(out_parts) + "\n")
 PYEOF
 }
 
@@ -627,7 +650,7 @@ fi
 
 TELEGRAM_PREVIEW="$TMP_DIR/telegram_preview.txt"
 if [[ "$IMMEDIATE_COUNT" -gt 0 ]]; then
-  head -n 5 "$IMMEDIATE_ITEMS" | while IFS=$'\t' read -r source title summary url; do
+  head -n 3 "$IMMEDIATE_ITEMS" | while IFS=$'\t' read -r source title summary url; do
     [[ -z "${source:-}" ]] && continue
     if [[ -n "${url:-}" ]]; then
       echo "• <b>$source</b> | <a href=\"$url\">$title</a>"
@@ -653,7 +676,7 @@ TELEGRAM_MESSAGE="[IT 콘텐츠] $RUN_DATE
 
 <b>📊 오늘의 동향</b>
 ${OVERVIEW_TEXT}
-<b>📌 즉시읽기 TOP 5</b>
+<b>📌 즉시읽기 TOP 3</b>
 $(cat "$TELEGRAM_PREVIEW")
 💬 AI 분석: 이 봇에 <code>/it-contents</code> 전송"
 
