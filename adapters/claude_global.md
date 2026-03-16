@@ -1,4 +1,6 @@
 # Claude Code — Global Instructions
+<!-- ⚠️ 원본 파일: adapters/claude_global.md (agent-orchestration 레포)
+     ~/CLAUDE.md 는 sync.sh가 여기서 복사한 배포본 — 직접 편집 금지 -->
 
 ## 기본 규칙
 

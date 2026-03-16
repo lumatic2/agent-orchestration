@@ -122,8 +122,8 @@ deploy_claude() {
   cp "$REPO_DIR/adapters/claude.md" "$target_dir/orchestrator_rules.md"
   echo "[OK] Claude adapter → $target_dir/orchestrator_rules.md"
 
-  # Deploy global CLAUDE.md (adapters/claude_global.md가 정본)
-  sed "s|~/projects/agent-orchestration|$REPO_DIR|g" "$REPO_DIR/adapters/claude_global.md" > "$BASE_DIR/CLAUDE.md"
+  # Deploy global CLAUDE.md — 경로 치환 없이 단순 복사 (~/는 모든 플랫폼에서 동작)
+  cp "$REPO_DIR/adapters/claude_global.md" "$BASE_DIR/CLAUDE.md"
   echo "[OK] Global CLAUDE.md → $BASE_DIR/CLAUDE.md"
 
   # Deploy settings.json
