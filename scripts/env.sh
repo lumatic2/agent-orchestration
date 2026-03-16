@@ -32,6 +32,11 @@ if [[ "$PLATFORM" == "windows" ]]; then
   export NODE_PATH="${_WIN_NPM}:${_FALLBACK}:${_PLAYWRIGHT_PATHS}"
 else
   export NODE_PATH="$(node -e 'console.log(require.resolve.paths("playwright").join(":"))' 2>/dev/null || true)"
+  # nvm bin이 PATH에 없으면 추가 (SSH 세션에서 .zshrc 미로드 시 대비)
+  if [[ -d "$HOME/.nvm" ]]; then
+    NVM_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
+    [[ -n "$NVM_BIN" && ":$PATH:" != *":$NVM_BIN:"* ]] && export PATH="$NVM_BIN:$PATH"
+  fi
 fi
 
 # ── mktemp 헬퍼 ──────────────────────────────────────────────
