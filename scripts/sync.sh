@@ -201,6 +201,18 @@ deploy_gemini() {
   echo "[OK] Gemini adapter → $target_dir/GEMINI.md"
 }
 
+deploy_codex_brain() {
+  # Codex Brain mode — Claude 한도 초과 시 오케스트레이터 역할
+  local target_dir="$BASE_DIR/.codex"
+  mkdir -p "$target_dir"
+
+  # Build codex_brain with injected SHARED_MEMORY
+  cp "$REPO_DIR/adapters/codex_brain.md" "$REPO_DIR/adapters/codex_brain.md.build"
+  inject_shared "$REPO_DIR/adapters/codex_brain.md.build"
+  mv "$REPO_DIR/adapters/codex_brain.md.build" "$target_dir/CODEX_BRAIN.md"
+  echo "[OK] Codex Brain → $target_dir/CODEX_BRAIN.md"
+}
+
 setup_mcp() {
   if [ -n "${GEMINI_API_KEY:-}" ]; then
     bash "$REPO_DIR/configs/mcp_setup.sh"
@@ -282,6 +294,9 @@ main() {
     deploy_gemini
     cp "$gemini_orig.bak" "$REPO_DIR/adapters/gemini.md" 2>/dev/null || true
   fi
+
+  # Codex Brain (항상 배포)
+  deploy_codex_brain
 
   # Cleanup
   rm -f "$REPO_DIR/adapters/"*.deploy "$REPO_DIR/adapters/"*.bak

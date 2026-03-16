@@ -1031,3 +1031,6 @@
 {"ts":"2026-03-16T10:49:19+0900","id":"T007","event":"created","detail":"agent=codex"}
 {"ts":"2026-03-16T10:49:19+0900","id":"T007","event":"dispatched","detail":""}
 {"ts":"2026-03-16T10:51:22+0900","id":"T007","event":"completed","detail":""}
+{"ts":"2026-03-16T11:03:09+0900","id":"T008","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-16T11:03:09+0900","id":"T008","event":"dispatched","detail":""}
+{"ts":"2026-03-16T11:04:48+0900","id":"T008","event":"completed","detail":""}
