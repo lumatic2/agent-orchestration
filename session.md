@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-16 저녁 — 크로스 플랫폼 동기화 시스템 정비] (Mac Air)
+**한 일**: env.sh 모듈 신설 및 scripts/*.sh 전체 적용, Python 3.9 호환 자동화(ruff FA), 4기기 settings.json 표준화, ~/.claude/CLAUDE.md 글로벌 규칙 신설, sync.sh 충돌 해소, system-setup.md 현행화
+**진행 중**: Slack AI 에이전트 버그 안정화 (03-19 마감), content-automation E2E 테스트
+**주요 결정**: env.sh = 크로스 플랫폼 단일 진실 소스. ~/CLAUDE.md(오케스트레이션)와 ~/.claude/CLAUDE.md(글로벌 규칙) 두 파일 역할 분리 확정
+---
+
 ## [2026-03-16 — slides 파이프라인 점검 + 기기 동기화] (Mac Air)
 **한 일**: slides.sh(Option B) 파이프라인 구조 파악, Windows 03-14 이후 미동기화 발견 → git pull 완료, session-end 기기 레이블 기능 추가
 **진행 중**: 없음
