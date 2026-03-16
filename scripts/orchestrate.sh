@@ -773,7 +773,7 @@ do_boot() {
         "$HOME/projects/agent-orchestration"
         "$HOME/Desktop/content-automation"
       ) ;;
-    *air*|MacBook*)                 # MacBook Air
+    *[Aa]ir*|*MacBook*)             # MacBook Air
       PULL_REPOS=(
         "$HOME/vault"
         "$HOME/projects/agent-orchestration"

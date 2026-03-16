@@ -167,6 +167,14 @@ deploy_claude() {
     echo "[OK] Skills ($(ls "$skills_src"/*.md | wc -l | tr -d ' ')개) → $target_dir/commands/"
   fi
 
+  # Patch settings.json common hooks (pre-pull scope, push failure detection)
+  local settings_file="$target_dir/settings.json"
+  if [ -f "$settings_file" ] && command -v python3 &>/dev/null; then
+    python3 "$REPO_DIR/scripts/patch_hooks.py" "$settings_file" 2>/dev/null \
+      && echo "[OK] settings.json hooks 최신화" \
+      || echo "[WARN] settings.json hooks 패치 실패"
+  fi
+
   # Deploy connection layer scripts (save_to_notion.sh, memory_update.sh, chain.sh)
   for script in save_to_notion.sh memory_update.sh chain.sh knowledge_update.sh feedback.sh; do
     if [ -f "$REPO_DIR/scripts/$script" ]; then
