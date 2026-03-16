@@ -16,6 +16,8 @@ PDF 처리 전략:
   - Vision API 사용 시 GEMINI_API_KEY 또는 ANTHROPIC_API_KEY 환경변수 필요
 """
 
+from __future__ import annotations
+
 import sys
 import os
 import json
