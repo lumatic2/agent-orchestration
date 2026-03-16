@@ -122,33 +122,21 @@ deploy_claude() {
   cp "$REPO_DIR/adapters/claude.md" "$target_dir/orchestrator_rules.md"
   echo "[OK] Claude adapter → $target_dir/orchestrator_rules.md"
 
-  # Deploy global CLAUDE.md to home directory (auto-loaded every session)
-  # Replace generic ~/projects/agent-orchestration path with OS-specific actual path
+  # Deploy global CLAUDE.md (adapters/claude_global.md가 정본)
   sed "s|~/projects/agent-orchestration|$REPO_DIR|g" "$REPO_DIR/adapters/claude_global.md" > "$BASE_DIR/CLAUDE.md"
   echo "[OK] Global CLAUDE.md → $BASE_DIR/CLAUDE.md"
 
-  # Deploy guard.sh hook config
+  # Deploy settings.json (settings 없을 때만 — 기존 설정 덮어쓰지 않음)
   local settings_file="$target_dir/settings.json"
-  local guard_path="$REPO_DIR/scripts/guard.sh"
-
   local template_file="$REPO_DIR/configs/settings_template.json"
-  local needs_deploy=false
 
   if [ ! -f "$settings_file" ]; then
-    needs_deploy=true
-    echo "[INFO] settings.json not found — deploying from template"
-  elif ! grep -q '"WebSearch"' "$settings_file"; then
-    needs_deploy=true
-    echo "[WARN] settings.json missing WebSearch hook — redeploying from template"
-  elif ! grep -q '"mcpServers"' "$settings_file"; then
-    needs_deploy=true
-    echo "[INFO] settings.json missing MCP servers — redeploying from template"
-  fi
-
-  if [ "$needs_deploy" = true ]; then
-    # Replace /PATH/TO/agent-orchestration with actual repo path
-    sed "s|/PATH/TO/agent-orchestration|$REPO_DIR|g" "$template_file" > "$settings_file"
+    cp "$template_file" "$settings_file"
     echo "[OK] Claude settings.json deployed from template → $settings_file"
+    echo "[INFO] 전체 배포가 필요하면: bash $REPO_DIR/scripts/deploy-settings.sh"
+  elif ! grep -q '"WebSearch"' "$settings_file"; then
+    cp "$template_file" "$settings_file"
+    echo "[WARN] settings.json missing WebSearch hook — redeployed from template"
   else
     echo "[OK] Claude settings.json up to date"
   fi
