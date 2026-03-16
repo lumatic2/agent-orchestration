@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-16 밤 — SCHEDULE 업데이트] (Mac Air)
+**한 일**: SCHEDULE.md #학습 섹션에 "석/박사 알아보고 일정 만들어보기" 항목 추가
+**진행 중**: 석/박사 알아보고 일정 만들어보기
+**주요 결정**: 없음
+---
+
 ## [2026-03-16 저녁 — 크로스 플랫폼 동기화 시스템 정비] (Mac Air)
 **한 일**: env.sh 모듈 신설 및 scripts/*.sh 전체 적용, Python 3.9 호환 자동화(ruff FA), 4기기 settings.json 표준화, ~/.claude/CLAUDE.md 글로벌 규칙 신설, sync.sh 충돌 해소, system-setup.md 현행화
 **진행 중**: Slack AI 에이전트 버그 안정화 (03-19 마감), content-automation E2E 테스트
