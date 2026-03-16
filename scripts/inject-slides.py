@@ -10,6 +10,8 @@ inject-slides.py — JSON 슬라이드 데이터 → 완성 HTML 조립
   --out 지정 시 파일 저장, 없으면 stdout
 """
 
+from __future__ import annotations
+
 import argparse
 import copy
 import json

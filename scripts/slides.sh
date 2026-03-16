@@ -41,7 +41,12 @@ RENDER="$SCRIPT_DIR/render-slides.sh"
 SLUG="$(slugify "$TOPIC")"
 [ -n "$SLUG" ] || SLUG="slides"
 # Windows에서 /tmp는 Node.js가 접근 못함 → AppData/Local/Temp 사용
-WIN_TEMP="${HOME}/AppData/Local/Temp"
+if [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* || -d "${HOME}/AppData" ]]; then
+  WIN_TEMP="${HOME}/AppData/Local/Temp"
+  mkdir -p "$WIN_TEMP"
+else
+  WIN_TEMP="/tmp"
+fi
 SLIDES_JSON="${WIN_TEMP}/${SLUG}.json"
 OUT_HTML="${WIN_TEMP}/${SLUG}.html"
 
@@ -84,7 +89,7 @@ if [ "$dry_run" = true ]; then
   exit 0
 fi
 
-RAW_OUTPUT_FILE="$(mktemp "/tmp/slides-gemini-${SLUG}-XXXXXX.txt")"
+RAW_OUTPUT_FILE="$(mktemp "/tmp/slides-gemini-XXXXXX.txt")"
 TASK_NAME="slides-json-${SLUG}"
 
 echo "[1/4] Gemini JSON 생성 중..." >&2
