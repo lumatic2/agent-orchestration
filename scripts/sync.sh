@@ -159,6 +159,14 @@ deploy_claude() {
     echo "[OK] session-logger.sh → $claude_dir/session-logger.sh"
   fi
 
+  # Deploy skills to ~/.claude/commands/
+  local skills_src="$REPO_DIR/skills"
+  if [ -d "$skills_src" ]; then
+    mkdir -p "$target_dir/commands"
+    cp "$skills_src"/*.md "$target_dir/commands/"
+    echo "[OK] Skills ($(ls "$skills_src"/*.md | wc -l | tr -d ' ')개) → $target_dir/commands/"
+  fi
+
   # Deploy connection layer scripts (save_to_notion.sh, memory_update.sh, chain.sh)
   for script in save_to_notion.sh memory_update.sh chain.sh knowledge_update.sh feedback.sh; do
     if [ -f "$REPO_DIR/scripts/$script" ]; then
