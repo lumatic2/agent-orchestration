@@ -3,8 +3,8 @@ set -euo pipefail
 
 NOTION_DB_ID="31b85046ff558181b24cd5b94f371c75"
 NOTION_DB_PY="$HOME/notion_db.py"
-LOG_DIR="$HOME/Desktop/agent-orchestration/logs"
-DATA_DIR="$HOME/Desktop/agent-orchestration/data"
+LOG_DIR="$HOME/projects/agent-orchestration/logs"
+DATA_DIR="$HOME/projects/agent-orchestration/data"
 HISTORY_FILE="$DATA_DIR/planby-title-history.txt"
 TODAY=$(date +%Y-%m-%d)
 

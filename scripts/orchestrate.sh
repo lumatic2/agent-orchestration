@@ -787,7 +787,6 @@ do_boot() {
     *)                              # fallback
       PULL_REPOS=(
         "$HOME/vault"
-        "$HOME/Desktop/agent-orchestration"
         "$HOME/projects/agent-orchestration"
         "$HOME/Desktop/content-automation"
       ) ;;
@@ -1279,7 +1278,7 @@ do_chain() {
 # ============================================================
 
 case "${1:-}" in
-  run)        shift; python /c/Users/1/Desktop/agent-orchestration/scripts/run_blueprint.py "$@"; exit $? ;;
+  run)        shift; python "$SCRIPT_DIR/run_blueprint.py" "$@"; exit $? ;;
   schema)     shift; do_schema "$@" ;;
   --boot)     do_boot ;;
   --status)   shift; do_status "${1:-}" ;;

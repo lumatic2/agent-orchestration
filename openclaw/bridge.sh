@@ -5,7 +5,7 @@ AGENT_TYPE="${1:-codex}"   # codex | gemini | codex-spark | gemini-pro
 TASK="${2}"
 TASK_NAME="${3:-openclaw-$(date +%s)}"
 
-ORCH="$HOME/Desktop/agent-orchestration/scripts/orchestrate.sh"
+ORCH="$HOME/projects/agent-orchestration/scripts/orchestrate.sh"
 
 if [ ! -f "$ORCH" ]; then
   echo "ERROR: orchestrate.sh not found at $ORCH" >&2

@@ -11,8 +11,8 @@ app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DASHBOARD_HTML = os.path.join(BASE_DIR, 'dashboard.html')
-SCHEDULE_PATH = os.path.expanduser('~/Desktop/agent-orchestration/SCHEDULE.md')
-SOMEDAY_PATH = os.path.expanduser('~/Desktop/agent-orchestration/SOMEDAY.md')
+SCHEDULE_PATH = os.path.expanduser('~/projects/agent-orchestration/SCHEDULE.md')
+SOMEDAY_PATH = os.path.expanduser('~/projects/agent-orchestration/SOMEDAY.md')
 SSH_HOSTS = ['windows', 'macair', 'm1', 'm4']
 TASK_RE = re.compile(r'^- \[([ x/])\]\s*\[([^\]]*)\]\s*(.*?)\s*(#[^\s#`]+)?\s*$')
 DATE_TAG_RE = re.compile(r'`(\d{2}-\d{2}(?:\([^)]+\))?)`')

@@ -18,7 +18,7 @@ HTML_FILE="${1:?Usage: render-slides.sh <input.html> [output-name]}"
 OUTPUT_NAME="${2:-slides}"
 
 # config에서 설정값 읽기 (없으면 기본값)
-CONFIG="$HOME/Desktop/agent-orchestration/slides_config.yaml"
+CONFIG="$HOME/projects/agent-orchestration/slides_config.yaml"
 if command -v python3 &>/dev/null && [ -f "$CONFIG" ]; then
   OUTPUT_DIR=$(python3 -c "
 import re, sys
