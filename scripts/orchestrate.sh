@@ -763,20 +763,20 @@ do_boot() {
   case "$(hostname)" in
     DESKTOP*|PC*|*windows*|LUMA*)   # Windows
       PULL_REPOS=(
-        "$HOME/Desktop/agent-orchestration"
+        "$HOME/projects/agent-orchestration"
         "$HOME/Desktop/content-automation"
         "$HOME/Desktop/portfolio"
       ) ;;
     *luma3*|*Macmini*luma3*|*m4*)   # M4 (회사)
       PULL_REPOS=(
         "$HOME/vault"
-        "$HOME/Desktop/agent-orchestration"
+        "$HOME/projects/agent-orchestration"
         "$HOME/Desktop/content-automation"
       ) ;;
     *air*|MacBook*)                 # MacBook Air
       PULL_REPOS=(
         "$HOME/vault"
-        "$HOME/Desktop/agent-orchestration"
+        "$HOME/projects/agent-orchestration"
       ) ;;
     *luma2*|*luma2s*)               # M1 (~/projects/)
       PULL_REPOS=(
@@ -815,6 +815,12 @@ do_boot() {
       echo "[OK] $(basename "$repo") 최신"
     fi
   done
+
+  # Skills 자동 배포 (git pull 후 repo/skills/ → ~/.claude/commands/)
+  local skills_src="$SCRIPT_DIR/../skills"
+  if [ -d "$skills_src" ]; then
+    cp "$skills_src"/*.md "$HOME/.claude/commands/" 2>/dev/null || true
+  fi
 
   # Knowledge file refresh (최근 1일 이내 갱신된 경우 스킵)
   REFRESH_SCRIPT="$SCRIPT_DIR/refresh_knowledge.sh"
