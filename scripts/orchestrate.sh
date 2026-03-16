@@ -639,7 +639,9 @@ run_gemini() {
   gemini \
     --yolo \
     -m "$model" \
-    -p "$TASK" > "$log_file" 2>&1 || true
+    -p "$TASK" 2>&1 \
+    | grep -Ev "YOLO mode is enabled|All tool calls will be automatically approved|Loaded cached credentials|\[WARN\]|EPERM|EACCES|operation not permitted|Error getting folder structure" \
+    > "$log_file" || true
 
   local result
   result=$(cat "$log_file")
