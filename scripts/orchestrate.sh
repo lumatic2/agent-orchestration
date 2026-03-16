@@ -785,6 +785,7 @@ do_boot() {
   case "$(hostname)" in
     DESKTOP*|PC*|*windows*|LUMA*)   # Windows
       PULL_REPOS=(
+        "/c/Users/1/vault"           # pull-only (M1이 원본, 로컬 쓰기 금지)
         "$HOME/projects/agent-orchestration"
         "$HOME/Desktop/content-automation"
         "$HOME/Desktop/portfolio"

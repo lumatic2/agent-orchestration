@@ -83,4 +83,28 @@
    - 레포별로 변경 내용이 다르면 커밋 메시지를 각각 맞게 조정해라.
    - 변경사항 없는 레포는 건너뛰어라.
 
-7. 완료 메시지 출력: "세션 마무리 완료. 다음 세션 시작 시 session.md를 먼저 읽어라."
+7. **Vault 40-log 기록 (SSH → M1)**
+   - Vault 원본은 M1에만 있다. SSH로 M1에 접속해 `~/vault/40-log/YYYY-MM-DD.md`에 기록하고 push해라.
+   - 아래 스크립트를 실행해라. `TODAY`, `DEVICE`, `SUMMARY`, `NEXT`를 실제 값으로 채워 넣어라:
+     ```bash
+     TODAY=$(date +%Y-%m-%d)
+     DEVICE="[기기 레이블]"   # Windows / Mac mini M4 / MacBook Air
+     SUMMARY="[이번 세션 핵심 3줄 이내]"
+     NEXT="[다음 세션에 이어할 것]"
+
+     ssh m1 bash -s << ENDSSH
+       FILE="\$HOME/vault/40-log/${TODAY}.md"
+       if [ ! -f "\$FILE" ]; then
+         printf -- "---\ntype: log\ndate: ${TODAY}\nstatus: active\n---\n" > "\$FILE"
+       fi
+       printf "\n## ${TODAY} (${DEVICE})\n- ${SUMMARY}\n\n**다음**: ${NEXT}\n" >> "\$FILE"
+       cd "\$HOME/vault"
+       git add "40-log/${TODAY}.md"
+       git commit -m "log: ${TODAY} ${DEVICE} session"
+       git push
+     ENDSSH
+     ```
+   - SSH 실패 시 "Vault 로그 실패 (M1 오프라인?)"을 출력하고 다음 단계로 넘어가라.
+   - **주의**: M1 vault만 쓰기. 로컬 vault 폴더(Windows/M4/MacAir)는 절대 수정하지 마라.
+
+8. 완료 메시지 출력: "세션 마무리 완료. 다음 세션 시작 시 session.md를 먼저 읽어라."
