@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-17] (Windows)
+**한 일**: session-end vault 연동(SSH→M1) + heredoc 버그 수정, boot Windows vault pull 추가, sync.sh 경로 치환 제거(~/통일), 시스템 파일 역할 치트시트 vault 저장
+**진행 중**: Slack AI 에이전트 버그 안정화 (03-19 마감)
+**주요 결정**: vault 원본 M1 단독, 다른 기기 pull-only / CLAUDE.md 직접 편집 금지(adapter가 원본)
+---
+
 ## [2026-03-16 — it-contents / events-tracker 개선] (Mac Air)
 **한 일**: 텔레그램 동향 섹션 카테고리화, TOP5→TOP3, Gemini 노이즈 필터, M1 SSH PATH 버그 수정, events-tracker cwd=/tmp 교체, 실 발송 테스트 완료
 **진행 중**: 없음
