@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-16 — it-contents / events-tracker 개선] (Mac Air)
+**한 일**: 텔레그램 동향 섹션 카테고리화, TOP5→TOP3, Gemini 노이즈 필터, M1 SSH PATH 버그 수정, events-tracker cwd=/tmp 교체, 실 발송 테스트 완료
+**진행 중**: 없음
+**주요 결정**: events-tracker Gemini 호출은 cwd=/tmp Python subprocess로 통일 (디렉토리 스캔 hang 방지)
+---
+
 ## [2026-03-16 밤 — SCHEDULE 업데이트] (Mac Air)
 **한 일**: SCHEDULE.md #학습 섹션에 "석/박사 알아보고 일정 만들어보기" 항목 추가
 **진행 중**: 석/박사 알아보고 일정 만들어보기
