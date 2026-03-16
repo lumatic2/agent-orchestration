@@ -6,6 +6,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/env.sh"
+
 HTML_FILE="${1:?Usage: render-docs.sh <input.html> [output-name]}"
 OUTPUT_NAME="${2:-docs}"
 
@@ -41,7 +44,7 @@ if [[ "$OUTPUT_DIR" =~ ^/([a-zA-Z])/ ]]; then
 fi
 PDF_PATH="$OUTPUT_DIR/$OUTPUT_NAME.pdf"
 
-TMP_JS=$(mktemp /tmp/render-docs-XXXXXX.js)
+TMP_JS=$(safe_mktemp render-docs .js)
 ABS_HTML=$(cd "$(dirname "$HTML_FILE")" && pwd)/$(basename "$HTML_FILE")
 if [[ "$ABS_HTML" =~ ^/([a-zA-Z])/ ]]; then
   ABS_HTML="${BASH_REMATCH[1]^^}:/${ABS_HTML:3}"
@@ -72,7 +75,7 @@ JSEOF
 
 echo "렌더 중: $HTML_FILE → $PDF_PATH"
 
-export NODE_PATH="/c/Users/1/AppData/Roaming/npm/node_modules:$HOME/Desktop/node_modules:$(node -e 'console.log(require.resolve.paths(\"playwright\").join(\":\"))' 2>/dev/null || true)"
+# NODE_PATH는 env.sh에서 플랫폼별로 설정됨
 cd "$HOME/Desktop" 2>/dev/null || true
 node "$TMP_JS"
 

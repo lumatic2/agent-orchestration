@@ -69,6 +69,7 @@ EOF
 }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/env.sh"
 ORCH="$SCRIPT_DIR/orchestrate.sh"
 INJECT="$SCRIPT_DIR/inject-docs.py"
 RENDER="$SCRIPT_DIR/render-docs.sh"
@@ -76,9 +77,8 @@ RENDER="$SCRIPT_DIR/render-docs.sh"
 SLUG="$(slugify "$TOPIC")"
 [ -n "$SLUG" ] || SLUG="docs"
 
-WIN_TEMP="${HOME}/AppData/Local/Temp"
-DOCS_JSON="${WIN_TEMP}/${SLUG}-${DOC_TYPE}.json"
-OUT_HTML="${WIN_TEMP}/${SLUG}-${DOC_TYPE}.html"
+DOCS_JSON="${SYS_TMP}/${SLUG}-${DOC_TYPE}.json"
+OUT_HTML="${SYS_TMP}/${SLUG}-${DOC_TYPE}.html"
 
 TYPE_GUIDE="$(type_guide "$DOC_TYPE")"
 
@@ -121,7 +121,7 @@ if [ "$dry_run" = true ]; then
   exit 0
 fi
 
-RAW_OUTPUT_FILE="$(mktemp "/tmp/docs-gemini-${SLUG}-${DOC_TYPE}-XXXXXX.txt")"
+RAW_OUTPUT_FILE="$(safe_mktemp docs-gemini)"
 TASK_NAME="docs-json-${SLUG}-${DOC_TYPE}"
 
 echo "[1/4] Gemini JSON 생성 중..." >&2

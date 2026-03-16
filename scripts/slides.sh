@@ -34,21 +34,15 @@ slugify() {
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
+source "$SCRIPT_DIR/env.sh"
 ORCH="$SCRIPT_DIR/orchestrate.sh"
 INJECT="$SCRIPT_DIR/inject-slides.py"
 RENDER="$SCRIPT_DIR/render-slides.sh"
 
 SLUG="$(slugify "$TOPIC")"
 [ -n "$SLUG" ] || SLUG="slides"
-# Windows에서 /tmp는 Node.js가 접근 못함 → AppData/Local/Temp 사용
-if [[ "$OSTYPE" == "msys"* || "$OSTYPE" == "cygwin"* || -d "${HOME}/AppData" ]]; then
-  WIN_TEMP="${HOME}/AppData/Local/Temp"
-  mkdir -p "$WIN_TEMP"
-else
-  WIN_TEMP="/tmp"
-fi
-SLIDES_JSON="${WIN_TEMP}/${SLUG}.json"
-OUT_HTML="${WIN_TEMP}/${SLUG}.html"
+SLIDES_JSON="${SYS_TMP}/${SLUG}.json"
+OUT_HTML="${SYS_TMP}/${SLUG}.html"
 
 PROMPT=$(cat <<EOF
 주제: ${TOPIC}
@@ -89,7 +83,7 @@ if [ "$dry_run" = true ]; then
   exit 0
 fi
 
-RAW_OUTPUT_FILE="$(mktemp "/tmp/slides-gemini-XXXXXX.txt")"
+RAW_OUTPUT_FILE="$(safe_mktemp slides-gemini)"
 TASK_NAME="slides-json-${SLUG}"
 
 echo "[1/4] Gemini JSON 생성 중..." >&2

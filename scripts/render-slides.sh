@@ -10,6 +10,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/env.sh"
+
 # ── 인자 처리 ───────────────────────────────────────────────────────
 HTML_FILE="${1:?Usage: render-slides.sh <input.html> [output-name]}"
 OUTPUT_NAME="${2:-slides}"
@@ -56,7 +59,7 @@ fi
 PDF_PATH="$OUTPUT_DIR/$OUTPUT_NAME.pdf"
 
 # ── 임시 JS 렌더 스크립트 생성 ──────────────────────────────────────
-TMP_JS=$(mktemp /tmp/render-XXXXXX.js)
+TMP_JS=$(safe_mktemp render .js)
 ABS_HTML=$(cd "$(dirname "$HTML_FILE")" && pwd)/$(basename "$HTML_FILE")
 # Windows 경로 변환 (Git Bash: /c/Users/... → C:/Users/...)
 if [[ "$ABS_HTML" =~ ^/([a-zA-Z])/ ]]; then
@@ -113,7 +116,7 @@ fi
 echo "렌더 중: $HTML_FILE → $PDF_PATH"
 
 # playwright 모듈 위치 찾기 (~/Desktop/node_modules 우선)
-export NODE_PATH="/c/Users/1/AppData/Roaming/npm/node_modules:$HOME/Desktop/node_modules:$(node -e 'console.log(require.resolve.paths("playwright").join(":"))'  2>/dev/null || true)"
+# NODE_PATH는 env.sh에서 플랫폼별로 설정됨
 cd "$HOME/Desktop" 2>/dev/null || true
 node "$TMP_JS"
 
