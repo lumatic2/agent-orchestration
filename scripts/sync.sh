@@ -126,19 +126,20 @@ deploy_claude() {
   sed "s|~/projects/agent-orchestration|$REPO_DIR|g" "$REPO_DIR/adapters/claude_global.md" > "$BASE_DIR/CLAUDE.md"
   echo "[OK] Global CLAUDE.md → $BASE_DIR/CLAUDE.md"
 
-  # Deploy settings.json (settings 없을 때만 — 기존 설정 덮어쓰지 않음)
+  # Deploy settings.json
+  # - 없을 때: settings_common.json (크로스플랫폼) 으로 초기화
+  # - 있을 때: patch_hooks.py로 공통 훅만 최신화 (기기별 설정 보존)
+  # - NEVER overwrite via SCP (nah_guard 등 기기 전용 항목 손실 위험)
   local settings_file="$target_dir/settings.json"
-  local template_file="$REPO_DIR/configs/settings_template.json"
+  local common_file="$REPO_DIR/configs/settings_common.json"
 
   if [ ! -f "$settings_file" ]; then
-    cp "$template_file" "$settings_file"
-    echo "[OK] Claude settings.json deployed from template → $settings_file"
-    echo "[INFO] 전체 배포가 필요하면: bash $REPO_DIR/scripts/deploy-settings.sh"
-  elif ! grep -q '"WebSearch"' "$settings_file"; then
-    cp "$template_file" "$settings_file"
-    echo "[WARN] settings.json missing WebSearch hook — redeployed from template"
+    cp "$common_file" "$settings_file"
+    echo "[OK] Claude settings.json 초기화 (settings_common.json 기반) → $settings_file"
   else
-    echo "[OK] Claude settings.json up to date"
+    python3 "$REPO_DIR/scripts/patch_hooks.py" "$settings_file" 2>/dev/null \
+      && echo "[OK] settings.json 공통 훅 최신화 (기기별 설정 보존)" \
+      || echo "[WARN] settings.json patch 실패"
   fi
 
   # Deploy notion_db.py to home directory
