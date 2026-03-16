@@ -259,11 +259,14 @@ Queue entries persist across sessions in `~/projects/agent-orchestration/queue/`
 
 - **Location**: `luma2@m1:~/vault/` (MCP: `obsidian-vault`)
 - **Entry point**: `00-System/VAULT_INDEX.md` — 에이전트가 vault 작업 전 반드시 읽을 것
+- **쓰기 권한**: **M1 단독** — 다른 기기(Windows/M4/MacAir)의 로컬 vault 폴더는 pull-only
+  - M1이 아닌 기기에서 vault에 쓸 때: 반드시 **SSH → M1** 경유 또는 **MCP `obsidian-vault`** 사용
+  - 로컬 vault 파일 직접 수정 금지 (혼돈 방지)
 - **Write rules**:
   - 리서치 결과 → `10-knowledge/{domain}/`
   - 전문가 AI 업데이트 → `20-experts/{name}.md`
   - 프로젝트 노트 → `30-projects/{project}/`
   - 미분류/급할 때 → `00-inbox/`
-  - 날짜 로그 → `40-log/YYYY-MM-DD.md`
+  - 날짜 로그 → `40-log/YYYY-MM-DD.md` (session-end 자동 기록)
 - **Frontmatter 필수**: type, domain, source, date, status
 - Gemini 리서치 완료 후 → vault에 저장 (SHARED_MEMORY.md 덮어쓰기 금지)
