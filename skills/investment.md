@@ -1,5 +1,10 @@
 투자봇 현황을 조회하고 분석한다. 다음 순서대로 실행해라:
 
+0. M1 연결 확인 (실패 시 즉시 중단하고 "M1 오프라인" 보고):
+```bash
+ssh -o ConnectTimeout=3 m1 "echo ok" 2>/dev/null || echo "M1_OFFLINE"
+```
+
 1. M1에서 최신 포트폴리오 스냅샷을 조회한다:
 ```bash
 ssh m1 "cd ~/projects/investment-bot && python3 -c \"

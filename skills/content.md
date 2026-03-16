@@ -1,5 +1,10 @@
 콘텐츠 자동화 현황을 조회하고 파이프라인을 관리한다. 다음 순서대로 실행해라:
 
+0. M1 연결 확인 (실패 시 즉시 중단하고 "M1 오프라인" 보고):
+```bash
+ssh -o ConnectTimeout=3 m1 "echo ok" 2>/dev/null || echo "M1_OFFLINE"
+```
+
 1. M1에서 최근 생성된 콘텐츠 아티팩트를 확인한다:
 ```bash
 ssh m1 "ls -lt ~/Desktop/content-automation/outputs/ | head -10"

@@ -321,6 +321,7 @@ main() {
   echo ""
   echo "--- MCP Servers ---"
   setup_mcp
+  python3 "$REPO_DIR/scripts/check_mcp.py" 2>/dev/null || true
 
   echo ""
   echo "========================================"

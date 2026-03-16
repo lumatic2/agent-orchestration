@@ -718,6 +718,20 @@ run_with_fallback_research() {
 # ============================================================
 
 do_boot() {
+  # ── Self-update: pull repo first, reexec if orchestrate.sh changed ──
+  if [ "${_BOOT_SELF_UPDATED:-0}" != "1" ]; then
+    local self_hash
+    self_hash=$(md5sum "$0" 2>/dev/null || shasum "$0")
+    git -C "$REPO_DIR" pull --rebase --quiet 2>/dev/null || true
+    local new_hash
+    new_hash=$(md5sum "$0" 2>/dev/null || shasum "$0")
+    if [ "$self_hash" != "$new_hash" ]; then
+      echo "[INFO] orchestrate.sh 업데이트됨 — 재실행..."
+      _BOOT_SELF_UPDATED=1 exec bash "$0" --boot
+    fi
+    echo "[OK] orchestrate.sh 최신"
+  fi
+
   echo "=== Queue Boot Scan ==="
   local found=0
 
@@ -794,6 +808,8 @@ do_boot() {
 
   for repo in "${PULL_REPOS[@]}"; do
     [ -d "$repo/.git" ] || continue
+    # self-update 단계에서 이미 pull한 agent-orchestration은 스킵
+    [ "$repo" = "$REPO_DIR" ] && [ "${_BOOT_SELF_UPDATED:-0}" = "1" ] && echo "[OK] $(basename "$repo") 최신 (self-update 완료)" && continue
     local branch
     branch=$(git -C "$repo" symbolic-ref --short HEAD 2>/dev/null || echo "HEAD")
     git -C "$repo" fetch origin "$branch" --quiet 2>/dev/null || { echo "[SKIP] $repo — fetch 실패 (오프라인?)"; continue; }
