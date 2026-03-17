@@ -30,7 +30,8 @@
 
 ### #개발
 - [/] [중] 각 기기 Obsidian Git 플러그인 설치 — 자동 push/pull 설정, 유용한 플러그인 탐색 (Windows/M4/MacAir) ← M4 완료, Windows/MacAir 미완
-- [ ] [중] 원가회계 적용 계획 수립 및 구현 — 회사 재무 데이터 기반 원가 구조 설계 후 적용
+- [/] [중] 원가회계 적용 계획 수립 및 구현 — FTE 기반 Minimal Viable 방식 설계 완료. 세무사 협의 + Notion 필드 추가 실행 남음
+- [ ] [중] /decide-deal 스킬 CEO(노현섭)에게 인계 — decide-deal-installer.md 파일 전달 #회사
 - [ ] [높] 목요일 미팅자료 재파악 및 수정 — meeting-prep-0319 내용 확인 후 보완 `03-19(목) 전` #회사
 - [ ] [중] 전문가 AI 집단 시스템 고도화
 - [ ] [중] 개인 포트폴리오 사이트 개선 (luma3-portfolio.vercel.app)

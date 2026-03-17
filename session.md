@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-17 심야] (Mac mini)
+**한 일**: Planby TIPS 금융자산·장기차입금 분석, 원가추적 Minimal Viable 설계, /decide-deal 전면 개선(FTE 역산 제거·최대FTE테이블·채점기준명확화), /profitability 흡수 삭제, decide-deal-installer.md 생성, meeting-prep 반영, vault 업데이트
+**진행 중**: 목요일 미팅 슬라이드 제작, /decide-deal CEO 인계
+**주요 결정**: 원가추적은 타임시트 없이 FTE 직접 입력 + PM 완료 후 1줄 기록 방식으로 확정
+---
+
 ## [2026-03-17 저녁] (Mac mini)
 **한 일**: SCHEDULE.md 전체 재확인, 대기 항목 10개 정리, 회사 태도 고민 정리 완료 처리
 **진행 중**: 목요일 미팅 최종 점검 (내일)
