@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-17] (M4)
+**한 일**: M4→M1 vault 파일 이동(planby 8개, copora 2개, W11 주간회고), expert-knowledge-map.md 생성, EXPERT_BASE.md 도메인 테이블 업데이트(5→9개), ChromaDB 폐기, 법제처 API 연결 완료(OC=8307) + law-check.py 버그 2개 수정 → 36개 법령 ls_id 등록·전 법령 최신 확인
+**진행 중**: expert 페르소나 개별 knowledge_refs 추가, investment 도메인 보강
+**주요 결정**: ChromaDB 완전 폐기(vault MD 파일로 대체), vault 쓰기는 M1 MCP만 사용
+---
+
 ## [2026-03-17] (Windows)
 **한 일**: session-end vault 연동(SSH→M1) + heredoc 버그 수정, boot Windows vault pull 추가, sync.sh 경로 치환 제거(~/통일), 시스템 파일 역할 치트시트 vault 저장
 **진행 중**: Slack AI 에이전트 버그 안정화 (03-19 마감)

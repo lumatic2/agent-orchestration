@@ -293,6 +293,35 @@ _Tracked here when agents encounter blockers._
 - **2026-03-14**: Gemini 리서치 → vault 자동 저장 (--vault 불필요)
 - **2026-03-12**: Google Workspace MCP 4대 배포, GitHub 트렌드 자동 수신 시스템
 - **2026-03-08**: E2E 오케스트레이션 실전 검증 완료 (SSH·content-automation·VectorBT)
+
+## Slack Bot 개발 로드맵 (2026-03-17)
+**위치**: M1 `~/projects/claude-code-slack-bot/`
+
+### Phase 1 — MVP 안정화 (현재)
+- [x] 스레드 버그 수정 (slash cmd에서 첫 메시지를 thread anchor로 확정)
+- [x] QUE 템플릿 모달 구현 (`/que`, App Home 버튼)
+- [ ] 신입 온보딩 패키지 (Notion → vault 이식)
+
+### Phase 2 — 기능 고도화
+1. **계정/서버**: 현재 개인 Claude Code OAuth. 정식 출시 시 회사 공용 계정 + 서버 이전
+2. **뉴스 구독 시스템**: 4개 분야 일부 통합/개선 필요
+3. **홈 탭 버튼 정비**: 필요한 것만 유지. 문서 작성·슬라이드 → 실제 파이프라인(slides-bridge.sh) 연동, 버그 없이 일정 품질
+4. **Vault 접근 제어**: M1 vault 중 회사 파일 + 전문가 도메인만 봇에 노출 (개인 폴더 차단)
+5. **신입 온보딩**: 봇과 대화로 회사 지식 습득 + 작업 방향 설정
+
+### Phase 3 — 최적화
+- 전체 코드 점검: 속도·비용·보안 개선
+
+### 기술 현황
+- Socket Mode (Bolt), Claude Code OAuth, MCP: notion-company/obsidian-vault/google-workspace
+- 기존 에러: permission-mcp-server.ts 타입 에러 (pre-existing, 기능 영향 없음)
+
+## vault-company 규칙 (슬랙 봇 접근 제어)
+- 봇: `~/vault-company/` 만 접근 (mcp-servers.json)
+- 개인 Claude Code: `~/vault/` 전체 접근
+- 봇에 지식 추가: `ln -sf ~/vault/경로 ~/vault-company/폴더명`
+- 절대 링크 금지: 00-inbox, 40-log 등 개인 폴더
+- 규칙 전문: `cat ~/vault-company/README.md`
 <!-- END SHARED_MEMORY -->
 
 <!-- BEGIN ORCHESTRATION_SETUP -->
