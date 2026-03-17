@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-17 심야4] (Mac mini)
+**한 일**: SCHEDULE.md 항목 2개 삭제(AI산출물체크리스트·피드백루프), Notion 법인세 신고 체크리스트 조회, 세무사 미팅 준비 MD 작성 → vault 저장 (통합고용세액공제·R&D·이월결손금·Cap table 5개 안건)
+**진행 중**: 세무사 연락 (경영담당자 확인 후, 마감 D-14), 목요일 미팅 슬라이드
+**주요 결정**: Gross Margin 가시화 완료 처리 (지급수수료 외주비 확정)
+---
+
 ## [2026-03-17 심야3] (Mac mini)
 **한 일**: orchestrate.sh nvm PATH 버그 수정, GTM 자동화 시스템 설계·구현 (gtm-system 레포 신규), Gemini 리서치(Clay/lemlist 구조), vault 문서화
 **진행 중**: gtm-system .env 세팅 + 첫 실행 테스트, 목요일 미팅 슬라이드 제작
