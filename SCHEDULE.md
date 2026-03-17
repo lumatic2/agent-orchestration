@@ -31,6 +31,7 @@
 - [/] [중] 원가회계 적용 계획 수립 및 구현 — FTE 기반 Minimal Viable 방식 설계 완료. 세무사 협의 + Notion 필드 추가 실행 남음
 - [ ] [중] /decide-deal 스킬 CEO(노현섭)에게 인계 — decide-deal-installer.md 파일 전달 #회사
 - [ ] [높] 목요일 미팅자료 재파악 및 수정 — meeting-prep-0319 내용 확인 후 보완 `03-19(목) 전` #회사
+- [/] [높] GTM 시스템 구축 — gtm-system 레포 초기 구현 완료, .env 세팅 + 첫 실행 테스트 남음 (github.com/Mod41529/gtm-system)
 - [ ] [중] 전문가 AI 집단 시스템 고도화
 - [ ] [중] 개인 포트폴리오 사이트 개선 (luma3-portfolio.vercel.app)
 - [ ] [중] 유튜브 채널 분석: @ddokham

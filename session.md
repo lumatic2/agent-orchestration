@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-17 심야3] (Mac mini)
+**한 일**: orchestrate.sh nvm PATH 버그 수정, GTM 자동화 시스템 설계·구현 (gtm-system 레포 신규), Gemini 리서치(Clay/lemlist 구조), vault 문서화
+**진행 중**: gtm-system .env 세팅 + 첫 실행 테스트, 목요일 미팅 슬라이드 제작
+**주요 결정**: Clay+lemlist 폐기 → 자체 GTM 시스템 구축 (ICP config 기반 범용 구조)
+---
+
 ## [2026-03-17 심야2] (Mac mini)
 **한 일**: AI 회사 설계 프로젝트 — vault `30-projects/my-company/` 신설, org-design·data-flow·budget·phase-2-plan 작성, Canvas 시각화, COO 주간 리포트 자동화 구현
 **진행 중**: Phase 2 CMO 트렌드 자동화, 목요일 미팅자료 보완
