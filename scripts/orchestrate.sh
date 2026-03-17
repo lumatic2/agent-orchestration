@@ -49,6 +49,14 @@ sedi() {
 }
 
 # ============================================================
+# nvm PATH 보장 (비대화형 쉘에서 .zshrc 미로드 시 대비)
+# ============================================================
+if [[ -d "$HOME/.nvm" ]]; then
+  NVM_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
+  [[ -n "$NVM_BIN" && ":$PATH:" != *":$NVM_BIN:"* ]] && export PATH="$NVM_BIN:$PATH"
+fi
+
+# ============================================================
 # Queue Helper Functions
 # ============================================================
 
@@ -634,12 +642,6 @@ run_gemini() {
   # Update queue status to dispatched
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
   [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
-
-  # nvm bin PATH 보장 (SSH 세션에서 .zshrc 미로드 시 대비)
-  if [[ -d "$HOME/.nvm" && $(command -v gemini 2>/dev/null) == "" ]]; then
-    NVM_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
-    [[ -n "$NVM_BIN" ]] && export PATH="$NVM_BIN:$PATH"
-  fi
 
   # Write directly to file to avoid shell variable truncation
   gemini \

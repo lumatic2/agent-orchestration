@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-17 심야2] (Mac mini)
+**한 일**: AI 회사 설계 프로젝트 — vault `30-projects/my-company/` 신설, org-design·data-flow·budget·phase-2-plan 작성, Canvas 시각화, COO 주간 리포트 자동화 구현
+**진행 중**: Phase 2 CMO 트렌드 자동화, 목요일 미팅자료 보완
+**주요 결정**: AI 회사 설계도는 "만들어야 할 것"이 아니라 "이미 만든 것을 발견하는 과정"
+---
+
 ## [2026-03-17 심야] (Mac mini)
 **한 일**: Planby TIPS 금융자산·장기차입금 분석, 원가추적 Minimal Viable 설계, /decide-deal 전면 개선(FTE 역산 제거·최대FTE테이블·채점기준명확화), /profitability 흡수 삭제, decide-deal-installer.md 생성, meeting-prep 반영, vault 업데이트
 **진행 중**: 목요일 미팅 슬라이드 제작, /decide-deal CEO 인계
