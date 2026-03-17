@@ -7,6 +7,12 @@
 
 ---
 
+## 백로그 (Backlog)
+
+- [ ] [중] pm-skills + geo-seo-claude 적용 구현 — vault `30-projects/agent-orchestration/pm-skills-geo-seo-design.md` 참고. 우선순위: deal-pipeline 체이닝 → llms.txt → proposal-draft → parallel 디스패치 → geo-audit #개발
+
+---
+
 ## 내일 집중 (03-18 저녁 ~3h) — 03-19 임원 미팅 전날
 > 학교 가는 날. 저녁 3시간 집중.
 

@@ -1,3 +1,8 @@
+## 2026-03-17 17:20 (Mac mini)
+**한 일**: pm-skills + geo-seo-claude 레포 분석. 스킬 체이닝(팩 구조, deal-pipeline 체인) + 병렬 에이전트 패턴(orchestrate.sh parallel) + llms.txt 적용 설계 완료. vault 저장.
+**진행 중**: 설계 검토 후 구현 — deal-pipeline 체이닝 → llms.txt → proposal-draft → parallel 디스패치 순
+**주요 결정**: Skills=단위 프레임워크 / Commands=체인으로 구조 분리 채택
+---
 ## 2026-03-17 저녁 (Mac mini)
 **한 일**: M1 Slack 봇 닉(Nick) 버그 전체 해결 — allowedTools 제거, vault 절대경로, OpenTelemetry exit 1 수정, expert 페르소나 로드 구현, 봇 존댓말 페르소나 변경. vault + meeting-prep-0319.md 문서화 완료.
 **진행 중**: 03-19 임원 미팅 슬라이드 제작 필요
