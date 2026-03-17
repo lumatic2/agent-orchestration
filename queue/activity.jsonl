@@ -1080,3 +1080,8 @@
 {"ts":"2026-03-17T16:30:37+0900","id":"T011","event":"created","detail":"agent=codex"}
 {"ts":"2026-03-17T16:30:37+0900","id":"T011","event":"dispatched","detail":""}
 {"ts":"2026-03-17T16:36:20+0900","id":"T011","event":"completed","detail":""}
+{"ts":"2026-03-17T16:59:13+0900","id":"T012","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-17T16:59:14+0900","id":"T012","event":"dispatched","detail":""}
+{"ts":"2026-03-17T16:59:57+0900","id":"T012","event":"completed","detail":""}
+{"ts":"2026-03-17T17:07:08+0900","id":"T013","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-17T17:07:08+0900","id":"T013","event":"dispatched","detail":""}

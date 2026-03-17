@@ -1,3 +1,8 @@
+## 2026-03-17 저녁 (Mac mini)
+**한 일**: M1 Slack 봇 닉(Nick) 버그 전체 해결 — allowedTools 제거, vault 절대경로, OpenTelemetry exit 1 수정, expert 페르소나 로드 구현, 봇 존댓말 페르소나 변경. vault + meeting-prep-0319.md 문서화 완료.
+**진행 중**: 03-19 임원 미팅 슬라이드 제작 필요
+**주요 결정**: allowedTools 제한 제거가 핵심 해결책 (MCP 툴만 허용 시 내장 Read 툴 차단됨)
+---
 # Session Log
 
 ## [2026-03-17 심야5] (Mac mini)
