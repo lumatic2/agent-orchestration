@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-17 오후] (Mac mini)
+**한 일**: WezTerm 스크롤바 설정, Obsidian Git M4 연결(Mod41529/vault), 플랜바이 블로그 예시 글 2편 작성·Notion 저장, 유튜브 채널 기획 확정, meeting-prep-0318 콘텐츠 기획 반영, 블로그 자동화 파이프라인 vault 기록
+**진행 중**: Obsidian Git Windows/MacAir 설치, 홈페이지 완성 후 cron 등록
+**주요 결정**: 블로그 자동화 cron은 홈페이지 완성 후 M1에 한 줄 추가로 완성
+---
+
 ## [2026-03-17 저녁] (Mac mini)
 **한 일**: 4주 계약서 확인 완료 처리, 회사 성과 수치화(외주 하한가 기준 약 1,700만원), meeting-prep-0318 오프닝 두괄식 블록 추가
 **진행 중**: 없음 (미팅 준비 완료)
