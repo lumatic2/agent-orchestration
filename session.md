@@ -1,5 +1,11 @@
 # Session Log
 
+## [2026-03-17 저녁] (Mac mini)
+**한 일**: 4주 계약서 확인 완료 처리, 회사 성과 수치화(외주 하한가 기준 약 1,700만원), meeting-prep-0318 오프닝 두괄식 블록 추가
+**진행 중**: 없음 (미팅 준비 완료)
+**주요 결정**: 월급 공개 없이 외주가 기준으로 성과 수치화 — "보수적으로 방어 가능한 숫자"
+---
+
 ## [2026-03-17] (M4)
 **한 일**: M4→M1 vault 파일 이동(planby 8개, copora 2개, W11 주간회고), expert-knowledge-map.md 생성, EXPERT_BASE.md 도메인 테이블 업데이트(5→9개), ChromaDB 폐기, 법제처 API 연결 완료(OC=8307) + law-check.py 버그 2개 수정 → 36개 법령 ls_id 등록·전 법령 최신 확인
 **진행 중**: expert 페르소나 개별 knowledge_refs 추가, investment 도메인 보강
