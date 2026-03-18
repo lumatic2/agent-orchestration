@@ -28,7 +28,7 @@
 - [/] [중] 원가회계 적용 계획 수립 및 구현 — FTE 기반 Minimal Viable 방식 설계 완료. 세무사 협의 + Notion 필드 추가 실행 남음
 - [/] [높] GTM 시스템 구축 — gtm-system 레포 초기 구현 완료, .env 세팅 + 첫 실행 테스트 남음 (github.com/Mod41529/gtm-system)
 - [ ] [중] 전문가 AI 집단 시스템 고도화
-- [ ] [중] AI 구독 툴 리스트 + 효율 매뉴얼 작성 → vault 저장 — 미드저니 크레딧 확인법 포함
+- [x] [중] AI 구독 툴 리스트 + 효율 매뉴얼 작성 → vault 저장 (`30-projects/ai-tips/04-usage-manual.md`)
 - [ ] [낮] 내과의사 전문가 에이전트 구현 계획 수립
 - [ ] [낮] 사이트 영상 감지·다운로드 프로그램 계획
 - [ ] [중] 개인 포트폴리오 사이트 개선 (luma3-portfolio.vercel.app)
@@ -36,7 +36,7 @@
 
 ### #학습
 - [x] [중] 졸업 3품 점검 및 정리 계획 수립
-- [ ] [높] 졸업 요건 정리 + 로드맵 계획 → vault 저장 — 창업 요건 활용 방안(졸업평가 창업 면제) 분석 포함
+- [x] [높] 졸업 요건 정리 + 로드맵 계획 → vault 저장 — 창업 요건 활용 방안(졸업평가 창업 면제) 분석 포함
 - [x] [중] 실천리더십 수업 내용 정리 → vault 저장
 
 ### #크리에이티브
@@ -44,6 +44,25 @@
 
 ### #개인
 - [/] [중] AI 회사 설계도 작성 — vault `30-projects/my-company/` (org-design·data-flow·budget)
+
+---
+
+## 반복 루틴 (Recurring)
+
+### Daily — AI Usage (매일)
+- [ ] Perplexity: 트렌드 검색 3-5건 (Pro Search 300-600회/일 한도 활용)
+- [ ] Grok: X 실시간 트렌드 확인 (2h 롤링 한도 소진)
+- [ ] Claude Code: 오케스트레이션 세션 — 낮/저녁 분산 사용 (5h 롤링)
+
+### Weekly — AI Usage Review (매주 금요일)
+- [ ] 각 툴 usage 대시보드 확인 (Claude/ChatGPT/Gemini/Perplexity)
+- [ ] 미사용 크레딧 소진 계획 수립 (Suno, Midjourney, Canva)
+
+### Monthly — 말일 크레딧 소진
+- [ ] Suno: 잔여 크레딧 전부 소진 (이월 불가)
+- [ ] Canva: Magic Studio 잔여 크레딧 소진 (이월 불가)
+- [ ] Midjourney: Fast GPU 시간 확인 및 소진
+- [ ] AI 구독 현황 리뷰 → 미활용 플랜 다운그레이드 검토
 
 ---
 
