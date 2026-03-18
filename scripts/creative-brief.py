@@ -8,7 +8,7 @@ from datetime import datetime
 
 # ── 환경변수 (secrets_load.sh에서 주입됨) ──
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN_IT", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID_CREATIVE", "")
 
 DRY_RUN = "--dry-run" in sys.argv
