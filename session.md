@@ -1,3 +1,8 @@
+## 2026-03-18 밤 (Mac Air)
+**한 일**: 성균관대 졸업 요건 전체 분석, vault skku-graduation 폴더 생성(로드맵·체크리스트), 플랜바이 사업설명서 MD 작성 + PDF 생성(Desktop/planby-사업설명서.pdf)
+**진행 중**: 학과 사무실 방문 후 TOEIC 830점 인정 여부·창의품 방법 확정, 사업자등록증 수령 후 제출
+**주요 결정**: 졸업평가 면제는 창업(플랜바이 재직) 방향으로 진행, 창의품은 MOS 2과목 또는 교내 취업프로그램 중 확정 예정
+---
 ## 2026-03-18 저녁 (Mac Air)
 **한 일**: M1 vault에 성균관대 2026 수업 폴더 생성, 대중음악의 이해 포인트 규칙 기록, 2~9주차 6점 업데이트 (누적 48점)
 **진행 중**: 10주차부터 달라지는 포인트 규칙 확인 필요
@@ -12,14 +17,4 @@
 **한 일**: 브런치스토리 프롤로그 완성 — 시리즈명·프로필·제목·커버이미지·폰트 전부 확정. vault 저장.
 **진행 중**: 브런치 에디터에서 인용구 블록 적용 후 발행
 **주요 결정**: 제목 "대체될 것 같아서" / 커버 Midjourney 흑백 / 폰트 본고딕 / 이미지 소스 Shopify+Midjourney+Firefly
----
-## 2026-03-17 17:20 (Mac mini)
-**한 일**: pm-skills + geo-seo-claude 레포 분석. 스킬 체이닝(팩 구조, deal-pipeline 체인) + 병렬 에이전트 패턴(orchestrate.sh parallel) + llms.txt 적용 설계 완료. vault 저장.
-**진행 중**: 설계 검토 후 구현 — deal-pipeline 체이닝 → llms.txt → proposal-draft → parallel 디스패치 순
-**주요 결정**: Skills=단위 프레임워크 / Commands=체인으로 구조 분리 채택
----
-## 2026-03-17 저녁 (Mac mini)
-**한 일**: M1 Slack 봇 닉(Nick) 버그 전체 해결 — allowedTools 제거, vault 절대경로, OpenTelemetry exit 1 수정, expert 페르소나 로드 구현, 봇 존댓말 페르소나 변경. vault + meeting-prep-0319.md 문서화 완료.
-**진행 중**: 03-19 임원 미팅 슬라이드 제작 필요
-**주요 결정**: allowedTools 제한 제거가 핵심 해결책 (MCP 툴만 허용 시 내장 Read 툴 차단됨)
 ---
