@@ -157,7 +157,7 @@ PROMPT_HEAD
 
 PROMPT_CONTENT="$(cat "$PROMPT_FILE")"
 
-bash "$ORCH_SCRIPT" gemini "$PROMPT_CONTENT" "$TASK_NAME" >/dev/null 2>&1 \
+NO_VAULT=true bash "$ORCH_SCRIPT" gemini "$PROMPT_CONTENT" "$TASK_NAME" >/dev/null 2>&1 \
   || fail "Gemini 분류 호출 실패"
 
 CLASSIFY_LOG="$(ls -t "$LOGS_DIR"/gemini_"$TASK_NAME"_*.txt 2>/dev/null | head -1 || true)"
@@ -205,7 +205,7 @@ PROMPT
 } > "$OVERVIEW_PROMPT"
 
 OVERVIEW_RUN_OK=true
-bash "$ORCH_SCRIPT" gemini "$(cat "$OVERVIEW_PROMPT")" "$OVERVIEW_TASK" >/dev/null 2>&1 \
+NO_VAULT=true bash "$ORCH_SCRIPT" gemini "$(cat "$OVERVIEW_PROMPT")" "$OVERVIEW_TASK" >/dev/null 2>&1 \
   || OVERVIEW_RUN_OK=false
 
 OVERVIEW_LOG="$(ls -t "$LOGS_DIR"/gemini_"$OVERVIEW_TASK"_*.txt 2>/dev/null | head -1 || true)"

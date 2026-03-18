@@ -87,7 +87,7 @@ RAW_OUTPUT_FILE="$(safe_mktemp slides-gemini)"
 TASK_NAME="slides-json-${SLUG}"
 
 echo "[1/4] Gemini JSON 생성 중..." >&2
-bash "$ORCH" gemini "$PROMPT" "$TASK_NAME" >"$RAW_OUTPUT_FILE" 2>&1
+NO_VAULT=true bash "$ORCH" gemini "$PROMPT" "$TASK_NAME" >"$RAW_OUTPUT_FILE" 2>&1
 
 echo "[2/4] JSON 블록 추출 중..." >&2
 python3 - "$RAW_OUTPUT_FILE" "$SLIDES_JSON" <<'PY'

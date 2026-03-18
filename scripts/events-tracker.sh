@@ -79,6 +79,9 @@ import sys
 
 orch_script, prompt, task_name, timeout_sec = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
 try:
+    import os
+    env = os.environ.copy()
+    env["NO_VAULT"] = env.get("NO_VAULT", "false")
     subprocess.run(
         ["bash", orch_script, "gemini", prompt, task_name],
         cwd="/tmp",
@@ -86,6 +89,7 @@ try:
         stderr=subprocess.DEVNULL,
         timeout=timeout_sec,
         check=True,
+        env=env,
     )
 except subprocess.TimeoutExpired:
     sys.exit(124)
@@ -145,7 +149,7 @@ COLLECT_PROMPT="다음 두 기준 중 하나라도 해당하는 공모전·경�
 주관기관 | 행사명 | 마감일 | URL
 마감일 모를 경우 '미정'으로 표기. 한 줄에 하나씩."
 
-run_orchestrate "$COLLECT_PROMPT" "$COLLECT_LOG_NAME" 300 || true
+NO_VAULT=true run_orchestrate "$COLLECT_PROMPT" "$COLLECT_LOG_NAME" 300 || true
 
 COLLECT_LOG="$(latest_gemini_log "$COLLECT_LOG_NAME")"
 [[ -n "$COLLECT_LOG" ]] || fail "수집 로그를 찾을 수 없습니다"
@@ -199,7 +203,7 @@ CLASSIFY_PROMPT="아래 행사·공모전 목록을 분류하고, 각 섹션 내
 목록:
 $(cat "$ITEM_LIST")"
 
-run_orchestrate "$CLASSIFY_PROMPT" "$CLASSIFY_LOG_NAME" 300 || true
+NO_VAULT=true run_orchestrate "$CLASSIFY_PROMPT" "$CLASSIFY_LOG_NAME" 300 || true
 
 CLASSIFY_LOG="$(latest_gemini_log "$CLASSIFY_LOG_NAME")"
 [[ -n "$CLASSIFY_LOG" ]] || fail "분류 로그를 찾을 수 없습니다"
@@ -249,7 +253,7 @@ PROMPT
 } > "$OVERVIEW_PROMPT"
 
 OVERVIEW_RUN_OK=true
-run_orchestrate "$(cat "$OVERVIEW_PROMPT")" "$OVERVIEW_TASK" 180 || OVERVIEW_RUN_OK=false
+NO_VAULT=true run_orchestrate "$(cat "$OVERVIEW_PROMPT")" "$OVERVIEW_TASK" 180 || OVERVIEW_RUN_OK=false
 
 OVERVIEW_LOG="$(latest_gemini_log "$OVERVIEW_TASK")"
 if [[ -n "$OVERVIEW_LOG" ]]; then

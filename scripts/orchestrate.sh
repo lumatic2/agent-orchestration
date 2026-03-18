@@ -666,18 +666,19 @@ run_gemini() {
   [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
   [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
 
-  # Save to vault — always (VAULT_DOMAIN defaults to "research")
-  local effective_domain="${VAULT_DOMAIN:-research}"
-  local vault_dir
-  if [ "$effective_domain" = "inbox" ]; then
-    vault_dir="00-inbox"
-  else
-    vault_dir="10-knowledge/${effective_domain}"
-  fi
-  local vault_file="${TASK_NAME}_$(date +%Y-%m-%d).md"
-  local clean_result
-  clean_result=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$")
-  ssh m1 "mkdir -p ~/vault/${vault_dir} && cat > ~/vault/${vault_dir}/${vault_file}" << VAULTEOF
+  # Save to vault — unless --no-vault (for intermediate pipeline steps)
+  if [ "$NO_VAULT" != "true" ]; then
+    local effective_domain="${VAULT_DOMAIN:-research}"
+    local vault_dir
+    if [ "$effective_domain" = "inbox" ]; then
+      vault_dir="00-inbox"
+    else
+      vault_dir="10-knowledge/${effective_domain}"
+    fi
+    local vault_file="${TASK_NAME}_$(date +%Y-%m-%d).md"
+    local clean_result
+    clean_result=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$")
+    ssh m1 "mkdir -p ~/vault/${vault_dir} && cat > ~/vault/${vault_dir}/${vault_file}" << VAULTEOF
 ---
 type: knowledge
 domain: ${effective_domain}
@@ -690,7 +691,10 @@ task: ${TASK_NAME}
 
 ${clean_result}
 VAULTEOF
-  echo "[VAULT] Saved → ~/vault/${vault_dir}/${vault_file}"
+    echo "[VAULT] Saved → ~/vault/${vault_dir}/${vault_file}"
+  else
+    echo "[VAULT] Skipped (--no-vault)"
+  fi
 
   # Strip YOLO noise lines, show clean output
   echo ""
@@ -1347,11 +1351,13 @@ fi
 DRY_RUN="false"
 VAULT_DOMAIN=""
 FORCE="false"
+NO_VAULT="${NO_VAULT:-false}"
 while [[ "${1:-}" == --* ]]; do
   case "${1:-}" in
-    --dry-run) DRY_RUN="true"; shift ;;
-    --vault)   VAULT_DOMAIN="${2:-inbox}"; shift 2 ;;
-    --force)   FORCE="true"; shift ;;
+    --dry-run)  DRY_RUN="true"; shift ;;
+    --vault)    VAULT_DOMAIN="${2:-inbox}"; shift 2 ;;
+    --no-vault) NO_VAULT="true"; shift ;;
+    --force)    FORCE="true"; shift ;;
     *) break ;;
   esac
 done

@@ -107,6 +107,9 @@ import sys
 
 orch_script, prompt, task_name, timeout_sec = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
 try:
+    import os
+    env = os.environ.copy()
+    env["NO_VAULT"] = env.get("NO_VAULT", "false")
     subprocess.run(
         ["bash", orch_script, "gemini", prompt, task_name],
         cwd="/tmp",
@@ -114,6 +117,7 @@ try:
         stderr=subprocess.DEVNULL,
         timeout=timeout_sec,
         check=True,
+        env=env,
     )
 except subprocess.TimeoutExpired:
     sys.exit(124)
@@ -263,7 +267,7 @@ PROMPT
 )
 
   local run_ok=true
-  if ! run_orchestrate "$prompt" "$task_name"; then
+  if ! NO_VAULT=true run_orchestrate "$prompt" "$task_name"; then
     run_ok=false
   fi
 
@@ -319,7 +323,7 @@ PROMPT
   cat "$COLLECTED_LIST" >> "$SUMMARY_PROMPT"
 
   local run_ok=true
-  if ! run_orchestrate "$(cat "$SUMMARY_PROMPT")" "$task_name"; then
+  if ! NO_VAULT=true run_orchestrate "$(cat "$SUMMARY_PROMPT")" "$task_name"; then
     run_ok=false
   fi
 
@@ -405,7 +409,7 @@ PROMPT
   } > "$overview_prompt"
 
   local run_ok=true
-  if ! run_orchestrate "$(cat "$overview_prompt")" "$task_name" 120; then
+  if ! NO_VAULT=true run_orchestrate "$(cat "$overview_prompt")" "$task_name" 120; then
     run_ok=false
   fi
 
