@@ -1,3 +1,8 @@
+## 2026-03-18 (Windows)
+**한 일**: 브런치스토리 프롤로그 완성 — 시리즈명·프로필·제목·커버이미지·폰트 전부 확정. vault 저장.
+**진행 중**: 브런치 에디터에서 인용구 블록 적용 후 발행
+**주요 결정**: 제목 "대체될 것 같아서" / 커버 Midjourney 흑백 / 폰트 본고딕 / 이미지 소스 Shopify+Midjourney+Firefly
+---
 ## 2026-03-17 17:20 (Mac mini)
 **한 일**: pm-skills + geo-seo-claude 레포 분석. 스킬 체이닝(팩 구조, deal-pipeline 체인) + 병렬 에이전트 패턴(orchestrate.sh parallel) + llms.txt 적용 설계 완료. vault 저장.
 **진행 중**: 설계 검토 후 구현 — deal-pipeline 체이닝 → llms.txt → proposal-draft → parallel 디스패치 순
