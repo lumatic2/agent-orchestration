@@ -23,10 +23,10 @@
 - [x] [중] 신입사원 온보딩 패키지 완성 → PDF 배포
 
 ### #개발
-- [ ] [중] GTM .env 세팅 + `python3 run.py scrape` 첫 실행 테스트 `30m`
+- [x] [중] GTM .env 세팅 + `python3 run.py scrape` 첫 실행 테스트 `30m`
 - [/] [중] 각 기기 Obsidian Git 플러그인 설치 — 자동 push/pull 설정, 유용한 플러그인 탐색 (Windows/M4/MacAir) ← M4 완료, Windows/MacAir 미완
 - [/] [중] 원가회계 적용 계획 수립 및 구현 — FTE 기반 Minimal Viable 방식 설계 완료. 세무사 협의 + Notion 필드 추가 실행 남음
-- [/] [높] GTM 시스템 구축 — gtm-system 레포 초기 구현 완료, .env 세팅 + 첫 실행 테스트 남음 (github.com/Mod41529/gtm-system)
+- [x] [높] GTM 시스템 구축 — gtm-system 레포 초기 구현 완료, .env 세팅 + 첫 실행 테스트 남음 (github.com/Mod41529/gtm-system)
 - [ ] [중] 전문가 AI 집단 시스템 고도화
 - [x] [중] AI 구독 툴 리스트 + 효율 매뉴얼 작성 → vault 저장 (`30-projects/ai-tips/04-usage-manual.md`)
 - [ ] [낮] 내과의사 전문가 에이전트 구현 계획 수립
