@@ -29,7 +29,7 @@
 ### ~/.claude/CLAUDE.md (글로벌, 4대 공통)
 - 한국어 응답, 간결하게
 - 모델/Effort 추천 가이드 (질문 복잡도 기반)
-- 원본: `config/CLAUDE.md`
+- 원본: `adapters/claude_global.md`
 
 ### ~/.claude/settings.json
 
@@ -124,11 +124,10 @@ ssh windows  # Windows (Git Bash — 2026-03-16 변경)
 | Obsidian vault | MCP `mcp__obsidian-vault__*` (m1:~/vault/) |
 | 대용량 멀티문서 | `orchestrate.sh gemini` 위임 |
 
-## OpenClaw 파이프라인
+## 텔레그램 봇
 
-**구조**: 텔레그램 → OpenClaw(라우터) → Claude Code → 결과 텔레그램 전송
-- 설정: `~/.openclaw/openclaw.json`
-- 위임: `delegate_to_claude` 툴 → `claude --dangerously-skip-permissions "작업"`
+**구조**: Galaxy → Telegram → claude-code-telegram (@Floatery_bot) → Claude Code → 결과 텔레그램 전송
+- M1 `~/projects/claude-code-telegram/`
 
 ## 새 기기 셋업 순서
 

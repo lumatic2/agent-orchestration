@@ -11,21 +11,13 @@
 | **독자 대상** | |
 | **언어** | 한국어 / English |
 
-## 실행 순서
+## 실행
 
-```bash
-# 1. 목차 생성
-bash ~/projects/agent-orchestration/scripts/content_pipeline.sh init "프로젝트명" 소설 "주제"
-
-# 2. 챕터 순서대로 작성 (번호 없으면 자동으로 다음 챕터)
-bash ~/projects/agent-orchestration/scripts/content_pipeline.sh write "프로젝트명"
-
-# 3. 전체 합치기
-bash ~/projects/agent-orchestration/scripts/content_pipeline.sh compile "프로젝트명"
-
-# 진행 현황 확인
-bash ~/projects/agent-orchestration/scripts/content_pipeline.sh status "프로젝트명"
 ```
+/content
+```
+
+content-automation 파이프라인 현황 조회 및 관리.
 
 ## 결과물 위치
 `~/Desktop/content-projects/[프로젝트명]/`

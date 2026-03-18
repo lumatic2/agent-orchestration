@@ -18,7 +18,7 @@
 | AP-08 | Pattern C 패널 내부 flex centering 미적용 | justify-content:center 필수 |
 | AP-09 | 사례박스 absolute bottom 고정 | flex 흐름 안에 margin-top:20px |
 
-## 슬라이드 파이프라인 (OpenClaw 연동)
+## 슬라이드 파이프라인
 ```
 gen-brief.sh → orchestrate.sh gemini (리서치)
 → orchestrate.sh codex (HTML 생성)

@@ -21,6 +21,6 @@
 
 ## 실행 명령어
 
-```bash
-bash ~/projects/agent-orchestration/scripts/tax_agent.sh "질문" [--planby] [--pro]
+```
+/tax 질문 [--planby]
 ```
