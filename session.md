@@ -1,3 +1,8 @@
+## 2026-03-18 저녁 (Mac Air)
+**한 일**: M1 vault에 성균관대 2026 수업 폴더 생성, 대중음악의 이해 포인트 규칙 기록, 2~9주차 6점 업데이트 (누적 48점)
+**진행 중**: 10주차부터 달라지는 포인트 규칙 확인 필요
+**주요 결정**: 수업 자료는 vault 30-projects/skku-2026/ 에서 관리
+---
 ## 2026-03-18 (Mac Air)
 **한 일**: /today 스킬 개선(기한 초과 섹션·session.md 4개 유지), SCHEDULE.md 완료 항목 11개 vault 아카이브 및 섹션 구조 정리, claude-code-setup pull, --boot auto-pull 미작동 원인 분석
 **진행 중**: Claude Code 공식 문서 분석, orchestrate.sh --boot 자동화
