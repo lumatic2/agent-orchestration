@@ -20,8 +20,8 @@ $ARGUMENTS 형식: 질문 [옵션]
 - 법인세/세액공제/부가세 → tax
 - 증상/진단/의학 → doctor
 
-페르소나: ~/projects/agent-orchestration/agents/experts/{유형}.md
-지식파일: ~/projects/agent-orchestration/agents/knowledge/{파일명}
+페르소나: `ssh m1 cat ~/vault/20-experts/{유형}.md` 로 읽어라
+지식파일: `ssh m1 cat ~/vault/10-knowledge/{도메인}/{파일명}` 로 읽어라
 
 ## 2. Planby 컨텍스트
 

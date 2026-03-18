@@ -2,12 +2,12 @@
 
 $ARGUMENTS 형식: 질문 [--planby]
 
-페르소나: ~/projects/agent-orchestration/agents/accountant_persona.md
+페르소나: `ssh m1 cat ~/vault/20-experts/accountant_persona.md` 로 읽어라
 지식 파일:
-- ~/projects/agent-orchestration/agents/knowledge/tax_core.md
-- ~/projects/agent-orchestration/agents/knowledge/tax_incentives.md
-- ~/projects/agent-orchestration/agents/knowledge/vat.md
-- ~/projects/agent-orchestration/agents/knowledge/tax_personal.md
+- `ssh m1 cat ~/vault/10-knowledge/tax/tax_core.md`
+- `ssh m1 cat ~/vault/10-knowledge/tax/tax_incentives.md`
+- `ssh m1 cat ~/vault/10-knowledge/tax/vat.md`
+- `ssh m1 cat ~/vault/10-knowledge/tax/tax_personal.md`
 
 --planby 옵션: bash ~/projects/agent-orchestration/scripts/planby_context.sh 실행 후 반환 파일 읽기
 
