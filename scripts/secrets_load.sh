@@ -66,6 +66,7 @@ try:
     token = creds.token
     project = "zinc-wares-489921-j3"
     secrets = ["GEMINI_API_KEY","TELEGRAM_BOT_TOKEN","TELEGRAM_CHAT_ID",
+               "TELEGRAM_BOT_TOKEN_IT","TELEGRAM_CHAT_ID_IT","TELEGRAM_CHAT_ID_CREATIVE",
                "SLACK_WEBHOOK_URL","INSTAGRAM_ACCESS_TOKEN","INSTAGRAM_USER_ID"]
     for s in secrets:
         if os.environ.get(s): continue
