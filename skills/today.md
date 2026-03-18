@@ -1,8 +1,8 @@
 오늘의 브리핑을 시작한다. 다음 파일들을 읽어라:
 - ~/projects/agent-orchestration/SCHEDULE.md
+- ~/projects/agent-orchestration/BACKLOG.md
 - ~/projects/agent-orchestration/SOMEDAY.md
-- ~/projects/agent-orchestration/RECURRING.md
-- ~/projects/agent-orchestration/session.md (있으면 — 마지막 세션 요약 확인용)
+- ~/projects/agent-orchestration/RECURRING.md (없으면 건너뜀)
 
 아래 형식으로 출력해라:
 
@@ -23,10 +23,11 @@
 - 비어 있거나 완료 항목만 있으면 "아직 설정 안 됨" 출력
 
 **오늘의 반복 항목**
-- RECURRING.md에서 오늘 요일에 해당하는 항목 출력
+- RECURRING.md가 있으면: 오늘 요일에 해당하는 항목 출력
+- RECURRING.md가 없으면: 이 섹션 생략
 
 **추천 포커스 (3개)**
-- `## 언제든 (Anytime)` 섹션에서만 선정 (마감 있음·Today 섹션 제외)
+- BACKLOG.md에서만 선정 (마감·Today 섹션 제외)
 - 선정 기준 (순서대로 적용):
   1. 오늘이 평일이면 #회사/#개발 우선, 주말이면 #라이프/#크리에이티브 우선
   2. [높] → [중] → [낮] 순
