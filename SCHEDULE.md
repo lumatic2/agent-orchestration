@@ -29,6 +29,7 @@
 - [x] [높] GTM 시스템 구축 — gtm-system 레포 초기 구현 완료, .env 세팅 + 첫 실행 테스트 남음 (github.com/Mod41529/gtm-system)
 - [ ] [중] 전문가 AI 집단 시스템 고도화
 - [x] [중] AI 구독 툴 리스트 + 효율 매뉴얼 작성 → vault 저장 (`30-projects/ai-tips/04-usage-manual.md`)
+- [x] [중] Creative Brief 봇 구축 — 매일 08:30 Sora/Midjourney/Suno/Kling 프롬프트 자동 생성 → Telegram 전송 (M1 launchd)
 - [ ] [낮] 내과의사 전문가 에이전트 구현 계획 수립
 - [ ] [낮] 사이트 영상 감지·다운로드 프로그램 계획
 - [ ] [중] 개인 포트폴리오 사이트 개선 (luma3-portfolio.vercel.app)
