@@ -1,8 +1,9 @@
-오늘의 브리핑을 시작한다. 다음 파일들을 읽어라:
-- ~/projects/agent-orchestration/SCHEDULE.md
-- ~/projects/agent-orchestration/BACKLOG.md
-- ~/projects/agent-orchestration/SOMEDAY.md
-- ~/projects/agent-orchestration/RECURRING.md (없으면 건너뜀)
+오늘의 브리핑을 시작한다. 다음 파일들을 MCP로 읽어라:
+
+1. `mcp__obsidian-vault__read_note("30-projects/schedule/SCHEDULE.md")`
+2. `mcp__obsidian-vault__read_note("30-projects/schedule/BACKLOG.md")`
+3. `mcp__obsidian-vault__read_note("30-projects/schedule/SOMEDAY.md")`
+4. `mcp__obsidian-vault__read_note("30-projects/schedule/RECURRING.md")` (없으면 건너뜀)
 
 아래 형식으로 출력해라:
 

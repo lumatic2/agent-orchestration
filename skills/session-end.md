@@ -1,36 +1,38 @@
 세션을 마무리한다. 다음 단계를 순서대로 실행해라.
 
-**경로 기준**: 모든 기기에서 `~/projects/agent-orchestration` 을 사용한다.
-(Mac mini 등 다른 경로를 쓰는 기기는 `~/projects/agent-orchestration`으로 재클론 필요)
-
-1. **오늘 daily 로그 업데이트**
-   - 먼저 `hostname` 명령으로 현재 기기명을 확인해라. 기기명을 아래 규칙으로 레이블로 변환해라:
+1. **Vault 40-log 기록**
+   - `hostname` 명령으로 현재 기기명을 확인해라. 기기명을 아래 규칙으로 레이블로 변환해라:
      - `MacBookAir` 포함 → `Mac Air`
      - `Macmini` 포함 → `Mac mini`
      - `DESKTOP` 포함 → `Windows`
      - 그 외 → `M4`
-   - `~/projects/agent-orchestration/daily/[오늘날짜].md` 파일을 열어라.
-   - 파일이 없으면 `~/projects/agent-orchestration/daily/TEMPLATE.md`를 참고해서 새로 만들어라.
-   - 파일 맨 아래에 새 섹션을 추가해라 (기존 내용 수정 금지):
+   - `mcp__obsidian-vault__read_note("40-log/YYYY-MM-DD.md")` 로 오늘 로그 파일 확인.
+   - 파일이 없으면 먼저 생성:
+     ```
+     mcp__obsidian-vault__write_note("40-log/YYYY-MM-DD.md",
+       frontmatter={type: "log", date: "YYYY-MM-DD", status: "active"},
+       content="# YYYY-MM-DD\n")
+     ```
+   - `mcp__obsidian-vault__write_note("40-log/YYYY-MM-DD.md", mode: "append")` 로 아래 형식 추가:
+     ```
+     ## 세션 [기기 레이블] HH:MM
+     - 한 일: (3줄 이내)
+     - 이어할 것: (다음 세션에 이어할 것)
+     - 책 메모: (AI·자동화에서 책에 쓸 만한 장면 — 없으면 이 줄 생략)
 
-```
-### 세션 [기기 레이블] HH:MM
-- 한 일: (3줄 이내)
-- 이어할 것: (다음 세션에 이어할 것)
-- 책 메모: (AI·자동화에서 책에 쓸 만한 장면 — 없으면 이 줄 생략)
-
----
-```
+     ---
+     ```
 
 2. **SCHEDULE.md 동기화**
-   - `~/projects/agent-orchestration/SCHEDULE.md`를 읽어라.
-   - 이번 세션에서 완료된 항목이 있으면 `[x]`로 체크해라.
-   - 이번 세션에서 새로 발생한 할 일이 있으면 적절한 섹션에 추가해라.
+   - `mcp__obsidian-vault__read_note("30-projects/schedule/SCHEDULE.md")` 로 읽어라.
+   - 이번 세션에서 완료된 항목이 있으면 `mcp__obsidian-vault__patch_note` 로 `[x]`로 체크해라.
+   - 이번 세션에서 새로 발생한 할 일이 있으면 적절한 섹션에 `patch_note`로 추가해라.
 
-3. **Git commit & push (전체 레포 스캔)**
-   - `~/projects/` 아래 모든 git 레포를 순회하며 변경사항이 있는 것만 커밋·푸시해라.
+3. **Git commit & push (코드/스크립트 레포만)**
+   - `~/projects/` 아래 git 레포 중 **agent-orchestration** 등 코드/스크립트 레포만 커밋·푸시해라.
+   - SCHEDULE 파일(vault)은 obsidian-git이 자동 관리하므로 git에 포함하지 마라.
    - 커밋 메시지 형식: `session: [날짜] [한 일 핵심 1줄]`
-     예: `session: 2026-03-13 ICP 확정, 시스템 정비`
+     예: `session: 2026-03-19 스케줄 시스템 vault 이전`
    - 실행 방법:
      ```bash
      for repo in ~/projects/*/; do
@@ -42,31 +44,6 @@
        fi
      done
      ```
-   - 레포별로 변경 내용이 다르면 커밋 메시지를 각각 맞게 조정해라.
    - 변경사항 없는 레포는 건너뛰어라.
 
-4. **Vault 40-log 기록 (SSH → M1)**
-   - Vault 원본은 M1에만 있다. SSH로 M1에 접속해 `~/vault/40-log/YYYY-MM-DD.md`에 기록하고 push해라.
-   - 아래 스크립트를 실행해라. `TODAY`, `DEVICE`, `SUMMARY`, `NEXT`를 실제 값으로 채워 넣어라:
-     ```bash
-     TODAY=$(date +%Y-%m-%d)
-     DEVICE="[기기 레이블]"   # Windows / Mac mini M4 / MacBook Air
-     SUMMARY="[이번 세션 핵심 3줄 이내]"
-     NEXT="[다음 세션에 이어할 것]"
-
-     ssh m1 bash -s << ENDSSH
-       FILE="\$HOME/vault/40-log/${TODAY}.md"
-       if [ ! -f "\$FILE" ]; then
-         printf -- "---\ntype: log\ndate: ${TODAY}\nstatus: active\n---\n" > "\$FILE"
-       fi
-       printf "\n## ${TODAY} (${DEVICE})\n- ${SUMMARY}\n\n**다음**: ${NEXT}\n" >> "\$FILE"
-       cd "\$HOME/vault"
-       git add "40-log/${TODAY}.md"
-       git commit -m "log: ${TODAY} ${DEVICE} session"
-       git push
-     ENDSSH
-     ```
-   - SSH 실패 시 "Vault 로그 실패 (M1 오프라인?)"을 출력하고 다음 단계로 넘어가라.
-   - **주의**: M1 vault만 쓰기. 로컬 vault 폴더(Windows/M4/MacAir)는 절대 수정하지 마라.
-
-완료 메시지 출력: "세션 마무리 완료. ✓ daily · SCHEDULE · git · vault"
+완료 메시지 출력: "세션 마무리 완료. ✓ vault 40-log · SCHEDULE · git"
