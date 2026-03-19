@@ -18,6 +18,26 @@
 현재 모델이 부적절하면 세션 시작 시 한 번만 안내:
 "이 작업은 [모델]이 적합해요. `/model [모델]`로 바꾸시겠어요?"
 
+### Plan mode 실행 추천 블록
+
+Plan 작성 시 **마지막에 반드시** 아래 블록을 포함할 것:
+
+> **⚙️ 실행 추천**
+> - 모델: Sonnet / Opus
+> - Effort: low / medium / high
+> - 위임: 없음 / Codex / Gemini / Codex+Gemini
+> - 근거: (한 줄 이유)
+
+판단 기준:
+
+| 작업 특성 | 모델 | Effort | 위임 |
+|---|---|---|---|
+| 1-3 파일 단순 편집 | Sonnet | low~medium | 없음 |
+| 버그 수정, 기능 구현, 코드 리뷰 | Sonnet | medium~high | 없음 |
+| 4+ 파일 / 50+ 줄 코딩 | Sonnet | medium | → Codex |
+| 리서치 필요 | 무관 | 무관 | → Gemini 먼저 |
+| 아키텍처/전략/복합 판단 | Opus | high | 필요시 병행 |
+
 ---
 
 
