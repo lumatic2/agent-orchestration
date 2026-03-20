@@ -1,32 +1,72 @@
-﻿전문가 AI 세션을 시작한다.
+전문가 AI 세션을 시작한다.
 
-$ARGUMENTS 형식: 질문 [옵션]
+$ARGUMENTS 형식: [도메인] 질문 [옵션]
 
-옵션: --planby, --dual, --brief, --memo, --exam
+옵션: --brief, --memo, --exam
+
+## 0. 인수 없이 호출 시 (인터랙티브 모드)
+
+$ARGUMENTS가 비어 있으면:
+1. 아래 도메인 목록 출력:
+```
+어떤 분야의 전문가가 필요하신가요?
+
+📊 재무회계 (IFRS, 재무제표, 분개)
+📋 세무 (법인세, 부가세, 세액공제)
+🔍 세무조사 (조세불복, 세무조사 대응)
+🌐 국제조세 (이전가격, BEPS)
+💰 자산세 (상속세, 증여세, 양도세)
+⚖️ 법률 (계약서, 노동법, 상법)
+💹 딜/밸류에이션 (M&A, DCF, 기업가치)
+🔎 감사 (내부통제, 감사 절차)
+🕵️ 포렌식 (횡령, 배임, 부정조사)
+📈 경영전략 (스타트업, 성장 전략)
+📉 경제 (거시경제, 금리, 환율)
+🏥 의학 (증상, 진단, 치료)
+💻 개발 (아키텍처, 코드 리뷰)
+
+질문을 입력해주세요. (예: /expert 기준금리 인상이 대출에 미치는 영향)
+```
+2. 세션 대기 (추가 입력 기다림)
 
 ## 1. 전문가 자동 라우팅
 
 질문 내용 분석해 자동 선택. 라우팅 기준:
-- IFRS/분개/재무제표 → accounting_advisory
-- 계약서/노동법/상법 → legal_advisory
-- M&A/기업가치/DCF → deal_valuation
-- 감사/내부통제 → audit
-- 횡령/배임/포렌식 → forensic
-- 세무조사/조세불복 → tax_investigation
-- 이전가격/BEPS → international_tax
-- 상속세/증여세/양도세 → wealth_tax
-- 전략/스타트업 성장 → business
-- 기준금리/환율/물가 → economics
-- 법인세/세액공제/부가세 → tax
-- 증상/진단/의학 → doctor
+- IFRS/분개/재무제표/K-IFRS/회계기준 → accounting_advisory
+- 계약서/노동법/상법/소송/법률 → legal_advisory
+- M&A/기업가치/DCF/밸류에이션/투자유치/IR/시리즈/VC/스타트업 투자 → deal_valuation
+- 감사/내부통제/내부감사 → audit
+- 횡령/배임/포렌식/부정 → forensic
+- 세무조사/조세불복/과세 → tax_investigation
+- 이전가격/BEPS/국제조세 → international_tax
+- 상속세/증여세/양도세/가업승계 → wealth_tax
+- 전략/스타트업 성장/창업/PMF/GTM/OKR/성장 지표 → business
+- 기준금리/환율/물가/GDP/CPI/거시경제/경기/금리 사이클 → economics
+- 법인세/세액공제/부가세/원천세 → tax
+- 증상/진단/의학/처방/질환 → doctor
+- 개발/코드/아키텍처/API/데이터베이스/시스템 설계 → developer_persona
+- 졸업/학점/수강신청/학교 생활 → (전문가 범위 외 — "이 시스템은 전문직 도메인 전문가입니다. 해당 질문은 다루지 않습니다." 안내)
+
+## 2. 세션 시작 안내
+
+전문가 선택 후 **반드시** 아래 형식으로 한 줄 출력 후 시작:
+```
+[{전문가명}] — {전문 영역 한 줄 설명}
+질문해주세요.
+```
+
+예시:
+```
+[재무회계 전문가 (KICPA 수준)] — K-IFRS, 재무제표 분석, 연결결산 전문
+질문해주세요.
+```
+```
+[거시경제 전문가] — 금리/환율/경기 사이클, 한은·Fed 정책 분석 전문
+질문해주세요.
+```
 
 페르소나: `ssh m1 cat ~/vault/20-experts/{유형}.md` 로 읽어라
 지식파일: `ssh m1 cat ~/vault/10-knowledge/{도메인}/{파일명}` 로 읽어라
-
-## 2. Planby 컨텍스트
-
---planby 또는 플랜바이/planby/우리 회사 키워드 시:
-bash ~/projects/agent-orchestration/scripts/planby_context.sh 질문 실행
 
 ## 3. 답변 형식
 
@@ -37,4 +77,3 @@ bash ~/projects/agent-orchestration/scripts/planby_context.sh 질문 실행
 ## 4. 자기검증 및 대화 지속
 
 수치 역산, 기준서 확인, 불확실 ⚠️, 최신성 📅. 종료 요청 없으면 세션 유지.
-
