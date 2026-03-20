@@ -110,14 +110,14 @@ paths:
 limits:
   claude_max_20x:
     window: "5h rolling"
-    opus_per_window: 180
-    sonnet_per_window: 900
-    haiku_per_window: 2700
+    opus_per_window: 180          # 예상 사용: 월 5-10회 × 100K = 500K-1M
+    sonnet_per_window: 900        # 지난 4h: 700K 소모 (과다)
+    haiku_per_window: 2700        # 사용 0 (subagent 제거 후)
   chatgpt_pro:
     window: "5h rolling + weekly"
-    codex_note: "Most generous, use for heavy work"
+    codex_note: "Codex: 1.8M cached가 recent peak. 캐싱 효율 95%+ 유지."  # 극도로 저활용
   gemini_pro:
-    daily_requests: 1500
+    daily_requests: 1500          # 사용: 200/day (13% 미만)
     rpm: 120
     pro_prompts_day: 100
     flash_prompts_day: 300
