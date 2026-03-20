@@ -192,7 +192,7 @@ read_meta_field_raw() {
 is_rate_limited() {
   local output="$1"
   # Check only last 30 lines to avoid false positives from file contents read by agents
-  if echo "$output" | tail -10 | grep -qEi "rate.?limit|429|too.?many.?requests" && ! echo "$output" | tail -5 | grep -qEi "Retrying|success|완료|saved|VAULT"; then
+  if echo "$output" | tail -10 | grep -qEi "rate.?limit|429|too.?many.?requests|resource.?exhausted|quota.?exceeded" && ! echo "$output" | tail -5 | grep -qEi "Retrying|success|완료|saved|VAULT"; then
     return 0
   fi
   return 1
@@ -263,98 +263,155 @@ print_dry_run() {
   echo "(실제 실행 없음)"
 }
 
+fallback_chain_key_for_agent() {
+  local agent="$1"
+  case "$agent" in
+    codex|codex-spark|codex-fallback) echo "code_generation" ;;
+    gemini|gemini-pro|gemini-fallback) echo "research" ;;
+    chatgpt|chatgpt-mini|chatgpt-light) echo "general" ;;
+    *) echo "" ;;
+  esac
+}
+
+describe_fallback_chain() {
+  local chain_key="$1"
+  [ -n "$chain_key" ] || return 0
+
+  python3 - "$AGENT_CONFIG_FILE" "$chain_key" << 'PYEOF'
+import sys
+from pathlib import Path
+
+try:
+    import yaml  # type: ignore
+except ImportError:
+    print("")
+    raise SystemExit(0)
+
+config_path = Path(sys.argv[1])
+chain_key = sys.argv[2]
+config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+models = config.get("models") or {}
+reasoning = config.get("reasoning") or {}
+chain = ((config.get("fallback") or {}).get(chain_key) or [])
+
+def agent_family(agent_name: str) -> str:
+    if agent_name.startswith("codex"):
+        return "codex"
+    if agent_name.startswith("chatgpt"):
+        return "chatgpt"
+    if agent_name.startswith("gemini"):
+        return "gemini"
+    if agent_name.startswith("claude"):
+        return "claude"
+    return agent_name
+
+parts = []
+for step in chain:
+    if not isinstance(step, dict):
+        continue
+    if "action" in step:
+        parts.append(str(step["action"]).strip())
+        continue
+
+    agent = str(step.get("agent", "")).strip()
+    model_ref = str(step.get("model_key", "")).strip()
+    family = agent_family(agent)
+    model_key = model_ref
+    if "." in model_ref:
+        family, model_key = model_ref.split(".", 1)
+
+    model = str(((models.get(family) or {}).get(model_key) or "")).strip()
+    effort = str(((reasoning.get(family) or {}).get(model_key) or "")).strip()
+
+    label = f"{agent}:{model or model_key or 'unresolved'}"
+    if effort and effort != "auto":
+        label += f"[{effort}]"
+    parts.append(label)
+
+print(" -> ".join(parts))
+PYEOF
+}
+
+get_fallback_chain_steps() {
+  local chain_key="$1"
+  [ -n "$chain_key" ] || return 0
+
+  python3 - "$AGENT_CONFIG_FILE" "$chain_key" << 'PYEOF'
+import sys
+from pathlib import Path
+
+try:
+    import yaml  # type: ignore
+except ImportError:
+    raise SystemExit(0)
+
+config_path = Path(sys.argv[1])
+chain_key = sys.argv[2]
+config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+models = config.get("models") or {}
+reasoning = config.get("reasoning") or {}
+chain = ((config.get("fallback") or {}).get(chain_key) or [])
+
+def agent_family(agent_name: str) -> str:
+    if agent_name.startswith("codex"):
+        return "codex"
+    if agent_name.startswith("chatgpt"):
+        return "chatgpt"
+    if agent_name.startswith("gemini"):
+        return "gemini"
+    if agent_name.startswith("claude"):
+        return "claude"
+    return agent_name
+
+for step in chain:
+    if not isinstance(step, dict):
+        continue
+    if "action" in step:
+        print(f"action\t{str(step['action']).strip()}")
+        continue
+
+    agent = str(step.get("agent", "")).strip()
+    model_ref = str(step.get("model_key", "")).strip()
+    family = agent_family(agent)
+    model_key = model_ref
+    if "." in model_ref:
+        family, model_key = model_ref.split(".", 1)
+
+    model = str(((models.get(family) or {}).get(model_key) or "")).strip()
+    effort = str(((reasoning.get(family) or {}).get(model_key) or "")).strip()
+    print(f"agent\t{agent}\t{family}\t{model}\t{effort}")
+PYEOF
+}
+
 # --- Complexity tier + model selector (agent_config.yaml) ---
 # Prints tab-separated values: <tier>\t<model>\t<reasoning>\t<family>
 resolve_dispatch_profile() {
   local agent="$1"
   local task_text="$2"
   python3 - "$AGENT_CONFIG_FILE" "$agent" "$task_text" << 'PYEOF'
-import re
 import sys
-from typing import Dict
+import re
+from pathlib import Path
 
 config_path = sys.argv[1]
 agent = (sys.argv[2] or "").strip().lower()
 task_text = sys.argv[3] if len(sys.argv) > 3 else ""
 
 try:
-    lines = open(config_path, "r", encoding="utf-8").read().splitlines()
+    import yaml  # type: ignore
 except Exception as exc:
     print(f"medium\t\t\t{agent}", end="")
     sys.exit(0)
 
-def parse_models(lines) -> Dict[str, Dict[str, str]]:
-    models: Dict[str, Dict[str, str]] = {}
-    in_models = False
-    family = ""
-    for line in lines:
-        if re.match(r"^models:\s*$", line):
-            in_models = True
-            continue
-        if in_models and re.match(r"^[A-Za-z0-9_]", line):
-            break
-        if not in_models:
-            continue
-        m_family = re.match(r"^\s{2}([a-z0-9_-]+):\s*(#.*)?$", line)
-        if m_family:
-            family = m_family.group(1)
-            models[family] = {}
-            continue
-        m_model = re.match(r"^\s{4}([a-z0-9_-]+):\s*\"([^\"]+)\"", line)
-        if m_model and family:
-            models[family][m_model.group(1)] = m_model.group(2)
-    return models
+try:
+    config = yaml.safe_load(Path(config_path).read_text(encoding="utf-8")) or {}
+except Exception:
+    print(f"medium\t\t\t{agent}", end="")
+    sys.exit(0)
 
-def parse_reasoning(lines) -> Dict[str, Dict[str, str]]:
-    reasoning: Dict[str, Dict[str, str]] = {}
-    in_reasoning = False
-    family = ""
-    for line in lines:
-        if re.match(r"^reasoning:\s*$", line):
-            in_reasoning = True
-            continue
-        if in_reasoning and re.match(r"^[A-Za-z0-9_]", line):
-            break
-        if not in_reasoning:
-            continue
-        m_family = re.match(r"^\s{2}([a-z0-9_-]+):\s*(#.*)?$", line)
-        if m_family:
-            family = m_family.group(1)
-            reasoning[family] = {}
-            continue
-        m_level = re.match(r"^\s{4}([a-z0-9_-]+):\s*\"([^\"]+)\"", line)
-        if m_level and family:
-            reasoning[family][m_level.group(1)] = m_level.group(2)
-    return reasoning
-
-def parse_complexity(lines) -> Dict[str, Dict[str, Dict[str, str]]]:
-    result: Dict[str, Dict[str, Dict[str, str]]] = {}
-    in_block = False
-    tier = ""
-    for line in lines:
-        if re.match(r"^complexity_tiers:\s*$", line):
-            in_block = True
-            continue
-        if in_block and re.match(r"^[A-Za-z0-9_]", line):
-            break
-        if not in_block:
-            continue
-        m_tier = re.match(r"^\s{2}(low|medium|high|ultra):\s*(#.*)?$", line)
-        if m_tier:
-            tier = m_tier.group(1)
-            result[tier] = {}
-            continue
-        m_entry = re.match(r"^\s{4}([a-z0-9_-]+):\s*\{([^}]*)\}", line)
-        if m_entry and tier:
-            family = m_entry.group(1)
-            data: Dict[str, str] = {}
-            for part in m_entry.group(2).split(","):
-                if ":" not in part:
-                    continue
-                key, value = part.split(":", 1)
-                data[key.strip()] = value.strip()
-            result[tier][family] = data
-    return result
+models = config.get("models") or {}
+reasoning = config.get("reasoning") or {}
+complexity = config.get("complexity_tiers") or {}
 
 def infer_tier(task: str) -> str:
     text = task or ""
@@ -375,23 +432,25 @@ def infer_tier(task: str) -> str:
     ultra_kw = [
         "full codebase", "entire codebase", "whole codebase", "architecture",
         "architectural", "system design", "novel design", "multi-system orchestration",
-        "전체 분석", "아키텍처", "신규 설계", "멀티 시스템"
+        "전체 분석", "아키텍처", "신규 설계", "멀티 시스템",
+        "복합 교차분석", "교차분석", "교차 분석"
     ]
     high_kw = [
         "complex bug", "unclear root cause", "non-trivial refactor", "cross-system",
-        "복잡한 버그", "리팩터", "리팩토", "원인 불명", "대규모 수정"
+        "복잡한 버그", "리팩터", "리팩토", "원인 불명", "대규모 수정",
+        "깊은 분석"
     ]
-    medium_kw = ["new feature", "standard coding", "새 기능", "기능 추가", "표준 코딩"]
-    low_kw = ["simple", "small fix", "quick fix", "typo", "단순 수정", "문구 수정", "lookup"]
+    medium_kw = ["new feature", "standard coding", "새 기능", "기능 추가", "기능추가", "표준 코딩", "리서치"]
+    low_kw = ["simple", "small fix", "quick fix", "typo", "단순 수정", "문구 수정", "lookup", "간단한 조사"]
 
     if any(k in lower for k in ultra_kw):
         return "ultra"
 
     tier = "medium"
     if file_count is not None:
-        if file_count >= 6:
+        if file_count >= 5:
             tier = "high"
-        elif file_count <= 3:
+        elif file_count <= 2:
             tier = "low"
         else:
             tier = "medium"
@@ -421,11 +480,10 @@ def agent_family(agent_name: str) -> str:
         return "chatgpt"
     if agent_name.startswith("gemini"):
         return "gemini"
+    if agent_name.startswith("claude"):
+        return "claude"
     return agent_name
 
-models = parse_models(lines)
-reasoning = parse_reasoning(lines)
-complexity = parse_complexity(lines)
 family = agent_family(agent)
 tier = infer_tier(task_text)
 
@@ -439,17 +497,26 @@ explicit_overrides = {
 
 if agent in explicit_overrides:
     family, model_key = explicit_overrides[agent]
-    model = models.get(family, {}).get(model_key, "")
-    effort = reasoning.get(family, {}).get(model_key, "")
+    model = (models.get(family) or {}).get(model_key, "")
+    effort = (reasoning.get(family) or {}).get(model_key, "")
     print(f"{tier}\t{model}\t{effort}\t{family}", end="")
     sys.exit(0)
 
-tier_map = complexity.get(tier, {})
-agent_map = tier_map.get(family, {})
-model_key = agent_map.get("tier", "")
+default_model_keys = {
+    "codex": "heavy",
+    "chatgpt": "default",
+    "gemini": "default",
+    "claude": "mid",
+}
 
-model = models.get(family, {}).get(model_key, "")
-effort = agent_map.get("reasoning", "") or reasoning.get(family, {}).get(model_key, "")
+tier_map = complexity.get(tier) or {}
+agent_map = tier_map.get(family) or {}
+model_key = agent_map.get("tier", "")
+if not model_key:
+    model_key = default_model_keys.get(family, "")
+
+model = (models.get(family) or {}).get(model_key, "")
+effort = agent_map.get("reasoning", "") or (reasoning.get(family) or {}).get(model_key, "")
 
 print(f"{tier}\t{model}\t{effort}\t{family}", end="")
 PYEOF
@@ -466,19 +533,17 @@ select_dispatch_profile() {
   SELECTED_FAMILY="$(echo "$resolved" | awk -F'\t' '{print $4}')"
 
   if [ -z "${SELECTED_MODEL:-}" ]; then
-    case "$agent" in
-      codex)         SELECTED_MODEL="gpt-5.3-codex"; SELECTED_REASONING="${SELECTED_REASONING:-extra-high}" ;;
-      codex-spark)   SELECTED_MODEL="gpt-5.3-codex-spark"; SELECTED_REASONING="${SELECTED_REASONING:-high}" ;;
-      chatgpt)       SELECTED_MODEL="gpt-5.2"; SELECTED_REASONING="${SELECTED_REASONING:-high}" ;;
-      chatgpt-mini)  SELECTED_MODEL="gpt-5.1"; SELECTED_REASONING="${SELECTED_REASONING:-medium}" ;;
-      chatgpt-light) SELECTED_MODEL="gpt-5"; SELECTED_REASONING="${SELECTED_REASONING:-low}" ;;
-      gemini)        SELECTED_MODEL="gemini-2.5-flash" ;;
-      gemini-pro)    SELECTED_MODEL="gemini-2.5-pro" ;;
-      *)             SELECTED_MODEL="" ;;
-    esac
+    echo "[ERROR] No configured model for agent=$agent tier=${SELECTED_COMPLEXITY_TIER:-unknown}" >&2
+    return 1
   fi
 
   echo "[ROUTER] tier=${SELECTED_COMPLEXITY_TIER:-unknown} agent=$agent family=${SELECTED_FAMILY:-unknown} model=${SELECTED_MODEL:-unknown} reasoning=${SELECTED_REASONING:-auto}"
+  local fallback_key fallback_desc
+  fallback_key="$(fallback_chain_key_for_agent "$agent")"
+  fallback_desc="$(describe_fallback_chain "$fallback_key")"
+  if [ -n "$fallback_key" ] && [ -n "$fallback_desc" ]; then
+    echo "[ROUTER] fallback=${fallback_key}: ${fallback_desc}"
+  fi
 }
 
 json_to_brief() {
@@ -558,204 +623,213 @@ do_schema() {
     output_json="true"
   fi
 
-  if [ "$output_json" = "true" ]; then
-    if [ -n "$target" ]; then
-      case "$target" in
-        codex)
-          cat << 'JSON_EOF'
-{"name":"codex","models":["gpt-5.3-codex","gpt-5.3-codex-spark"],"default_model":"gpt-5.3-codex","use_for":["Code generation, refactoring, test loops","4+ files or 50+ lines of code"],"flags":{"--dry-run":"Validate without executing","--json <JSON>":"Structured task input (goal, scope, constraints, output)"},"input":{"task":"string (required) — task description or @filepath or --json","task_name":"string (optional, default: unnamed)"},"quota":"most generous (use first for code tasks)","fallback":"queues on rate limit, retry with --resume"}
-JSON_EOF
-          ;;
-        codex-spark)
-          cat << 'JSON_EOF'
-{"name":"codex-spark","models":["gpt-5.3-codex-spark"],"default_model":"gpt-5.3-codex-spark","use_for":["Quick edits, small patches, fast iterations"],"flags":{"--dry-run":"Validate without executing","--json <JSON>":"Structured task input (goal, scope, constraints, output)"},"input":{"task":"string (required) — task description or @filepath or --json","task_name":"string (optional, default: unnamed)"},"quota":"high","fallback":"codex fallback chain, retry with --resume"}
-JSON_EOF
-          ;;
-        gemini)
-          cat << 'JSON_EOF'
-{"name":"gemini","models":["gemini-2.5-flash"],"default_model":"gemini-2.5-flash","use_for":["Research, summarization, lightweight analysis"],"flags":{"--dry-run":"Validate without executing","--json <JSON>":"Structured task input (goal, scope, constraints, output)"},"input":{"task":"string (required) — task description or @filepath or --json","task_name":"string (optional, default: unnamed)"},"quota":"moderate","fallback":"codex fallback on rate limit"}
-JSON_EOF
-          ;;
-        gemini-pro)
-          cat << 'JSON_EOF'
-{"name":"gemini-pro","models":["gemini-2.5-pro"],"default_model":"gemini-2.5-pro","use_for":["Deep analysis, complex reasoning tasks"],"flags":{"--dry-run":"Validate without executing","--json <JSON>":"Structured task input (goal, scope, constraints, output)"},"input":{"task":"string (required) — task description or @filepath or --json","task_name":"string (optional, default: unnamed)"},"quota":"lower than flash","fallback":"codex fallback on rate limit"}
-JSON_EOF
-          ;;
-        *)
-          echo "[ERROR] Unknown agent for schema: $target"
-          exit 1
-          ;;
-      esac
-      exit 0
-    fi
+  python3 - "$AGENT_CONFIG_FILE" "$target" "$output_json" << 'PYEOF'
+import json
+import sys
+from pathlib import Path
 
-    cat << 'JSON_EOF'
-{
-  "agents": [
-    {"name":"codex","default_model":"gpt-5.3-codex","models":["gpt-5.3-codex","gpt-5.3-codex-spark"],"use_for":"code generation, refactoring, 4+ files or 50+ lines"},
-    {"name":"codex-spark","default_model":"gpt-5.3-codex-spark","models":["gpt-5.3-codex-spark"],"use_for":"quick edits, small patches"},
-    {"name":"gemini","default_model":"gemini-2.5-flash","models":["gemini-2.5-flash"],"use_for":"research, doc analysis, 1500 req/day"},
-    {"name":"gemini-pro","default_model":"gemini-2.5-pro","models":["gemini-2.5-pro"],"use_for":"deep analysis, max 100/day — use sparingly"}
-  ],
-  "dispatch": {
-    "usage": "orchestrate.sh <agent> \"<task>\" <task-name> [--dry-run]",
-    "flags": {
-      "--dry-run": "validate without executing",
-      "--pro": "use gemini-pro instead of flash",
-      "--save": "save result to vault",
-      "--resume": "re-attach to existing task by name"
-    }
-  },
-  "system": {
-    "--boot":     {"description":"scan queue on session start, re-dispatch stale tasks","returns":"pending count"},
-    "--status":   {"description":"show all queue entries","flags":{"--json":"machine-readable JSON output"},"returns":"table or {total,pending,queued,dispatched,completed,tasks[]}"},
-    "--resume":   {"description":"re-dispatch oldest pending/queued task","returns":"dispatch result"},
-    "--complete": {"usage":"--complete <ID> <summary>","description":"manually mark task as completed"},
-    "--cost":     {"description":"today's usage per model + limits","returns":"cost table"},
-    "--clean":    {"usage":"--clean [--dry]","description":"archive completed queue entries"},
-    "--chain":    {"usage":"--chain \"question\" agent1 [agent2...] [task-name]","description":"pipe output of one agent to next"},
-    "run":        {"usage":"run <blueprint_file> [--var key=value ...]","description":"execute YAML blueprint pipeline"}
-  },
-  "queue": {
-    "location": "queue/T###_<name>/",
-    "files": {
-      "meta.json":   "dispatch status, retry count, timestamps",
-      "brief.md":    "task spec (goal, scope, context budget, stop triggers)",
-      "progress.md": "phase checkpoints, notes, resume point",
-      "result.md":   "agent output"
+try:
+    import yaml  # type: ignore
+except ImportError as exc:
+    print(f"[ERROR] PyYAML is required for schema output: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+
+config = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+target = sys.argv[2].strip()
+output_json = sys.argv[3].strip().lower() == "true"
+models = config.get("models") or {}
+
+AGENTS = {
+    "codex": {
+        "family": "codex",
+        "tier": "heavy",
+        "models_mode": "family",
+        "use_for": ["Code generation, refactoring, test loops", "4+ files or 50+ lines of code"],
+        "quota": "use first for code tasks",
+        "fallback": "code_generation",
     },
-    "statuses": ["pending","dispatched","queued","completed"]
-  }
+    "codex-spark": {
+        "family": "codex",
+        "tier": "light",
+        "models_mode": "single",
+        "use_for": ["Quick edits, small patches, fast iterations"],
+        "quota": "high",
+        "fallback": "code_generation",
+    },
+    "gemini": {
+        "family": "gemini",
+        "tier": "default",
+        "models_mode": "single",
+        "use_for": ["Research, summarization, lightweight analysis"],
+        "quota": "config-driven",
+        "fallback": "research",
+    },
+    "gemini-pro": {
+        "family": "gemini",
+        "tier": "heavy",
+        "models_mode": "single",
+        "use_for": ["Deep analysis, complex reasoning tasks"],
+        "quota": "config-driven",
+        "fallback": "research",
+    },
+    "chatgpt": {
+        "family": "chatgpt",
+        "tier": "heavy",
+        "models_mode": "single",
+        "use_for": ["Writing, summarization, general non-coding tasks"],
+        "quota": "config-driven",
+        "fallback": "general",
+    },
+    "chatgpt-mini": {
+        "family": "chatgpt",
+        "tier": "default",
+        "models_mode": "single",
+        "use_for": ["Budget general tasks, translation, processing"],
+        "quota": "config-driven",
+        "fallback": "general",
+    },
+    "chatgpt-light": {
+        "family": "chatgpt",
+        "tier": "light",
+        "models_mode": "single",
+        "use_for": ["Simple transforms, bulk lightweight tasks"],
+        "quota": "config-driven",
+        "fallback": "general",
+    },
 }
-JSON_EOF
-    exit 0
-  fi
 
-  if [ -z "$target" ]; then
-    cat << 'SCHEMA_EOF'
-=== Agent Schema ===
+def ordered_unique(values):
+    seen = set()
+    result = []
+    for value in values:
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
 
-- codex
-- codex-spark
-- gemini
-- gemini-pro
+def build_schema(name: str):
+    if name not in AGENTS:
+        return None
+    spec = AGENTS[name]
+    family = spec["family"]
+    family_models = models.get(family) or {}
+    default_model = str(family_models.get(spec["tier"], "") or "")
+    if spec["models_mode"] == "family":
+        model_list = ordered_unique(str(v or "") for v in family_models.values())
+    else:
+        model_list = [default_model] if default_model else []
+    return {
+        "name": name,
+        "models": model_list,
+        "default_model": default_model,
+        "use_for": spec["use_for"],
+        "flags": {
+            "--dry-run": "Validate without executing",
+            "--json <JSON>": "Structured task input (goal, scope, constraints, output)",
+        },
+        "input": {
+            "task": "string (required) — task description or @filepath or --json",
+            "task_name": "string (optional, default: unnamed)",
+        },
+        "quota": spec["quota"],
+        "fallback": f"{spec['fallback']} (config-driven)",
+    }
 
-Usage:
-  orchestrate.sh schema
-  orchestrate.sh schema codex
-  orchestrate.sh schema gemini
-  orchestrate.sh schema --json
-  orchestrate.sh run blueprints/slides.yaml --var topic=커피
-SCHEMA_EOF
-    exit 0
-  fi
+if output_json:
+    if target:
+        schema = build_schema(target)
+        if schema is None:
+            print(f"[ERROR] Unknown agent for schema: {target}", file=sys.stderr)
+            raise SystemExit(1)
+        print(json.dumps(schema, ensure_ascii=False))
+        raise SystemExit(0)
 
-  case "$target" in
-    codex)
-      cat << 'SCHEMA_EOF'
-=== Agent Schema: codex ===
+    payload = {
+        "agents": [build_schema(name) for name in AGENTS],
+        "dispatch": {
+            "usage": 'orchestrate.sh <agent> "<task>" <task-name> [--dry-run]',
+            "flags": {
+                "--dry-run": "validate without executing",
+                "--save": "save result to vault",
+                "--resume": "re-attach to existing task by name",
+            },
+        },
+        "system": {
+            "--boot": {"description": "scan queue on session start, re-dispatch stale tasks", "returns": "pending count"},
+            "--status": {"description": "show all queue entries", "flags": {"--json": "machine-readable JSON output"}, "returns": "table or JSON"},
+            "--resume": {"description": "re-dispatch oldest pending/queued task", "returns": "dispatch result"},
+            "--complete": {"usage": "--complete <ID> <summary>", "description": "manually mark task as completed"},
+            "--cost": {"description": "today's usage per model + limits", "returns": "cost table"},
+            "--clean": {"usage": "--clean [--dry]", "description": "archive completed queue entries"},
+            "--chain": {"usage": '--chain "question" agent1 [agent2...] [task-name]', "description": "pipe output of one agent to next"},
+            "run": {"usage": "run <blueprint_file> [--var key=value ...]", "description": "execute YAML blueprint pipeline"},
+        },
+        "queue": {
+            "location": "queue/T###_<name>/",
+            "files": {
+                "meta.json": "dispatch status, retry count, timestamps",
+                "brief.md": "task spec (goal, scope, context budget, stop triggers)",
+                "progress.md": "phase checkpoints, notes, resume point",
+                "result.md": "agent output",
+            },
+            "statuses": ["pending", "dispatched", "queued", "completed"],
+        },
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    raise SystemExit(0)
 
-name:        codex
-models:
-  - gpt-5.3-codex (default, heavy tasks)
-  - gpt-5.3-codex-spark (quick edits)
-use_for:
-  - Code generation, refactoring, test loops
-  - 4+ files or 50+ lines of code
-flags:
-  --dry-run     : Validate without executing
-  --json <JSON> : Structured task input (goal, scope, constraints, output)
-input:
-  task:         string (required) — task description or @filepath or --json
-  task-name:    string (optional, default: unnamed)
-quota:          most generous (use first for code tasks)
-fallback:       queues on rate limit, retry with --resume
+if not target:
+    print("=== Agent Schema ===\n")
+    for name in AGENTS:
+        print(f"- {name}")
+    print("\nUsage:")
+    print("  orchestrate.sh schema")
+    print("  orchestrate.sh schema codex")
+    print("  orchestrate.sh schema gemini")
+    print("  orchestrate.sh schema --json")
+    print("  orchestrate.sh run blueprints/slides.yaml --var topic=커피")
+    raise SystemExit(0)
 
-examples:
-  orchestrate.sh codex "리팩토링 작업" task-name
-  orchestrate.sh codex @brief.md task-name
-  orchestrate.sh codex --json '{"goal":"...","scope":"..."}' task-name
-SCHEMA_EOF
-      ;;
-    codex-spark)
-      cat << 'SCHEMA_EOF'
-=== Agent Schema: codex-spark ===
+schema = build_schema(target)
+if schema is None:
+    print(f"[ERROR] Unknown agent for schema: {target}", file=sys.stderr)
+    raise SystemExit(1)
 
-name:        codex-spark
-models:
-  - gpt-5.3-codex-spark (default, quick edits)
-use_for:
-  - Quick edits, small patches, fast iterations
-flags:
-  --dry-run     : Validate without executing
-  --json <JSON> : Structured task input (goal, scope, constraints, output)
-input:
-  task:         string (required) — task description or @filepath or --json
-  task-name:    string (optional, default: unnamed)
-quota:          high
-fallback:       codex fallback chain, retry with --resume
-
-examples:
-  orchestrate.sh codex-spark "빠른 수정" task-name
-SCHEMA_EOF
-      ;;
-    gemini)
-      cat << 'SCHEMA_EOF'
-=== Agent Schema: gemini ===
-
-name:        gemini
-models:
-  - gemini-2.5-flash (default)
-use_for:
-  - Research, summarization, lightweight analysis
-flags:
-  --dry-run     : Validate without executing
-  --json <JSON> : Structured task input (goal, scope, constraints, output)
-input:
-  task:         string (required) — task description or @filepath or --json
-  task-name:    string (optional, default: unnamed)
-quota:          moderate
-fallback:       Codex fallback on rate limit
-
-examples:
-  orchestrate.sh gemini "최신 라이브러리 조사" research-task
-SCHEMA_EOF
-      ;;
-    gemini-pro)
-      cat << 'SCHEMA_EOF'
-=== Agent Schema: gemini-pro ===
-
-name:        gemini-pro
-models:
-  - gemini-2.5-pro (default, deep analysis)
-use_for:
-  - Deep analysis, complex reasoning tasks
-flags:
-  --dry-run     : Validate without executing
-  --json <JSON> : Structured task input (goal, scope, constraints, output)
-input:
-  task:         string (required) — task description or @filepath or --json
-  task-name:    string (optional, default: unnamed)
-quota:          lower than flash
-fallback:       Codex fallback on rate limit
-
-examples:
-  orchestrate.sh gemini-pro "심층 분석" analysis-task
-SCHEMA_EOF
-      ;;
-    *)
-      echo "[ERROR] Unknown agent for schema: $target"
-      exit 1
-      ;;
-  esac
-  exit 0
+print(f"=== Agent Schema: {schema['name']} ===\n")
+print(f"name:        {schema['name']}")
+print("models:")
+for model in schema["models"]:
+    print(f"  - {model}")
+print("use_for:")
+for item in schema["use_for"]:
+    print(f"  - {item}")
+print("flags:")
+print("  --dry-run     : Validate without executing")
+print("  --json <JSON> : Structured task input (goal, scope, constraints, output)")
+print("input:")
+print("  task:         string (required) — task description or @filepath or --json")
+print("  task-name:    string (optional, default: unnamed)")
+print(f"quota:          {schema['quota']}")
+print(f"fallback:       {schema['fallback']}")
+print("\nexamples:")
+print(f"  orchestrate.sh {schema['name']} \"task\" task-name")
+print(f"  orchestrate.sh {schema['name']} @brief.md task-name")
+print(f"  orchestrate.sh {schema['name']} --json '{{\"goal\":\"...\",\"scope\":\"...\"}}' task-name")
+PYEOF
+  exit $?
 }
 
 # --- Run Codex ---
 run_codex() {
-  local model="${1:-gpt-5.3-codex}"
+  local model="${1:-}"
   local reasoning="${2:-}"
   local log_file="$LOG_DIR/codex_${TASK_NAME}_${TIMESTAMP}.json"
+
+  if [ -z "$model" ]; then
+    echo "[ERROR] Missing Codex model for task: $TASK_NAME" >&2
+    return 1
+  fi
 
   if [ "${DRY_RUN:-false}" = "true" ]; then
     print_dry_run "$AGENT" "$model" "$reasoning"
@@ -849,9 +923,14 @@ vault_check() {
 
 # --- Run Gemini ---
 run_gemini() {
-  local model="${1:-gemini-2.5-flash}"
+  local model="${1:-}"
   local reasoning="${2:-}"
   local log_file="$LOG_DIR/gemini_${TASK_NAME}_${TIMESTAMP}.txt"
+
+  if [ -z "$model" ]; then
+    echo "[ERROR] Missing Gemini model for task: $TASK_NAME" >&2
+    return 1
+  fi
 
   if [ "${DRY_RUN:-false}" = "true" ]; then
     print_dry_run "$AGENT" "$model" "$reasoning"
@@ -929,27 +1008,76 @@ VAULTEOF
 }
 
 # --- Fallback logic ---
-run_with_fallback_code() {
-  echo "[INFO] Attempting code task with fallback chain..."
+run_with_fallback_chain() {
+  local chain_key="$1"
+  local skip_family="${2:-}"
+  local skip_model="${3:-}"
+  local chain_desc
+  chain_desc="$(describe_fallback_chain "$chain_key")"
 
-  if run_codex "gpt-5.3-codex" "extra-high"; then return 0; fi
+  echo "[INFO] Attempting fallback chain: ${chain_key}${chain_desc:+ ($chain_desc)}"
 
-  echo "[QUEUED] Codex rate-limited. Task queued for retry."
-  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "codex_rate_limited"
+  local step_type step_value step_family step_model step_reasoning
+  while IFS=$'\t' read -r step_type step_value step_family step_model step_reasoning; do
+    [ -n "${step_type:-}" ] || continue
+    step_type="${step_type//$'\r'/}"
+    step_value="${step_value//$'\r'/}"
+    step_family="${step_family//$'\r'/}"
+    step_model="${step_model//$'\r'/}"
+    step_reasoning="${step_reasoning//$'\r'/}"
+
+    case "$step_type" in
+      agent)
+        if [ -n "$skip_model" ] && [ "$step_family" = "$skip_family" ] && [ "$step_model" = "$skip_model" ]; then
+          echo "[FALLBACK] Skipping already-attempted step: $step_value ($step_model)"
+          skip_family=""
+          skip_model=""
+          continue
+        fi
+
+        echo "[FALLBACK] Trying $step_value ($step_model)"
+        case "$step_family" in
+          gemini)
+            if run_gemini "$step_model" "$step_reasoning"; then
+              return 0
+            fi
+            ;;
+          codex|chatgpt)
+            if run_codex "$step_model" "$step_reasoning"; then
+              return 0
+            fi
+            ;;
+          *)
+            echo "[WARN] Unsupported fallback agent family: $step_family"
+            ;;
+        esac
+        ;;
+      action)
+        case "$step_value" in
+          queue_and_wait|pause_and_notify)
+            echo "[QUEUED] Fallback chain exhausted. Task queued for retry."
+            [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "fallback_exhausted"
+            return 1
+            ;;
+          *)
+            echo "[WARN] Unknown fallback action: $step_value"
+            ;;
+        esac
+        ;;
+    esac
+  done < <(get_fallback_chain_steps "$chain_key")
+
+  echo "[QUEUED] No executable fallback step succeeded. Task queued for retry."
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "fallback_exhausted"
   return 1
 }
 
+run_with_fallback_code() {
+  run_with_fallback_chain "code_generation" "${1:-}" "${2:-}"
+}
+
 run_with_fallback_research() {
-  echo "[INFO] Attempting research task with fallback chain..."
-
-  if run_gemini "gemini-2.5-flash"; then return 0; fi
-
-  echo "[FALLBACK] Trying Codex..."
-  if run_codex "gpt-5.3-codex" "extra-high"; then return 0; fi
-
-  echo "[QUEUED] All agents rate-limited. Task queued for retry."
-  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "all_agents_rate_limited"
-  return 1
+  run_with_fallback_chain "research" "${1:-}" "${2:-}"
 }
 
 # ============================================================
@@ -1262,14 +1390,20 @@ do_complete() {
 
 do_cost() {
   local period="${1:-today}"   # today | week | all
-  python3 - "$QUEUE_DIR" "$REPO_DIR/archive/queue" "$period" << 'PYEOF'
+  python3 - "$QUEUE_DIR" "$REPO_DIR/archive/queue" "$period" "$AGENT_CONFIG_FILE" << 'PYEOF'
 import json, sys
 from pathlib import Path
 from datetime import date, timedelta
 
+try:
+    import yaml  # type: ignore
+except ImportError:
+    yaml = None
+
 queue_dir   = Path(sys.argv[1])
 archive_dir = Path(sys.argv[2])
 period      = sys.argv[3] if len(sys.argv) > 3 else "today"
+config_path = Path(sys.argv[4]) if len(sys.argv) > 4 else None
 
 today = date.today()
 if period == "week":
@@ -1282,11 +1416,30 @@ else:
     cutoff = str(today)
     period_label = f"오늘 ({today})"
 
-LIMITS = {
-    "gemini-2.5-pro": 100,
-    "gemini-2.5-flash": 300,
-    "gemini-2.5-flash-lite": 500,
-}
+def as_int(value):
+    try:
+        return int(value)
+    except Exception:
+        return None
+
+LIMITS = {}
+if yaml is not None and config_path and config_path.exists():
+    try:
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        config = {}
+    gemini_models = ((config.get("models") or {}).get("gemini") or {})
+    gemini_limits = ((config.get("limits") or {}).get("gemini_pro") or {})
+    shared = as_int(gemini_limits.get("shared_requests_per_day"))
+    tier_limits = {
+        "default": as_int(gemini_limits.get("default_per_day")) or shared,
+        "heavy": as_int(gemini_limits.get("heavy_per_day")) or shared,
+        "light": as_int(gemini_limits.get("light_per_day")) or shared,
+    }
+    for tier, model_name in gemini_models.items():
+        limit = tier_limits.get(str(tier))
+        if model_name and limit:
+            LIMITS[str(model_name)] = limit
 
 # 에이전트 유형 분류 (task name 기반)
 AGENT_KEYWORDS = {
@@ -1577,7 +1730,7 @@ fi
 # --- Parse arguments ---
 DRY_RUN="false"
 VAULT_DOMAIN=""
-FORCE="false"
+FORCE="${FORCE:-false}"
 NO_VAULT="${NO_VAULT:-false}"
 while [[ "${1:-}" == --* ]]; do
   case "${1:-}" in
@@ -1629,31 +1782,31 @@ fi
 case "$AGENT" in
   codex)
     select_dispatch_profile "$AGENT"
-    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_code
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_code "$SELECTED_FAMILY" "$SELECTED_MODEL"
     ;;
   codex-spark)
     select_dispatch_profile "$AGENT"
-    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_code
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_code "$SELECTED_FAMILY" "$SELECTED_MODEL"
     ;;
   gemini)
     select_dispatch_profile "$AGENT"
-    run_gemini "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
+    run_gemini "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research "$SELECTED_FAMILY" "$SELECTED_MODEL"
     ;;
   gemini-pro)
     select_dispatch_profile "$AGENT"
-    run_gemini "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
+    run_gemini "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research "$SELECTED_FAMILY" "$SELECTED_MODEL"
     ;;
   chatgpt)
     select_dispatch_profile "$AGENT"
-    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_chain "general" "$SELECTED_FAMILY" "$SELECTED_MODEL"
     ;;
   chatgpt-mini)
     select_dispatch_profile "$AGENT"
-    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_chain "general" "$SELECTED_FAMILY" "$SELECTED_MODEL"
     ;;
   chatgpt-light)
     select_dispatch_profile "$AGENT"
-    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_chain "general" "$SELECTED_FAMILY" "$SELECTED_MODEL"
     ;;
   codex-fallback)
     run_with_fallback_code

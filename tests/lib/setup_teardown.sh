@@ -17,6 +17,8 @@ setup_test_env() {
   export ACTIVITY_LOG="$QUEUE_DIR/activity.jsonl"
   export ISO_NOW="2026-02-28T10:00:00+0900"
   export TIMESTAMP="20260228_100000"
+  export NO_VAULT="true"
+  export FORCE="true"
 
   touch "$ACTIVITY_LOG"
 }
@@ -38,6 +40,8 @@ setup_e2e_env() {
   # Symlink real scripts (cp for Windows Git Bash compat)
   cp "$real_repo/scripts/orchestrate.sh" "$TEST_TEMP_DIR/scripts/orchestrate.sh"
   cp "$real_repo/scripts/guard.sh" "$TEST_TEMP_DIR/scripts/guard.sh"
+  cp "$real_repo/scripts/env.sh" "$TEST_TEMP_DIR/scripts/env.sh"
+  cp "$real_repo/agent_config.yaml" "$TEST_TEMP_DIR/agent_config.yaml"
 
   # Copy templates if they exist
   if [ -d "$real_repo/templates" ]; then

@@ -34,11 +34,11 @@ models:
 # --- Reasoning Levels ---
 reasoning:
   codex:
-    heavy: "extra-high"         # No cost concern — always use best
+    heavy: "xhigh"         # No cost concern — always use best
     light: "high"
     mini: "medium"
   chatgpt:
-    ultra: "extra-high"         # gpt-5.4
+    ultra: "xhigh"         # gpt-5.4
     heavy: "high"
     default: "medium"
     light: "low"
@@ -68,22 +68,22 @@ complexity_tiers:
 
   medium:
     signals: "3-5 files, new feature, standard coding, clear requirements"
-    codex:   { tier: heavy,  reasoning: extra-high }
+    codex:   { tier: heavy,  reasoning: xhigh }
     chatgpt: { tier: heavy,  reasoning: high }
     gemini:  { tier: default }
     claude:  { model: sonnet, effort: medium }
 
   high:
     signals: "5+ files, complex bug with unclear root cause, non-trivial refactoring, cross-system changes"
-    codex:   { tier: heavy,  reasoning: extra-high }
-    chatgpt: { tier: ultra,  reasoning: extra-high }
+    codex:   { tier: heavy,  reasoning: xhigh }
+    chatgpt: { tier: ultra,  reasoning: xhigh }
     gemini:  { tier: heavy }
     claude:  { model: sonnet, effort: high }
 
   ultra:
     signals: "Full codebase analysis, architecture decisions, novel design, multi-system orchestration"
-    codex:   { tier: heavy,  reasoning: extra-high }
-    chatgpt: { tier: ultra,  reasoning: extra-high }
+    codex:   { tier: ultra,  reasoning: xhigh }
+    chatgpt: { tier: ultra,  reasoning: xhigh }
     gemini:  { tier: heavy }
     claude:  { model: opus,  effort: high }
 
@@ -122,26 +122,26 @@ limits:
     note: "코딩/분석 전부 여기로."
 
   gemini_pro:
-    plan: "Gemini Pro ($20/mo)"
-    flash_per_day: 300
-    pro_per_day: 100
+    plan: "Gemini CLI (Gemini Code Assist Standard)"
+    shared_requests_per_day: 1500
     rpm: 120
-    note: "Flash = 기본. Pro = 심층분석만."
+    default_per_day: 1500
+    heavy_per_day: 1500
+    light_per_day: 1500
+    note: "공식 CLI quota는 모델별이 아니라 shared quota다. 상세 active limits는 AI Studio에서 확인."
 
 # --- Fallback Chains ---
 fallback:
   code_generation:
     - agent: codex
       model_key: heavy
-    - agent: claude_subagent
-      model_key: mid
+    - agent: gemini
+      model_key: default
     - action: queue_and_wait
 
   research:
     - agent: gemini
       model_key: default
-    - agent: claude_subagent
-      model_key: light
     - agent: codex
       model_key: heavy
     - action: queue_and_wait
