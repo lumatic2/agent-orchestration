@@ -1194,13 +1194,19 @@ run_gemini() {
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
   [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
 
-  # Write directly to file to avoid shell variable truncation
+  # Write task to temp file and pass via stdin to avoid shell escaping issues
+  # with long Korean prompts containing special characters ('-p "$TASK"' was silently failing)
+  local tmp_prompt
+  tmp_prompt=$(mktemp /tmp/gemini_prompt_XXXXXX.txt)
+  printf '%s' "$TASK" > "$tmp_prompt"
+
   gemini \
     --yolo \
-    -m "$model" \
-    -p "$TASK" 2>&1 \
+    -m "$model" < "$tmp_prompt" 2>&1 \
     | grep -Ev "YOLO mode is enabled|All tool calls will be automatically approved|Loaded cached credentials|\[WARN\]|EPERM|EACCES|operation not permitted|Error getting folder structure" \
     > "$log_file" || true
+
+  rm -f "$tmp_prompt"
 
   local result
   result=$(cat "$log_file")

@@ -135,14 +135,14 @@ fallback:
   code_generation:
     - agent: codex
       model_key: heavy
-    - agent: gemini
-      model_key: default
+    - agent: chatgpt
+      model_key: heavy
     - action: queue_and_wait
 
   research:
     - agent: gemini
       model_key: default
-    - agent: codex
+    - agent: gemini
       model_key: heavy
     - action: queue_and_wait
 
