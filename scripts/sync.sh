@@ -230,6 +230,17 @@ deploy_codex_brain() {
   echo "[OK] Codex Brain → $target_dir/CODEX_BRAIN.md"
 }
 
+deploy_codex_main() {
+  local dest_agents="$HOME/projects/agent-orchestration-Codex_main/AGENTS.md"
+  local src="$REPO_DIR/../agent-orchestration-Codex_main/adapters/codex_global.md"
+  if [ -f "$src" ]; then
+    cp "$src" "$dest_agents"
+    echo "[OK] codex_main AGENTS.md deployed"
+  else
+    echo "[WARN] codex_global.md not found, skipping codex_main deploy"
+  fi
+}
+
 setup_mcp() {
   if [ -n "${GEMINI_API_KEY:-}" ]; then
     bash "$REPO_DIR/configs/mcp_setup.sh"
@@ -314,6 +325,7 @@ main() {
 
   # Codex Brain (항상 배포)
   deploy_codex_brain
+  deploy_codex_main
 
   # Cleanup
   rm -f "$REPO_DIR/adapters/"*.deploy "$REPO_DIR/adapters/"*.bak

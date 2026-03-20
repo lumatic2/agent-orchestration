@@ -276,6 +276,8 @@ Queue entries persist across sessions in `~/projects/agent-orchestration/queue/`
 - Shared principles: `~/projects/agent-orchestration/SHARED_PRINCIPLES.md`
 - Config (models/flags): `~/projects/agent-orchestration/agent_config.yaml`
 - Handoff templates: `~/projects/agent-orchestration/templates/handoff_*.md`
+- **Codex-main repo**: `~/projects/agent-orchestration-Codex_main/` (Codex 오케스트레이터 신규 repo, 병행 운영 중)
+- **Codex AGENTS.md**: `~/projects/agent-orchestration-Codex_main/AGENTS.md`
 
 ### Knowledge Vault
 
