@@ -384,7 +384,8 @@ PYEOF
 }
 
 # --- Complexity tier + model selector (agent_config.yaml) ---
-# Prints tab-separated values: <tier>\t<model>\t<reasoning>\t<family>
+# Heuristic-only classifier: no external NLP, just stable keyword/count rules.
+# Prints tab-separated values: <tier>\t<model>\t<reasoning>\t<family>\t<source>
 resolve_dispatch_profile() {
   local agent="$1"
   local task_text="$2"
@@ -397,21 +398,113 @@ config_path = sys.argv[1]
 agent = (sys.argv[2] or "").strip().lower()
 task_text = sys.argv[3] if len(sys.argv) > 3 else ""
 
+BUILTIN_MODELS = {
+    "codex": {
+        "ultra": "gpt-5.4",
+        "heavy": "gpt-5.3-codex",
+        "light": "gpt-5.3-codex-spark",
+        "mini": "gpt-5-codex-mini",
+    },
+    "chatgpt": {
+        "heavy": "gpt-5.2",
+        "default": "gpt-5.1",
+        "light": "gpt-5",
+    },
+    "gemini": {
+        "heavy": "gemini-2.5-pro",
+        "default": "gemini-2.5-flash",
+        "light": "gemini-2.5-flash-lite",
+    },
+    "claude": {
+        "heavy": "opus",
+        "mid": "sonnet",
+        "light": "haiku",
+    },
+}
+
+BUILTIN_REASONING = {
+    "codex": {"ultra": "xhigh", "heavy": "xhigh", "light": "high", "mini": "medium"},
+    "chatgpt": {"ultra": "xhigh", "heavy": "high", "default": "medium", "light": "low"},
+    "gemini": {"heavy": "auto", "default": "auto", "light": "auto"},
+    "claude": {
+        "opus": "high",
+        "sonnet": "medium",
+        "haiku": "low",
+        "sonnet_high": "high",
+        "haiku_medium": "medium",
+    },
+}
+
+LEGACY_DEFAULT_KEYS = {
+    "codex": "heavy",
+    "chatgpt": "default",
+    "gemini": "default",
+    "claude": "mid",
+}
+
+MODEL_KEY_ORDER = {
+    "codex": ["ultra", "heavy", "light", "mini"],
+    "chatgpt": ["ultra", "heavy", "default", "light"],
+    "gemini": ["heavy", "default", "light"],
+    "claude": ["heavy", "mid", "light"],
+}
+
+ALIAS_OVERRIDES = {
+    "codex-spark": ("codex", "light"),
+    "gemini-pro": ("gemini", "heavy"),
+    "chatgpt-mini": ("chatgpt", "default"),
+    "chatgpt-light": ("chatgpt", "light"),
+}
+
+EFFORT_ALIASES = {
+    "": "",
+    "auto": "auto",
+    "low": "low",
+    "medium": "medium",
+    "med": "medium",
+    "high": "high",
+    "xhigh": "xhigh",
+    "extra-high": "xhigh",
+    "extra high": "xhigh",
+}
+
 try:
     import yaml  # type: ignore
-except Exception as exc:
-    print(f"medium\t\t\t{agent}", end="")
-    sys.exit(0)
-
-try:
-    config = yaml.safe_load(Path(config_path).read_text(encoding="utf-8")) or {}
 except Exception:
-    print(f"medium\t\t\t{agent}", end="")
-    sys.exit(0)
+    yaml = None
 
-models = config.get("models") or {}
-reasoning = config.get("reasoning") or {}
+config = {}
+if yaml is not None:
+    try:
+        config = yaml.safe_load(Path(config_path).read_text(encoding="utf-8")) or {}
+    except Exception:
+        config = {}
+
+models = config.get("models") or BUILTIN_MODELS
+reasoning = config.get("reasoning") or BUILTIN_REASONING
 complexity = config.get("complexity_tiers") or {}
+
+def ordered_unique(values):
+    seen = set()
+    result = []
+    for value in values:
+        value = str(value or "").strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+def first_non_empty(values):
+    for value in values:
+        value = str(value or "").strip()
+        if value:
+            return value
+    return ""
+
+def normalize_effort(value):
+    raw = str(value or "").strip().lower().replace("_", " ").replace("-", " ")
+    return EFFORT_ALIASES.get(raw, str(value or "").strip())
 
 def infer_tier(task: str) -> str:
     text = task or ""
@@ -421,57 +514,85 @@ def infer_tier(task: str) -> str:
     if forced:
         return forced.group(1)
 
-    range_files = [max(int(a), int(b)) for a, b in re.findall(r"(\d+)\s*[-~]\s*(\d+)\s*(?:files?|파일|문서)", lower)]
-    single_files = [int(x) for x in re.findall(r"(\d+)\s*\+?\s*(?:files?|파일|문서)", lower)]
-    file_count = max(range_files + single_files) if (range_files or single_files) else None
+    file_range_pattern = r"(\d+)\s*(?:to|[-~])\s*(\d+)\s*(?:files?|개\s*파일|파일|문서)"
+    file_ranges = [(min(int(a), int(b)), max(int(a), int(b))) for a, b in re.findall(file_range_pattern, lower)]
+    lower_no_file_ranges = re.sub(file_range_pattern, " ", lower)
+    single_files = [int(x) for x in re.findall(r"(\d+)\s*\+?\s*(?:files?|개\s*파일|파일|문서)", lower_no_file_ranges)]
+    less_than_files = [max(int(x) - 1, 0) for x in re.findall(r"(?:<|under|less than)\s*(\d+)\s*(?:files?|개\s*파일|파일|문서)", lower)]
+    file_count = max(single_files + less_than_files) if (single_files or less_than_files) else None
+    file_floor_candidates = [low for low, _ in file_ranges] + single_files
+    file_ceiling_candidates = [high for _, high in file_ranges] + single_files + less_than_files
+    file_floor = max(file_floor_candidates) if file_floor_candidates else None
+    file_ceiling = min(file_ceiling_candidates) if file_ceiling_candidates else None
 
-    range_lines = [max(int(a), int(b)) for a, b in re.findall(r"(\d+)\s*[-~]\s*(\d+)\s*(?:lines?|loc|줄)", lower)]
-    single_lines = [int(x) for x in re.findall(r"(?<!<)(?<!≤)(\d+)\s*\+?\s*(?:lines?|loc|줄)", lower)]
-    line_count = max(range_lines + single_lines) if (range_lines or single_lines) else None
+    line_range_pattern = r"(\d+)\s*(?:to|[-~])\s*(\d+)\s*(?:lines?|loc|줄)"
+    line_ranges = [(min(int(a), int(b)), max(int(a), int(b))) for a, b in re.findall(line_range_pattern, lower)]
+    lower_no_line_ranges = re.sub(line_range_pattern, " ", lower)
+    single_lines = [int(x) for x in re.findall(r"(?<![<≤])(\d+)\s*\+?\s*(?:lines?|loc|줄)", lower_no_line_ranges)]
+    less_than_lines = [max(int(x) - 1, 0) for x in re.findall(r"(?:<|under|less than)\s*(\d+)\s*(?:lines?|loc|줄)", lower)]
+    korean_less_than_lines = [max(int(x) - 1, 0) for x in re.findall(r"(\d+)\s*(?:lines?|loc|줄)\s*미만", lower)]
+    line_count = max(single_lines + less_than_lines + korean_less_than_lines) if (single_lines or less_than_lines or korean_less_than_lines) else None
+    line_floor_candidates = [low for low, _ in line_ranges] + single_lines
+    line_ceiling_candidates = [high for _, high in line_ranges] + single_lines + less_than_lines + korean_less_than_lines
+    line_floor = max(line_floor_candidates) if line_floor_candidates else None
+    line_ceiling = min(line_ceiling_candidates) if line_ceiling_candidates else None
 
     ultra_kw = [
         "full codebase", "entire codebase", "whole codebase", "architecture",
-        "architectural", "system design", "novel design", "multi-system orchestration",
-        "전체 분석", "아키텍처", "신규 설계", "멀티 시스템",
-        "복합 교차분석"
+        "architectural", "system design", "design pattern", "novel design",
+        "multi-system orchestration", "repo-wide", "cross-repository",
+        "전체 분석", "전체 코드베이스", "전사 분석", "아키텍처", "신규 설계", "설계 패턴", "멀티 시스템",
+        "복합 교차분석", "코드베이스 전반", "전면 재설계"
     ]
     high_kw = [
         "complex bug", "unclear root cause", "non-trivial refactor", "cross-system",
+        "root cause", "deep analysis", "investigation", "multi-step fix",
         "복잡한 버그", "리팩터", "리팩토", "원인 불명", "대규모 수정",
-        "깊은 분석"
+        "깊은 분석", "비자명", "교차 분석", "원인 분석", "문제 추적"
     ]
-    medium_kw = ["new feature", "standard coding", "새 기능", "기능 추가", "기능추가", "표준 코딩", "리서치"]
-    low_kw = ["simple", "small fix", "quick fix", "typo", "단순 수정", "문구 수정", "lookup", "간단한 조사"]
+    medium_kw = [
+        "new feature", "feature", "standard coding", "implementation", "integrate",
+        "새 기능", "기능 추가", "기능추가", "표준 코딩", "일반 구현", "리서치"
+    ]
+    low_kw = [
+        "simple", "simple edit", "small fix", "quick fix", "typo", "lookup", "read-only",
+        "단순 수정", "문구 수정", "조회", "간단한 조사", "소규모 수정", "경미한 수정"
+    ]
 
-    if any(k in lower for k in ultra_kw):
+    has_ultra_kw = any(k in lower for k in ultra_kw)
+    has_high_kw = any(k in lower for k in high_kw)
+    has_medium_kw = any(k in lower for k in medium_kw)
+    has_low_kw = any(k in lower for k in low_kw)
+
+    if has_ultra_kw:
         return "ultra"
 
-    tier = "medium"
-    if file_count is not None:
-        if file_count >= 5:
-            tier = "high"
-        elif file_count <= 2:
-            tier = "low"
-        else:
-            tier = "medium"
+    # Rule order matches requested precedence:
+    # ultra (codebase/architecture) > high (5+ files or complex bug) >
+    # low (1-3 files + <10 lines + simple lookup/edit) > medium (default).
+    if has_high_kw:
+        return "high"
+    if (file_floor is not None and file_floor >= 5) or (file_count is not None and file_count >= 5):
+        return "high"
+    if (line_floor is not None and line_floor >= 80) or (line_count is not None and line_count >= 80):
+        return "high"
 
-    if line_count is not None:
-        if line_count >= 80:
-            tier = "high"
-        elif line_count < 10 and tier == "medium":
-            tier = "low"
-        elif line_count >= 10 and tier == "low":
-            tier = "medium"
+    low_file_band = file_ceiling is not None and file_ceiling <= 3
+    low_line_band = line_ceiling is not None and line_ceiling < 10
+    if low_file_band and low_line_band and (has_low_kw or not has_medium_kw):
+        return "low"
 
-    if any(k in lower for k in high_kw):
-        tier = "high"
-    if any(k in lower for k in medium_kw) and tier == "low":
-        tier = "medium"
-    if any(k in lower for k in low_kw) and tier not in ("high", "ultra"):
-        if (file_count is None or file_count <= 3) and (line_count is None or line_count < 10):
-            tier = "low"
+    if has_medium_kw:
+        return "medium"
+    if file_floor is not None and 3 <= file_floor <= 5:
+        return "medium"
+    if file_count is not None and 3 <= file_count <= 5:
+        return "medium"
 
-    return tier
+    if low_file_band and (line_ceiling is None or line_ceiling < 10):
+        return "low"
+
+    return "medium"
 
 def agent_family(agent_name: str) -> str:
     if agent_name.startswith("codex"):
@@ -484,53 +605,176 @@ def agent_family(agent_name: str) -> str:
         return "claude"
     return agent_name
 
+def model_key_candidates(family: str, requested_key: str):
+    requested_key = str(requested_key or "").strip()
+    order = MODEL_KEY_ORDER.get(family, [])
+    legacy_key = LEGACY_DEFAULT_KEYS.get(family, "")
+    if requested_key and requested_key in order:
+        idx = order.index(requested_key)
+        candidates = [requested_key] + order[idx + 1 :] + [legacy_key] + order[:idx]
+    else:
+        candidates = [requested_key, legacy_key] + order
+    return ordered_unique(candidates)
+
+def resolve_standard_family(family: str, requested_key: str, requested_effort: str):
+    family_models = {str(k).strip(): str(v).strip() for k, v in (models.get(family) or {}).items()}
+    family_reasoning = reasoning.get(family) or {}
+    resolved_key = ""
+    model_name = ""
+    for candidate in model_key_candidates(family, requested_key):
+        model_name = family_models.get(candidate, "")
+        if model_name:
+            resolved_key = candidate
+            break
+    effort = first_non_empty([
+        normalize_effort(requested_effort),
+        normalize_effort(family_reasoning.get(resolved_key, "")),
+        normalize_effort(family_reasoning.get(requested_key, "")),
+        normalize_effort(family_reasoning.get(LEGACY_DEFAULT_KEYS.get(family, ""), "")),
+    ])
+    return model_name, effort, resolved_key
+
+def resolve_claude(requested_model: str, requested_effort: str):
+    family_models = {str(k).strip(): str(v).strip() for k, v in (models.get("claude") or {}).items()}
+    family_reasoning = reasoning.get("claude") or {}
+    by_value = {value: key for key, value in family_models.items()}
+    requested_model = str(requested_model or "").strip()
+    model_name = ""
+    model_key = ""
+    if requested_model in family_models:
+        model_key = requested_model
+        model_name = family_models.get(model_key, "")
+    elif requested_model in by_value:
+        model_name = requested_model
+        model_key = by_value[requested_model]
+    else:
+        model_key = LEGACY_DEFAULT_KEYS.get("claude", "mid")
+        model_name = family_models.get(model_key, "")
+
+    effort = normalize_effort(requested_effort)
+    if not effort:
+        effort = first_non_empty([
+            normalize_effort(family_reasoning.get(model_name, "")),
+            normalize_effort(family_reasoning.get(model_key, "")),
+        ])
+
+    return model_name, effort, model_key
+
+def resolve_from_complexity(family: str, tier_name: str):
+    tier_map = complexity.get(tier_name) or {}
+    agent_map = tier_map.get(family) or {}
+    if family == "claude":
+        requested_model = agent_map.get("model", "") or agent_map.get("tier", "")
+        requested_effort = agent_map.get("effort", "") or agent_map.get("reasoning", "")
+        model_name, effort, resolved_key = resolve_claude(requested_model, requested_effort)
+        requested_key = str(requested_model or "").strip()
+    else:
+        requested_key = str(agent_map.get("tier", "") or agent_map.get("model", "")).strip()
+        requested_effort = agent_map.get("reasoning", "") or agent_map.get("effort", "")
+        model_name, effort, resolved_key = resolve_standard_family(family, requested_key, requested_effort)
+
+    source = "complexity"
+    if requested_key and resolved_key and requested_key != resolved_key:
+        source = "complexity-fallback"
+    return model_name, effort, source
+
+def resolve_legacy(agent_name: str):
+    family = agent_family(agent_name)
+    if agent_name in ALIAS_OVERRIDES:
+        family, requested_key = ALIAS_OVERRIDES[agent_name]
+        model_name, effort, _ = resolve_standard_family(family, requested_key, "")
+        return family, model_name, effort or normalize_effort((reasoning.get(family) or {}).get(requested_key, "")), "legacy-alias"
+
+    if family == "claude":
+        default_key = LEGACY_DEFAULT_KEYS.get("claude", "mid")
+        model_name, effort, _ = resolve_claude(default_key, "")
+        return family, model_name, effort, "legacy-default"
+
+    default_key = LEGACY_DEFAULT_KEYS.get(family, "")
+    model_name, effort, _ = resolve_standard_family(family, default_key, "")
+    return family, model_name, effort, "legacy-default"
+
 family = agent_family(agent)
 tier = infer_tier(task_text)
 
-# Explicit alias compatibility (legacy behavior)
-explicit_overrides = {
-    "codex-spark": ("codex", "light"),
-    "gemini-pro": ("gemini", "heavy"),
-    "chatgpt-mini": ("chatgpt", "default"),
-    "chatgpt-light": ("chatgpt", "light"),
-}
-
-if agent in explicit_overrides:
-    family, model_key = explicit_overrides[agent]
-    model = (models.get(family) or {}).get(model_key, "")
-    effort = (reasoning.get(family) or {}).get(model_key, "")
-    print(f"{tier}\t{model}\t{effort}\t{family}", end="")
+if agent in ALIAS_OVERRIDES:
+    family, model_name, effort, source = resolve_legacy(agent)
+    print(f"{tier}\t{model_name}\t{effort}\t{family}\t{source}", end="")
     sys.exit(0)
 
-default_model_keys = {
-    "codex": "heavy",
-    "chatgpt": "default",
-    "gemini": "default",
-    "claude": "mid",
+model_name, effort, source = resolve_from_complexity(family, tier)
+if not model_name:
+    family, model_name, effort, source = resolve_legacy(agent)
+
+print(f"{tier}\t{model_name}\t{effort}\t{family}\t{source}", end="")
+PYEOF
 }
 
-tier_map = complexity.get(tier) or {}
-agent_map = tier_map.get(family) or {}
-model_key = agent_map.get("tier", "")
-if not model_key:
-    model_key = default_model_keys.get(family, "")
+select_dispatch_profile_legacy() {
+  local agent="$1"
+  case "$agent" in
+    codex)
+      SELECTED_FAMILY="codex"
+      SELECTED_MODEL="gpt-5.3-codex"
+      SELECTED_REASONING="xhigh"
+      ;;
+    codex-spark)
+      SELECTED_FAMILY="codex"
+      SELECTED_MODEL="gpt-5.3-codex-spark"
+      SELECTED_REASONING="high"
+      ;;
+    gemini)
+      SELECTED_FAMILY="gemini"
+      SELECTED_MODEL="gemini-2.5-flash"
+      SELECTED_REASONING="auto"
+      ;;
+    gemini-pro)
+      SELECTED_FAMILY="gemini"
+      SELECTED_MODEL="gemini-2.5-pro"
+      SELECTED_REASONING="auto"
+      ;;
+    chatgpt)
+      SELECTED_FAMILY="chatgpt"
+      SELECTED_MODEL="gpt-5.2"
+      SELECTED_REASONING="high"
+      ;;
+    chatgpt-mini)
+      SELECTED_FAMILY="chatgpt"
+      SELECTED_MODEL="gpt-5.1"
+      SELECTED_REASONING="medium"
+      ;;
+    chatgpt-light)
+      SELECTED_FAMILY="chatgpt"
+      SELECTED_MODEL="gpt-5"
+      SELECTED_REASONING="low"
+      ;;
+    *)
+      SELECTED_FAMILY="$agent"
+      SELECTED_MODEL=""
+      SELECTED_REASONING=""
+      ;;
+  esac
 
-model = (models.get(family) or {}).get(model_key, "")
-effort = agent_map.get("reasoning", "") or (reasoning.get(family) or {}).get(model_key, "")
-
-print(f"{tier}\t{model}\t{effort}\t{family}", end="")
-PYEOF
+  [ -n "${SELECTED_COMPLEXITY_TIER:-}" ] || SELECTED_COMPLEXITY_TIER="legacy"
+  SELECTED_PROFILE_SOURCE="legacy-shell-default"
 }
 
 select_dispatch_profile() {
   local agent="$1"
-  local resolved
-  resolved="$(resolve_dispatch_profile "$agent" "$TASK")"
+  local resolved=""
+  resolved="$(resolve_dispatch_profile "$agent" "$TASK" 2>/dev/null || true)"
 
-  SELECTED_COMPLEXITY_TIER="$(echo "$resolved" | awk -F'\t' '{print $1}')"
-  SELECTED_MODEL="$(echo "$resolved" | awk -F'\t' '{print $2}')"
-  SELECTED_REASONING="$(echo "$resolved" | awk -F'\t' '{print $3}')"
-  SELECTED_FAMILY="$(echo "$resolved" | awk -F'\t' '{print $4}')"
+  SELECTED_COMPLEXITY_TIER=""
+  SELECTED_MODEL=""
+  SELECTED_REASONING=""
+  SELECTED_FAMILY=""
+  SELECTED_PROFILE_SOURCE=""
+  IFS=$'\t' read -r SELECTED_COMPLEXITY_TIER SELECTED_MODEL SELECTED_REASONING SELECTED_FAMILY SELECTED_PROFILE_SOURCE <<< "$resolved"
+
+  if [ -z "${SELECTED_MODEL:-}" ] || [ -z "${SELECTED_FAMILY:-}" ]; then
+    echo "[WARN] Complexity routing unavailable for agent=$agent. Falling back to legacy defaults."
+    select_dispatch_profile_legacy "$agent"
+  fi
 
   if [ -z "${SELECTED_MODEL:-}" ]; then
     echo "[ERROR] No configured model for agent=$agent tier=${SELECTED_COMPLEXITY_TIER:-unknown}" >&2
@@ -538,9 +782,12 @@ select_dispatch_profile() {
   fi
 
   echo "[ROUTER] tier=${SELECTED_COMPLEXITY_TIER:-unknown} agent=$agent family=${SELECTED_FAMILY:-unknown} model=${SELECTED_MODEL:-unknown} reasoning=${SELECTED_REASONING:-auto}"
+  if [ -n "${SELECTED_PROFILE_SOURCE:-}" ] && [ "$SELECTED_PROFILE_SOURCE" != "complexity" ]; then
+    echo "[ROUTER] profile_source=${SELECTED_PROFILE_SOURCE}"
+  fi
   local fallback_key fallback_desc
   fallback_key="$(fallback_chain_key_for_agent "$agent")"
-  fallback_desc="$(describe_fallback_chain "$fallback_key")"
+  fallback_desc="$(describe_fallback_chain "$fallback_key" 2>/dev/null || true)"
   if [ -n "$fallback_key" ] && [ -n "$fallback_desc" ]; then
     echo "[ROUTER] fallback=${fallback_key}: ${fallback_desc}"
   fi
