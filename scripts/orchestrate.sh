@@ -27,11 +27,13 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/env.sh"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 LOCAL_VAULT_PATH="${LOCAL_VAULT_PATH:-$HOME/vault}" # Default to ~/vault, user can override
 LOG_DIR="$REPO_DIR/logs"
 QUEUE_DIR="$REPO_DIR/queue"
 TEMPLATE_DIR="$REPO_DIR/templates"
+AGENT_CONFIG_FILE="$REPO_DIR/agent_config.yaml"
 ACTIVITY_LOG="$QUEUE_DIR/activity.jsonl"
 mkdir -p "$LOG_DIR" "$QUEUE_DIR"
 
@@ -247,16 +249,236 @@ dispatch_guard() {
 }
 
 print_dry_run() {
-  local agent="$1" model="$2"
+  local agent="$1" model="$2" reasoning="${3:-}"
   echo "=== DRY RUN ==="
   echo "Agent:   $agent"
+  [ -n "${SELECTED_COMPLEXITY_TIER:-}" ] && echo "Tier:    $SELECTED_COMPLEXITY_TIER"
   echo "Model:   $model"
+  [ -n "$reasoning" ] && echo "Reason:  $reasoning"
   echo "Task:    $TASK_NAME"
   echo "Brief:"
   echo "---"
   echo "$TASK"
   echo "---"
   echo "(실제 실행 없음)"
+}
+
+# --- Complexity tier + model selector (agent_config.yaml) ---
+# Prints tab-separated values: <tier>\t<model>\t<reasoning>\t<family>
+resolve_dispatch_profile() {
+  local agent="$1"
+  local task_text="$2"
+  python3 - "$AGENT_CONFIG_FILE" "$agent" "$task_text" << 'PYEOF'
+import re
+import sys
+from typing import Dict
+
+config_path = sys.argv[1]
+agent = (sys.argv[2] or "").strip().lower()
+task_text = sys.argv[3] if len(sys.argv) > 3 else ""
+
+try:
+    lines = open(config_path, "r", encoding="utf-8").read().splitlines()
+except Exception as exc:
+    print(f"medium\t\t\t{agent}", end="")
+    sys.exit(0)
+
+def parse_models(lines) -> Dict[str, Dict[str, str]]:
+    models: Dict[str, Dict[str, str]] = {}
+    in_models = False
+    family = ""
+    for line in lines:
+        if re.match(r"^models:\s*$", line):
+            in_models = True
+            continue
+        if in_models and re.match(r"^[A-Za-z0-9_]", line):
+            break
+        if not in_models:
+            continue
+        m_family = re.match(r"^\s{2}([a-z0-9_-]+):\s*(#.*)?$", line)
+        if m_family:
+            family = m_family.group(1)
+            models[family] = {}
+            continue
+        m_model = re.match(r"^\s{4}([a-z0-9_-]+):\s*\"([^\"]+)\"", line)
+        if m_model and family:
+            models[family][m_model.group(1)] = m_model.group(2)
+    return models
+
+def parse_reasoning(lines) -> Dict[str, Dict[str, str]]:
+    reasoning: Dict[str, Dict[str, str]] = {}
+    in_reasoning = False
+    family = ""
+    for line in lines:
+        if re.match(r"^reasoning:\s*$", line):
+            in_reasoning = True
+            continue
+        if in_reasoning and re.match(r"^[A-Za-z0-9_]", line):
+            break
+        if not in_reasoning:
+            continue
+        m_family = re.match(r"^\s{2}([a-z0-9_-]+):\s*(#.*)?$", line)
+        if m_family:
+            family = m_family.group(1)
+            reasoning[family] = {}
+            continue
+        m_level = re.match(r"^\s{4}([a-z0-9_-]+):\s*\"([^\"]+)\"", line)
+        if m_level and family:
+            reasoning[family][m_level.group(1)] = m_level.group(2)
+    return reasoning
+
+def parse_complexity(lines) -> Dict[str, Dict[str, Dict[str, str]]]:
+    result: Dict[str, Dict[str, Dict[str, str]]] = {}
+    in_block = False
+    tier = ""
+    for line in lines:
+        if re.match(r"^complexity_tiers:\s*$", line):
+            in_block = True
+            continue
+        if in_block and re.match(r"^[A-Za-z0-9_]", line):
+            break
+        if not in_block:
+            continue
+        m_tier = re.match(r"^\s{2}(low|medium|high|ultra):\s*(#.*)?$", line)
+        if m_tier:
+            tier = m_tier.group(1)
+            result[tier] = {}
+            continue
+        m_entry = re.match(r"^\s{4}([a-z0-9_-]+):\s*\{([^}]*)\}", line)
+        if m_entry and tier:
+            family = m_entry.group(1)
+            data: Dict[str, str] = {}
+            for part in m_entry.group(2).split(","):
+                if ":" not in part:
+                    continue
+                key, value = part.split(":", 1)
+                data[key.strip()] = value.strip()
+            result[tier][family] = data
+    return result
+
+def infer_tier(task: str) -> str:
+    text = task or ""
+    lower = text.lower()
+
+    forced = re.search(r"(?:complexity[_ -]?tier|tier)\s*[:=]\s*(low|medium|high|ultra)\b", lower)
+    if forced:
+        return forced.group(1)
+
+    range_files = [max(int(a), int(b)) for a, b in re.findall(r"(\d+)\s*[-~]\s*(\d+)\s*(?:files?|파일)", lower)]
+    single_files = [int(x) for x in re.findall(r"(\d+)\s*\+?\s*(?:files?|파일)", lower)]
+    file_count = max(range_files + single_files) if (range_files or single_files) else None
+
+    range_lines = [max(int(a), int(b)) for a, b in re.findall(r"(\d+)\s*[-~]\s*(\d+)\s*(?:lines?|loc|줄)", lower)]
+    single_lines = [int(x) for x in re.findall(r"(?<!<)(?<!≤)(\d+)\s*\+?\s*(?:lines?|loc|줄)", lower)]
+    line_count = max(range_lines + single_lines) if (range_lines or single_lines) else None
+
+    ultra_kw = [
+        "full codebase", "entire codebase", "whole codebase", "architecture",
+        "architectural", "system design", "novel design", "multi-system orchestration",
+        "전체 분석", "아키텍처", "신규 설계", "멀티 시스템"
+    ]
+    high_kw = [
+        "complex bug", "unclear root cause", "non-trivial refactor", "cross-system",
+        "복잡한 버그", "리팩터", "리팩토", "원인 불명", "대규모 수정"
+    ]
+    medium_kw = ["new feature", "standard coding", "새 기능", "기능 추가", "표준 코딩"]
+    low_kw = ["simple", "small fix", "quick fix", "typo", "단순 수정", "문구 수정", "lookup"]
+
+    if any(k in lower for k in ultra_kw):
+        return "ultra"
+
+    tier = "medium"
+    if file_count is not None:
+        if file_count >= 6:
+            tier = "high"
+        elif file_count <= 3:
+            tier = "low"
+        else:
+            tier = "medium"
+
+    if line_count is not None:
+        if line_count >= 80:
+            tier = "high"
+        elif line_count < 10 and tier == "medium":
+            tier = "low"
+        elif line_count >= 10 and tier == "low":
+            tier = "medium"
+
+    if any(k in lower for k in high_kw):
+        tier = "high"
+    if any(k in lower for k in medium_kw) and tier == "low":
+        tier = "medium"
+    if any(k in lower for k in low_kw) and tier not in ("high", "ultra"):
+        if (file_count is None or file_count <= 3) and (line_count is None or line_count < 10):
+            tier = "low"
+
+    return tier
+
+def agent_family(agent_name: str) -> str:
+    if agent_name.startswith("codex"):
+        return "codex"
+    if agent_name.startswith("chatgpt"):
+        return "chatgpt"
+    if agent_name.startswith("gemini"):
+        return "gemini"
+    return agent_name
+
+models = parse_models(lines)
+reasoning = parse_reasoning(lines)
+complexity = parse_complexity(lines)
+family = agent_family(agent)
+tier = infer_tier(task_text)
+
+# Explicit alias compatibility (legacy behavior)
+explicit_overrides = {
+    "codex-spark": ("codex", "light"),
+    "gemini-pro": ("gemini", "heavy"),
+    "chatgpt-mini": ("chatgpt", "default"),
+    "chatgpt-light": ("chatgpt", "light"),
+}
+
+if agent in explicit_overrides:
+    family, model_key = explicit_overrides[agent]
+    model = models.get(family, {}).get(model_key, "")
+    effort = reasoning.get(family, {}).get(model_key, "")
+    print(f"{tier}\t{model}\t{effort}\t{family}", end="")
+    sys.exit(0)
+
+tier_map = complexity.get(tier, {})
+agent_map = tier_map.get(family, {})
+model_key = agent_map.get("tier", "")
+
+model = models.get(family, {}).get(model_key, "")
+effort = agent_map.get("reasoning", "") or reasoning.get(family, {}).get(model_key, "")
+
+print(f"{tier}\t{model}\t{effort}\t{family}", end="")
+PYEOF
+}
+
+select_dispatch_profile() {
+  local agent="$1"
+  local resolved
+  resolved="$(resolve_dispatch_profile "$agent" "$TASK")"
+
+  SELECTED_COMPLEXITY_TIER="$(echo "$resolved" | awk -F'\t' '{print $1}')"
+  SELECTED_MODEL="$(echo "$resolved" | awk -F'\t' '{print $2}')"
+  SELECTED_REASONING="$(echo "$resolved" | awk -F'\t' '{print $3}')"
+  SELECTED_FAMILY="$(echo "$resolved" | awk -F'\t' '{print $4}')"
+
+  if [ -z "${SELECTED_MODEL:-}" ]; then
+    case "$agent" in
+      codex)         SELECTED_MODEL="gpt-5.3-codex"; SELECTED_REASONING="${SELECTED_REASONING:-extra-high}" ;;
+      codex-spark)   SELECTED_MODEL="gpt-5.3-codex-spark"; SELECTED_REASONING="${SELECTED_REASONING:-high}" ;;
+      chatgpt)       SELECTED_MODEL="gpt-5.2"; SELECTED_REASONING="${SELECTED_REASONING:-high}" ;;
+      chatgpt-mini)  SELECTED_MODEL="gpt-5.1"; SELECTED_REASONING="${SELECTED_REASONING:-medium}" ;;
+      chatgpt-light) SELECTED_MODEL="gpt-5"; SELECTED_REASONING="${SELECTED_REASONING:-low}" ;;
+      gemini)        SELECTED_MODEL="gemini-2.5-flash" ;;
+      gemini-pro)    SELECTED_MODEL="gemini-2.5-pro" ;;
+      *)             SELECTED_MODEL="" ;;
+    esac
+  fi
+
+  echo "[ROUTER] tier=${SELECTED_COMPLEXITY_TIER:-unknown} agent=$agent family=${SELECTED_FAMILY:-unknown} model=${SELECTED_MODEL:-unknown} reasoning=${SELECTED_REASONING:-auto}"
 }
 
 json_to_brief() {
@@ -532,10 +754,11 @@ SCHEMA_EOF
 # --- Run Codex ---
 run_codex() {
   local model="${1:-gpt-5.3-codex}"
+  local reasoning="${2:-}"
   local log_file="$LOG_DIR/codex_${TASK_NAME}_${TIMESTAMP}.json"
 
   if [ "${DRY_RUN:-false}" = "true" ]; then
-    print_dry_run "$AGENT" "$model"
+    print_dry_run "$AGENT" "$model" "$reasoning"
     return 0
   fi
 
@@ -565,6 +788,7 @@ run_codex() {
     -m "$model"
     --json
   )
+  [ -n "$reasoning" ] && codex_args+=(-c "model_reasoning_effort=$reasoning")
   [ -n "$work_dir" ] && codex_args+=(-C "$work_dir")
 
   # Write directly to file to avoid shell variable truncation
@@ -626,10 +850,11 @@ vault_check() {
 # --- Run Gemini ---
 run_gemini() {
   local model="${1:-gemini-2.5-flash}"
+  local reasoning="${2:-}"
   local log_file="$LOG_DIR/gemini_${TASK_NAME}_${TIMESTAMP}.txt"
 
   if [ "${DRY_RUN:-false}" = "true" ]; then
-    print_dry_run "$AGENT" "$model"
+    print_dry_run "$AGENT" "$model" "$reasoning"
     return 0
   fi
 
@@ -707,7 +932,7 @@ VAULTEOF
 run_with_fallback_code() {
   echo "[INFO] Attempting code task with fallback chain..."
 
-  if run_codex "gpt-5.3-codex"; then return 0; fi
+  if run_codex "gpt-5.3-codex" "extra-high"; then return 0; fi
 
   echo "[QUEUED] Codex rate-limited. Task queued for retry."
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "codex_rate_limited"
@@ -720,7 +945,7 @@ run_with_fallback_research() {
   if run_gemini "gemini-2.5-flash"; then return 0; fi
 
   echo "[FALLBACK] Trying Codex..."
-  if run_codex "gpt-5.3-codex"; then return 0; fi
+  if run_codex "gpt-5.3-codex" "extra-high"; then return 0; fi
 
   echo "[QUEUED] All agents rate-limited. Task queued for retry."
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "all_agents_rate_limited"
@@ -984,13 +1209,14 @@ do_resume() {
 
       local exit_code=0
       case "$agent" in
-        codex)         run_codex "gpt-5.3-codex" || exit_code=$? ;;
-        codex-spark)   run_codex "gpt-5.3-codex-spark" || exit_code=$? ;;
-        chatgpt)       run_codex "gpt-5.2" || exit_code=$? ;;
-        chatgpt-mini)  run_codex "gpt-5.1" || exit_code=$? ;;
-        chatgpt-light) run_codex "gpt-5" || exit_code=$? ;;
-        gemini)        run_gemini "gemini-2.5-flash" || exit_code=$? ;;
-        gemini-pro)    run_gemini "gemini-2.5-pro" || exit_code=$? ;;
+        codex|codex-spark|chatgpt|chatgpt-mini|chatgpt-light|gemini|gemini-pro)
+          select_dispatch_profile "$agent"
+          if [[ "$agent" == gemini* ]]; then
+            run_gemini "$SELECTED_MODEL" "$SELECTED_REASONING" || exit_code=$?
+          else
+            run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || exit_code=$?
+          fi
+          ;;
         *)
           echo "[ERROR] Unknown agent in queue: $agent"
           exit 1
@@ -1402,25 +1628,32 @@ fi
 # --- Main dispatch ---
 case "$AGENT" in
   codex)
-    run_codex "gpt-5.3-codex" || run_with_fallback_code
+    select_dispatch_profile "$AGENT"
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_code
     ;;
   codex-spark)
-    run_codex "gpt-5.3-codex-spark" || run_with_fallback_code
+    select_dispatch_profile "$AGENT"
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_code
     ;;
   gemini)
-    run_gemini "gemini-2.5-flash" || run_with_fallback_research
+    select_dispatch_profile "$AGENT"
+    run_gemini "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
     ;;
   gemini-pro)
-    run_gemini "gemini-2.5-pro" || run_with_fallback_research
+    select_dispatch_profile "$AGENT"
+    run_gemini "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
     ;;
   chatgpt)
-    run_codex "gpt-5.2" || run_with_fallback_research
+    select_dispatch_profile "$AGENT"
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
     ;;
   chatgpt-mini)
-    run_codex "gpt-5.1" || run_with_fallback_research
+    select_dispatch_profile "$AGENT"
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
     ;;
   chatgpt-light)
-    run_codex "gpt-5" || run_with_fallback_research
+    select_dispatch_profile "$AGENT"
+    run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_research
     ;;
   codex-fallback)
     run_with_fallback_code
