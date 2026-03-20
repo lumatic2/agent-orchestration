@@ -109,18 +109,24 @@ paths:
 # --- Usage Limits (reference) ---
 limits:
   claude_max_20x:
+    plan: "Max 20x ($200/mo)"
     window: "5h rolling"
-    opus_per_window: 180          # 예상 사용: 월 5-10회 × 100K = 500K-1M
-    sonnet_per_window: 900        # 지난 4h: 700K 소모 (과다)
-    haiku_per_window: 2700        # 사용 0 (subagent 제거 후)
+    sonnet_per_window: 900
+    opus_per_window: 180
+    haiku_per_window: 2700
+    note: "Sonnet은 판단만. 구현/분석은 전부 Codex/Gemini."
+
   chatgpt_pro:
-    window: "5h rolling + weekly"
-    codex_note: "Codex: 1.8M cached가 recent peak. 캐싱 효율 95%+ 유지."  # 극도로 저활용
+    plan: "ChatGPT Pro ($200/mo)"
+    codex_heavy: "gpt-5.3-codex"
+    note: "코딩/분석 전부 여기로."
+
   gemini_pro:
-    daily_requests: 1500          # 사용: 200/day (13% 미만)
+    plan: "Gemini Pro ($20/mo)"
+    flash_per_day: 300
+    pro_per_day: 100
     rpm: 120
-    pro_prompts_day: 100
-    flash_prompts_day: 300
+    note: "Flash = 기본. Pro = 심층분석만."
 
 # --- Fallback Chains ---
 fallback:
