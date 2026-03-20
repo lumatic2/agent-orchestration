@@ -23,9 +23,9 @@ models:
     default: "gpt-5.1"            # Data processing, translation, general tasks
     light: "gpt-5"                # Bulk translation, simple transforms
   gemini:
-    heavy: "gemini-2.5-pro"       # Deep analysis (max 100/day on Pro plan)
-    default: "gemini-2.5-flash"   # Web search, research requiring live data
-    light: "gemini-2.5-flash-lite" # Lightweight search tasks
+    heavy: "gemini-2.5-pro"        # Deep analysis (max 100/day on Pro plan)
+    default: "gemini-2.5-flash"    # Web search, research requiring live data
+    light: "gemini-2.5-flash-lite" # Lightweight search tasks (or flash when needed)
   claude:
     heavy: "opus"                 # Orchestration judgment only
     mid: "sonnet"                 # Code review, code generation (subagent)
@@ -63,7 +63,7 @@ complexity_tiers:
     signals: "1-2 files, <10 lines, simple edit or lookup, no reasoning required"
     codex:   { tier: light,  reasoning: high }
     chatgpt: { tier: default, reasoning: low }
-    gemini:  { tier: default }
+    gemini:  { tier: light }
     claude:  { model: haiku,  effort: low }
 
   medium:
@@ -77,7 +77,7 @@ complexity_tiers:
     signals: "5+ files, complex bug with unclear root cause, non-trivial refactoring, cross-system changes"
     codex:   { tier: heavy,  reasoning: xhigh }
     chatgpt: { tier: ultra,  reasoning: xhigh }
-    gemini:  { tier: heavy }
+    gemini:  { tier: default }
     claude:  { model: sonnet, effort: high }
 
   ultra:

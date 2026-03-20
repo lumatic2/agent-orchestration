@@ -421,8 +421,8 @@ def infer_tier(task: str) -> str:
     if forced:
         return forced.group(1)
 
-    range_files = [max(int(a), int(b)) for a, b in re.findall(r"(\d+)\s*[-~]\s*(\d+)\s*(?:files?|파일)", lower)]
-    single_files = [int(x) for x in re.findall(r"(\d+)\s*\+?\s*(?:files?|파일)", lower)]
+    range_files = [max(int(a), int(b)) for a, b in re.findall(r"(\d+)\s*[-~]\s*(\d+)\s*(?:files?|파일|문서)", lower)]
+    single_files = [int(x) for x in re.findall(r"(\d+)\s*\+?\s*(?:files?|파일|문서)", lower)]
     file_count = max(range_files + single_files) if (range_files or single_files) else None
 
     range_lines = [max(int(a), int(b)) for a, b in re.findall(r"(\d+)\s*[-~]\s*(\d+)\s*(?:lines?|loc|줄)", lower)]
@@ -433,7 +433,7 @@ def infer_tier(task: str) -> str:
         "full codebase", "entire codebase", "whole codebase", "architecture",
         "architectural", "system design", "novel design", "multi-system orchestration",
         "전체 분석", "아키텍처", "신규 설계", "멀티 시스템",
-        "복합 교차분석", "교차분석", "교차 분석"
+        "복합 교차분석"
     ]
     high_kw = [
         "complex bug", "unclear root cause", "non-trivial refactor", "cross-system",
