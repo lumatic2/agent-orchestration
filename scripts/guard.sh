@@ -39,5 +39,35 @@ if echo "$INPUT" | grep -qEi "npm\s+install\s+-g|pip\s+install\s+--system|sudo\s
   exit 1
 fi
 
+# --- Data exfiltration patterns ---
+if echo "$INPUT" | grep -qEi "curl.*\|\s*bash|wget.*\|\s*bash|curl.*\|\s*sh"; then
+  echo "BLOCKED: Pipe-to-shell pattern detected (possible remote code execution)." >&2
+  exit 1
+fi
+
+# --- Permission escalation ---
+if echo "$INPUT" | grep -qEi "sudo\s+su|sudo\s+-i|sudo\s+bash|chmod\s+777\s+/|chown.*root"; then
+  echo "BLOCKED: Permission escalation attempt." >&2
+  exit 1
+fi
+
+# --- Overwrite system/critical files ---
+if echo "$INPUT" | grep -qEi ">\s*/etc/|>\s*/usr/|>\s*/bin/|>\s*/sbin/"; then
+  echo "BLOCKED: Attempt to overwrite system files." >&2
+  exit 1
+fi
+
+# --- Network exfiltration ---
+if echo "$INPUT" | grep -qEi "nc\s+-e|ncat.*-e|/dev/tcp/|base64.*curl|curl.*base64"; then
+  echo "BLOCKED: Potential network exfiltration pattern." >&2
+  exit 1
+fi
+
+# --- History/audit tampering ---
+if echo "$INPUT" | grep -qEi "history\s+-c|unset\s+HISTFILE|HISTSIZE=0|rm.*bash_history"; then
+  echo "BLOCKED: Audit trail tampering detected." >&2
+  exit 1
+fi
+
 # Passed all checks
 exit 0
