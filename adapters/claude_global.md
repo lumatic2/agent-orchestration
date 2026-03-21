@@ -68,9 +68,8 @@ Examples:
 
 - **Location**: `luma2@m1:~/vault/` (MCP: `obsidian-vault`)
 - **Entry point**: `00-System/VAULT_INDEX.md` — 에이전트가 vault 작업 전 반드시 읽을 것
-- **쓰기 권한**: **M1 단독** — 다른 기기(Windows/M4/MacAir)의 로컬 vault 폴더는 pull-only
-  - M1이 아닌 기기에서 vault에 쓸 때: 반드시 **SSH → M1** 경유 또는 **MCP `obsidian-vault`** 사용
-  - 로컬 vault 파일 직접 수정 금지 (혼돈 방지)
+- **쓰기 권한**: **MCP `obsidian-vault` 또는 M1 직접** — 다른 기기에서 쓸 때는 MCP 사용
+  - 로컬 vault clone 금지 (혼동 방지 — Windows vault는 삭제됨)
 - **Write rules**:
   - 리서치 결과 → `10-knowledge/{domain}/`
   - 전문가 AI 업데이트 → `20-experts/{name}.md`
