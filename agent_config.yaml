@@ -34,8 +34,8 @@ models:
 # --- Reasoning Levels ---
 reasoning:
   codex:
-    heavy: "xhigh"         # No cost concern — always use best
-    light: "high"
+    heavy: "xhigh"         # MEDIUM/HIGH/ULTRA: max cost OK
+    light: "low"           # LOW complexity: minimal cost
     mini: "medium"
   chatgpt:
     ultra: "xhigh"         # gpt-5.4
@@ -61,22 +61,22 @@ reasoning:
 complexity_tiers:
   low:
     signals: "1-2 files, <10 lines, simple edit or lookup, no reasoning required"
-    codex:   { tier: light,  reasoning: high }
+    codex:   { tier: light,  reasoning: low }
     chatgpt: { tier: default, reasoning: low }
     gemini:  { tier: light }
     claude:  { model: haiku,  effort: low }
 
   medium:
     signals: "3-5 files, new feature, standard coding, clear requirements"
-    codex:   { tier: heavy,  reasoning: xhigh }
-    chatgpt: { tier: heavy,  reasoning: high }
+    codex:   { tier: heavy,  reasoning: medium }
+    chatgpt: { tier: heavy,  reasoning: medium }
     gemini:  { tier: default }
     claude:  { model: sonnet, effort: medium }
 
   high:
     signals: "5+ files, complex bug with unclear root cause, non-trivial refactoring, cross-system changes"
-    codex:   { tier: heavy,  reasoning: xhigh }
-    chatgpt: { tier: ultra,  reasoning: xhigh }
+    codex:   { tier: heavy,  reasoning: high }
+    chatgpt: { tier: ultra,  reasoning: high }
     gemini:  { tier: default }
     claude:  { model: sonnet, effort: high }
 
