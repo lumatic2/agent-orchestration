@@ -55,6 +55,9 @@ Then apply the Self-Execution Guard before writing a single line of code:
 | Any research needed | STOP → `orchestrate.sh gemini "task" name` |
 | Simple edit (1-3 files, <50 lines) | Proceed directly |
 
+> ⚠️ **리서치 위임 방법**: 반드시 `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"task\" name")` 직접 호출.
+> `Agent(subagent_type="gemini-researcher")` 사용 **금지** — 위임 루프 버그로 실제 리서치를 수행하지 않음.
+
 Examples:
 - "지뢰찾기 게임 만들어줘" → Python ~100줄 → **`orchestrate.sh codex`로 위임**
 - "README 첫 줄 수정" → 1파일 1줄 → 직접 수행
