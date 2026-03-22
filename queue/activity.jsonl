@@ -1463,3 +1463,10 @@
 {"ts":"2026-03-21T19:41:06+0900","id":"T082","event":"created","detail":"agent=chatgpt"}
 {"ts":"2026-03-21T19:41:08+0900","id":"T082","event":"dispatched","detail":""}
 {"ts":"2026-03-21T19:42:51+0900","id":"T082","event":"completed","detail":""}
+{"ts":"2026-03-21T19:45:04+0900","id":"T083","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-21T19:45:06+0900","id":"T083","event":"dispatched","detail":""}
+{"ts":"2026-03-21T19:45:48+0900","id":"T082","event":"completed","detail":""}
+{"ts":"2026-03-21T19:46:00+0900","id":"T083","event":"completed","detail":""}
+{"ts":"2026-03-22T09:49:59+0900","id":"T084","event":"created","detail":"agent=codex"}
+{"ts":"2026-03-22T09:50:00+0900","id":"T084","event":"dispatched","detail":""}
+{"ts":"2026-03-22T09:53:53+0900","id":"T084","event":"completed","detail":""}
