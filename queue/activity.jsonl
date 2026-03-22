@@ -1506,3 +1506,6 @@
 {"ts":"2026-03-22T16:24:47+0900","id":"T096","event":"created","detail":"agent=codex"}
 {"ts":"2026-03-22T16:24:48+0900","id":"T096","event":"dispatched","detail":""}
 {"ts":"2026-03-22T16:28:52+0900","id":"T096","event":"completed","detail":""}
+{"ts":"2026-03-23T02:57:25+0900","id":"T044","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-23T02:57:26+0900","id":"T044","event":"dispatched","detail":""}
+{"ts":"2026-03-23T02:59:01+0900","id":"T044","event":"completed","detail":""}

@@ -7,7 +7,7 @@ ssh -o ConnectTimeout=3 m1 "echo ok" 2>/dev/null || echo "M1_OFFLINE"
 
 1. M1에서 최신 포트폴리오 스냅샷을 조회한다:
 ```bash
-ssh m1 "cd ~/projects/investment-bot && python3 -c \"
+"cd ~/projects/investment-bot && python3 -c \"
 import sys
 sys.path.insert(0, '.')
 from data.db.database import get_latest_snapshot
@@ -42,7 +42,7 @@ else:
 
 3. 최근 봇 로그 20줄을 확인한다:
 ```bash
-ssh m1 "tail -20 ~/projects/investment-bot/error.log"
+"tail -20 ~/projects/investment-bot/error.log"
 ```
 
 4. 에러가 있으면 원인을 분석하고 수정 방법을 제안한다.
@@ -53,5 +53,5 @@ ssh m1 "tail -20 ~/projects/investment-bot/error.log"
 
 6. 해당 파일을 M1에서 읽어 수정하고 서비스를 재시작한다:
 ```bash
-ssh m1 "launchctl unload ~/Library/LaunchAgents/com.luma2.investment-bot.plist && launchctl load ~/Library/LaunchAgents/com.luma2.investment-bot.plist"
+"launchctl unload ~/Library/LaunchAgents/com.luma3.investment-bot.plist && launchctl load ~/Library/LaunchAgents/com.luma3.investment-bot.plist"
 ```

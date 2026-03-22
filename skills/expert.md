@@ -65,8 +65,8 @@ $ARGUMENTS가 비어 있으면:
 질문해주세요.
 ```
 
-페르소나: `ssh m1 cat ~/vault/20-experts/{유형}.md` 로 읽어라
-지식파일: `ssh m1 cat ~/vault/10-knowledge/{도메인}/{파일명}` 로 읽어라
+페르소나: `mcp__obsidian-vault__read_note` 툴로 `20-experts/{유형}.md` 읽어라
+지식파일: `mcp__obsidian-vault__read_note` 툴로 `10-knowledge/{도메인}/{파일명}` 읽어라
 
 ## 3. 답변 형식
 

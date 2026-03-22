@@ -2,7 +2,7 @@
 
 1. M1에 SSH로 접속해서 재고 현황을 가져와라:
    ```
-   ssh m1 "cd ~/ingredient-bot && python3 -c \"
+   "cd ~/ingredient-bot && python3 -c \"
 from db import IngredientDB
 from dotenv import load_dotenv
 load_dotenv()
