@@ -266,6 +266,14 @@ run_stage_gemini() {
   result="$(printf '%s\n' "$full_content" | awk '/^--- Gemini Result ---/{found=1; next} found')"
   # fallback: --- 없으면 전체 사용
   [ -z "$result" ] && result="$full_content"
+  # Node.js stacktrace / [LOG] / [QUEUE] 라인 제거
+  result="$(printf '%s\n' "$result" | /usr/bin/grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]' || true)"
+  # 앞부분 stacktrace 잔재 제거 (SECTION_ADDITION 또는 # 로 시작하는 실제 내용 이전 라인)
+  local first_content_line
+  first_content_line="$(printf '%s\n' "$result" | /usr/bin/grep -n '^#\|^## SECTION_ADDITION\|^---' | head -1 | cut -d: -f1)"
+  if [ -n "$first_content_line" ] && [ "$first_content_line" -gt 1 ]; then
+    result="$(printf '%s\n' "$result" | tail -n +"$first_content_line")"
+  fi
   printf '%s\n' "$result" > "$out_file"
 }
 
@@ -304,6 +312,8 @@ run_stage_codex() {
   local result
   result="$(printf '%s\n' "$full_content" | awk '/^--- Codex Result ---/{found=1; next} found')"
   [ -z "$result" ] && result="$full_content"
+  # Node.js stacktrace / [LOG] / [QUEUE] 라인 제거
+  result="$(printf '%s\n' "$result" | /usr/bin/grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]' || true)"
   printf '%s\n' "$result" > "$out_file"
 }
 
