@@ -773,24 +773,62 @@ S15_EOF
           echo "[pipeline] WARN: pandoc 미설치 — brew install pandoc" >&2
           printf '# S16 PDF 변환\n\nWARN: pandoc 미설치\n' > "$out_file"
         else
-          # 1) pandoc: markdown → standalone HTML (CSS 내장)
-          pandoc "$PAPER_DIR/draft.md" \
+          # 0) 마크다운 전처리: 헤딩 전후 빈 줄 보장 + 문단 분리
+          local fmt_md="$PAPER_DIR/draft_fmt.md"
+          python3 - "$PAPER_DIR/draft.md" "$fmt_md" << 'PYEOF'
+import re, sys
+src, dst = sys.argv[1], sys.argv[2]
+content = open(src).read()
+# 헤딩 전 빈 줄 보장
+content = re.sub(r'([^\n])\n(#{1,6} )', r'\1\n\n\2', content)
+# 헤딩 후 빈 줄 보장
+content = re.sub(r'(#{1,6} [^\n]+)\n([^\n#])', r'\1\n\n\2', content)
+# 마침표/느낌표/물음표로 끝나는 줄 다음에 새 문장이 오면 빈 줄 추가
+lines = content.split('\n')
+out = []
+for i, line in enumerate(lines):
+    out.append(line)
+    if i < len(lines) - 1:
+        nxt = lines[i + 1]
+        if (line.rstrip().endswith(('.', '!', '?', '다', '요', '임', '됨', '음'))
+                and nxt and not nxt.startswith('#') and nxt.strip()):
+            out.append('')
+# 3줄 이상 연속 빈 줄 → 2줄로
+content = '\n'.join(out)
+content = re.sub(r'\n{3,}', '\n\n', content)
+open(dst, 'w').write(content)
+PYEOF
+
+          # 1) pandoc: markdown → standalone HTML (CSS 내장, TOC 포함)
+          #    --shift-heading-level-by=-1: H1 제목은 문서 title로 이동, 본문은 H2부터 시작
+          pandoc "$fmt_md" \
             --from markdown \
             --to html5 \
             --standalone \
-            --metadata title="$(head -1 "$PAPER_DIR/draft.md" | sed 's/^# //')" \
+            --toc \
+            --toc-depth=2 \
+            --shift-heading-level-by=-1 \
             --css - \
             -o "$html_path" << 'CSS_EOF'
-body { font-family: "Georgia", serif; max-width: 800px; margin: 40px auto; padding: 0 20px; font-size: 12pt; line-height: 1.7; color: #111; }
-h1 { font-size: 20pt; margin-bottom: 4px; }
-h2 { font-size: 14pt; margin-top: 2em; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
-h3 { font-size: 12pt; margin-top: 1.5em; }
-p { text-align: justify; margin: 0.6em 0; }
-table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
-th { background: #f5f5f5; }
-code { background: #f4f4f4; padding: 1px 4px; border-radius: 3px; font-size: 10pt; }
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap');
+body { font-family: "Noto Serif KR", "Georgia", serif; max-width: 820px; margin: 40px auto; padding: 0 32px 60px; font-size: 11.5pt; line-height: 1.85; color: #1a1a1a; }
+h1.title { font-size: 22pt; font-weight: 700; margin-bottom: 8px; line-height: 1.3; }
+h1 { font-size: 17pt; margin-top: 2.5em; border-bottom: 2px solid #333; padding-bottom: 6px; }
+h2 { font-size: 13pt; margin-top: 1.8em; margin-bottom: 0.4em; }
+h3 { font-size: 11.5pt; margin-top: 1.2em; font-style: italic; }
+p { text-align: justify; margin: 0.9em 0; }
+nav#TOC { background: #f8f8f8; border: 1px solid #ddd; border-radius: 4px; padding: 16px 24px; margin: 2em 0 3em; }
+nav#TOC ul { margin: 0; padding-left: 1.2em; }
+nav#TOC li { margin: 0.3em 0; font-size: 10.5pt; }
+nav#TOC a { color: #2a5db0; text-decoration: none; }
+table { border-collapse: collapse; width: 100%; margin: 1.2em 0; font-size: 10.5pt; }
+th, td { border: 1px solid #ccc; padding: 7px 12px; text-align: left; }
+th { background: #f0f0f0; font-weight: 700; }
+code { background: #f4f4f4; padding: 1px 5px; border-radius: 3px; font-size: 10pt; font-family: monospace; }
+blockquote { border-left: 3px solid #aaa; margin: 1em 0; padding: 0.5em 1em; color: #444; font-style: italic; }
 CSS_EOF
+
+          rm -f "$fmt_md"
 
           # 2) Chrome headless: HTML → PDF
           local chrome_bin="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"

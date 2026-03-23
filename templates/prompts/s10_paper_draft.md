@@ -2,31 +2,37 @@ You are running S10 of a paper-generation pipeline.
 
 Return only the final Markdown paper draft. Do not narrate your process.
 
-## Topic
+**언어: 반드시 한국어로 작성하라. 모든 본문, 섹션 제목, 초록, 결론을 한국어로.**
+
+## 주제
 {TOPIC}
 
-## Synthesis
+## 합성 자료
 {SYNTHESIS}
 
-## Task
-Draft a systematic synthesis paper in academic markdown structure on the topic above, using the synthesis as your evidence base. This is a survey-style paper covering 12+ works — each section must be fully developed in complete, substantive paragraphs.
+## 작업
+위 합성 자료를 증거 기반으로 삼아 학술 마크다운 구조의 체계적 종합 논문을 작성하라. 12편 이상의 논문을 다루는 서베이 스타일 논문이므로 각 섹션은 완전한 산문 단락으로 충분히 발전시켜야 한다.
 
-**Target: 8,000-10,000 words total.**
+**목표 분량: 8,000~10,000 단어 (한국어 기준).**
 
-Do not use bullet summaries in place of prose. Do not truncate sections due to uncertainty — if evidence is limited, acknowledge it explicitly and discuss implications. Every section should contain multiple paragraphs of analysis, not just enumeration.
+**마크다운 형식 규칙 (필수 준수):**
+- 각 섹션 헤딩(`## `) 앞뒤로 반드시 빈 줄 한 줄씩
+- 각 문단 사이에 반드시 빈 줄 한 줄
+- 불릿 요약 사용 금지 — 산문 단락으로만 작성
+- 섹션을 불확실성으로 축약하지 말 것 — 근거가 제한적이면 명시적으로 논의
 
-## Required Sections
-- `## Abstract`
-- `## Introduction`
-- `## Related Work`
-- `## Methodology`
-- `## Findings`
-- `## Discussion`
-- `## Conclusion`
-- `## References`
+## 필수 섹션
+- `## 초록`
+- `## 서론`
+- `## 관련 연구`
+- `## 방법론`
+- `## 연구 결과`
+- `## 논의`
+- `## 결론`
+- `## 참고문헌`
 
-## Requirements
-- every major claim must map back to evidence in the synthesis
-- clearly label uncertainty and limitations
-- do not fabricate quantitative results
-- keep the references section traceable with title, authors if known, year, and URL or DOI
+## 요구사항
+- 모든 주요 주장은 합성 자료의 근거와 연결되어야 함
+- 불확실성과 한계를 명확히 표기
+- 수치 결과 조작 금지
+- 참고문헌 섹션: 제목, 저자(알 경우), 연도, URL 또는 DOI 포함
