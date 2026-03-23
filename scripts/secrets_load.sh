@@ -86,7 +86,10 @@ PYEOF
   _py_exports=$(python3 "$_tmp_py" 2>/dev/null)
   rm -f "$_tmp_py"
   if [ -n "$_py_exports" ]; then
-    eval "$_py_exports"
+    # export 패턴만 허용 (인젝션 방지)
+    while IFS= read -r _line; do
+      [[ "$_line" =~ ^export\ [A-Z_]+= ]] && eval "$_line"
+    done <<< "$_py_exports"
     _loaded=$(echo "$_py_exports" | wc -l | tr -d ' ')
     echo "[secrets] Python ADC에서 ${_loaded}개 로드됨 (프로젝트: $GCP_PROJECT)"
   fi

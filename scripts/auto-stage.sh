@@ -18,8 +18,8 @@ except:
 
 [[ -z "$FILE_PATH" ]] && exit 0
 
-# 절대 경로로 변환
-FILE_PATH=$(eval echo "$FILE_PATH")
+# 절대 경로로 변환 (eval 사용하지 않음 — 인젝션 방지)
+FILE_PATH="${FILE_PATH/#\~/$HOME}"
 [[ -f "$FILE_PATH" ]] || exit 0
 
 # 파일이 git 레포 안에 있는지 확인

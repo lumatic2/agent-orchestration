@@ -2070,6 +2070,11 @@ $GOAL
 ## Done Criteria
 - [ ] Task completed successfully
 - [ ] No errors in output
+
+## Stop Conditions
+- All questions in the goal are answered (at least Moderate confidence)
+- OR no further sources available and remaining gaps are documented
+- OR scope/budget exhausted with partial findings clearly labeled
 BRIEF_EOF
   # Append role-specific checklist if --role was given
   if [ -n "$BRIEF_ROLE" ]; then
