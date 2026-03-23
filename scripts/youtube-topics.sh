@@ -30,7 +30,8 @@ mkdir -p "$DATA_DIR" "$LOG_DIR"
   exit 1
 }
 
-GEMINI_BIN_DEFAULT="/Users/luma2/.nvm/versions/node/v24.14.0/bin/gemini"
+export PATH="/Users/luma3/.nvm/versions/node/v24.14.0/bin:$PATH"
+GEMINI_BIN_DEFAULT="/Users/luma3/.nvm/versions/node/v24.14.0/bin/gemini"
 if [[ -x "${GEMINI_BIN:-$GEMINI_BIN_DEFAULT}" ]]; then
   GEMINI_CMD="${GEMINI_BIN:-$GEMINI_BIN_DEFAULT}"
 else
@@ -44,12 +45,27 @@ trap 'rm -f "$TMP_RAW" "$TMP_JSON"' EXIT
 
 PROMPT=$(cat <<'EOF'
 한국어 유튜브 채널용 주제 제목 10개를 제안해줘.
-조건:
-- 채널 톤: "AI 시대 나는 이렇게 살고 있다"
-- 타깃: AI를 일과 삶에 적용하려는 성인 실무자
-- 톤 비중: 진지 6 : 가벼움 4
-- 과장/낚시 금지, 실행 가능한 내용 중심
-- 제목은 짧고 명확하게
+
+## 채널 정체성
+- "AI 시대, 나는 이렇게 살고 있다" — 비개발자 실무자의 AI 라이프스타일 채널
+- 도구 소개가 아닌 실제 경험담·패턴·인사이트 중심
+- 톤: 담담하고 실용적, 과장/낚시 금지
+
+## 다루는 영역 (매 회차마다 골고루 섞어라)
+- 🤖 AI 워크플로우·자동화 (Claude, Gemini, Codex 실전 활용)
+- 🎵 AI x 음악 (Suno로 작곡, BGM 제작, 음향 디자인)
+- 🎨 AI x 디자인 (Midjourney, Firefly, Canva AI 실제 작업)
+- 🍽️ AI x 미식·요리 (레시피 생성, 식재료 관리, 맛집 큐레이션)
+- 🔊 AI x 음향·사운드 (ElevenLabs, 팟캐스트, 보이스 제작)
+- 🐾 AI x 반려동물 (건강 관리, 행동 분석, 케어 자동화)
+- 💡 기타 라이프스타일 (여행, 독서, 인테리어 등 AI 접목)
+
+## 조건
+- 타깃: AI를 일상·취미에 적용하려는 성인 (비개발자)
+- 톤 비중: 진지 5 : 가벼움 5
+- 10개 중 AI 워크플로우 3개, 나머지 영역에서 7개 분산
+- 제목은 짧고 호기심을 자극하되 낚시성 금지
+- "내가 해봤더니" "써봤다" 등 1인칭 경험 톤 권장
 
 출력 형식:
 JSON만 출력.
@@ -151,6 +167,7 @@ then
   cat "$TMP_RAW" >&2
   exit 1
 fi
+cp "$TMP_JSON" "$DATA_FILE"
 
 TOPICS_MESSAGE="$(
 python3 - "$DATA_FILE" "$RUN_DATE" <<'PYEOF'
