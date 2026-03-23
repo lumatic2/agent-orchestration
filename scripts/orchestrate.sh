@@ -386,6 +386,59 @@ PYEOF
 # --- Complexity tier + model selector (agent_config.yaml) ---
 # Heuristic-only classifier: no external NLP, just stable keyword/count rules.
 # Prints tab-separated values: <tier>\t<model>\t<reasoning>\t<family>\t<source>
+# Map task text → Codex subagent name
+# Returns empty string if no match (Codex handles it alone)
+# resolve_subagent_hint <task_text> [tier]
+# tier: low | medium | high | ultra (default: medium)
+# Ultra-tier subagents only fire on high/ultra to avoid model cost mismatch
+resolve_subagent_hint() {
+  local task="$1"
+  local tier="${2:-medium}"
+  local t
+  t=$(echo "$task" | tr '[:upper:]' '[:lower:]')
+
+  # --- Exclude research/analysis-only patterns (false positive guard) ---
+  # If task is about researching/explaining/summarizing, skip code subagents
+  if echo "$t" | grep -qE "조사|찾아줘|검색|리서치|요약|설명해|분석해줘$|알려줘$"; then
+    echo ""; return
+  fi
+
+  # --- Medium/Light subagents (always eligible) ---
+
+  # MCP (more specific than CLI — check first)
+  if echo "$t" | grep -qE "mcp|model context protocol"; then
+    echo "mcp-developer"; return
+  fi
+  # Python — must involve coding/writing/fixing, not just mentioning python
+  if echo "$t" | grep -qE "\.py|pytest|django|flask|fastapi|pandas|numpy" || \
+     (echo "$t" | grep -qE "python" && echo "$t" | grep -qE "작성|구현|수정|고쳐|만들어|짜줘|fix|write|implement"); then
+    echo "python-pro"; return
+  fi
+  # Shell/CLI — must involve scripting
+  if echo "$t" | grep -qE "\.sh|bash.*(작성|수정|고쳐)|shell.*(script|작성)|(스크립트|쉘).*(작성|수정|만들)"; then
+    echo "cli-developer"; return
+  fi
+  # Code review — explicit review request
+  if echo "$t" | grep -qE "코드.?(리뷰|검토)|code.?review|pr.?review"; then
+    echo "reviewer"; return
+  fi
+
+  # --- Ultra-tier subagents (high/ultra only) ---
+  if [[ "$tier" == "high" || "$tier" == "ultra" ]]; then
+    if echo "$t" | grep -qE "multi.?agent|멀티.?에이전트|여러.에이전트|에이전트.협업"; then
+      echo "multi-agent-coordinator"; return
+    fi
+    if echo "$t" | grep -qE "workflow|워크플로우|파이프라인.설계|자동화.플로우"; then
+      echo "workflow-orchestrator"; return
+    fi
+    if echo "$t" | grep -qE "task.?distribut|태스크.분배|작업.분배|역할.분담"; then
+      echo "task-distributor"; return
+    fi
+  fi
+
+  echo ""
+}
+
 resolve_dispatch_profile() {
   local agent="$1"
   local task_text="$2"
@@ -1179,6 +1232,16 @@ $(cat "$checklist_file")"
     fi
   fi
 
+  # Inject subagent hint if applicable
+  local subagent_hint
+  subagent_hint=$(resolve_subagent_hint "$task_with_checklist" "${SELECTED_TIER:-medium}")
+  if [ -n "$subagent_hint" ]; then
+    task_with_checklist="[Subagent: use the '${subagent_hint}' subagent for this task]
+
+${task_with_checklist}"
+    echo "[SUBAGENT] Hint injected: $subagent_hint"
+  fi
+
   # Build codex command args
   local codex_args=(
     exec
@@ -1308,6 +1371,26 @@ $(cat "$checklist_file")"
     return 1
   fi
 
+  # Validate result — detect meta-response (Gemini said "completed" but returned no content)
+  local clean_len
+  clean_len=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$\|write_todos\|mark.*complete\|task.*complete\|completed.*task\|analysis.*done\|I have completed\|All tasks are complete" | wc -c)
+  if [ "$clean_len" -lt 300 ]; then
+    echo "[WARN] Gemini returned a meta-response (${clean_len} chars). Retrying once..."
+    local retry_prompt
+    retry_prompt="IMPORTANT: Output the full analysis content directly. Do NOT say 'I completed' or 'analysis is done'. Write everything inline now.
+
+${gemini_task}"
+    printf '%s' "$retry_prompt" > "$tmp_prompt"
+    gemini \
+      --yolo \
+      -m "$model" < "$tmp_prompt" 2>&1 \
+      | grep -Ev "YOLO mode is enabled|All tool calls will be automatically approved|Loaded cached credentials|\[WARN\]|EPERM|EACCES|operation not permitted|Error getting folder structure" \
+      > "$log_file" || true
+    rm -f "$tmp_prompt"
+    result=$(cat "$log_file")
+    echo "[RETRY] Gemini retry complete ($(echo "$result" | wc -c) chars)"
+  fi
+
   # Success — update queue
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
   [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
@@ -1394,13 +1477,15 @@ run_openclaw() {
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
 
   # openclaw CLI가 없으면 M4 SSH로 원격 실행 (Windows/MacAir → M4)
+  # nvm PATH를 원격 셸에 명시적으로 주입 (비대화형 SSH는 .zshrc 미로드)
+  local REMOTE_NVM_BIN='$(ls -d ~/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)'
   if command -v openclaw &>/dev/null; then
     openclaw agent --agent main \
       --message "$TASK" \
       2>&1 > "$log_file" || true
   else
     echo "[INFO] openclaw CLI not found locally — running via SSH on m4"
-    ssh m4 "openclaw agent --agent main --message $(printf '%q' "$TASK")" \
+    ssh m4 "export PATH=\"\$(ls -d ~/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1):\$PATH\" && openclaw agent --agent main --message $(printf '%q' "$TASK")" \
       2>&1 > "$log_file" || true
   fi
 

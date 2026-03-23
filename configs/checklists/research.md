@@ -40,3 +40,9 @@
 - next evidence-gathering step
 
 > Do not overstate certainty or force a recommendation when evidence is insufficient.
+
+**Output rules (CRITICAL):**
+- Write the full report content directly to stdout — do NOT summarize as "I completed the task" or "analysis is done"
+- Do not use todo tools, file write tools, or any side-channel to store results — output everything inline
+- Minimum output: 500 characters of substantive findings; if under this threshold the response is considered invalid
+- Always respond in the same language as the task prompt (if the prompt is in Korean, respond in Korean)
