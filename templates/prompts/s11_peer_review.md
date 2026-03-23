@@ -13,9 +13,10 @@ You are both a peer reviewer and a reviser. First, identify all issues with the 
 
 The output must be the complete revised paper (all sections), not a list of review comments.
 
-## Requirements
-- every major claim must map back to evidence
-- clearly label uncertainty and limitations
-- do not fabricate quantitative results
-- keep the references section traceable with title, authors if known, year, and URL or DOI
-- if a section has weak evidence, note it explicitly rather than padding
+## Critical Requirements
+- **Do not reduce the word count.** The revised paper must be at least as long as the draft, and ideally longer — expand weak sections with additional analysis, context, and discussion rather than cutting them.
+- If a section is underdeveloped, expand it. Do not summarize or compress existing content.
+- Every major claim must map back to evidence.
+- Clearly label uncertainty and limitations.
+- Do not fabricate quantitative results.
+- Keep the references section traceable with title, authors if known, year, and URL or DOI.

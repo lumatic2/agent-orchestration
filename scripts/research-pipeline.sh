@@ -519,25 +519,106 @@ S12_EOF
         mkdir -p "$PAPER_DIR"
         # [LOG]/[QUEUE] 메타라인 제거 후 저장
         grep -v '^\[LOG\]\|^\[QUEUE\]' "$STATE_DIR/s11_revised.md" > "$PAPER_DIR/draft.md"
-        if ! ssh -o ConnectTimeout=10 m4 "mkdir -p ~/vault/30-projects/papers/$SLUG && cat > ~/vault/30-projects/papers/$SLUG/draft.md" <<VEOF
-$(cat "$STATE_DIR/s11_revised.md")
-VEOF
-        then
-          : 
+
+        # notes.md — 합성 + 가설 요약
+        {
+          echo "# Research Notes: ${TOPIC}"
+          echo ""
+          echo "- date: $(timestamp)"
+          echo "- pipeline: ${PIPELINE_FILE}"
+          echo ""
+          echo "## Synthesis"
+          cat "$STATE_DIR/s05_synthesis.md" 2>/dev/null || echo "(없음)"
+        } > "$PAPER_DIR/notes.md"
+
+        # references.md — draft의 References 섹션 추출
+        {
+          echo "# References: ${TOPIC}"
+          echo ""
+          grep -A 9999 '^## References\|^## [0-9]\+\. References' "$PAPER_DIR/draft.md" 2>/dev/null || echo "(References 섹션 없음)"
+        } > "$PAPER_DIR/references.md"
+
+        # vault에 저장 (draft + notes + references)
+        local vault_ok=0
+        if ssh -o ConnectTimeout=10 m4 "mkdir -p ~/vault/30-projects/papers/$SLUG" 2>/dev/null; then
+          ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/draft.md" < "$PAPER_DIR/draft.md" 2>/dev/null && \
+          ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/notes.md" < "$PAPER_DIR/notes.md" 2>/dev/null && \
+          ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/references.md" < "$PAPER_DIR/references.md" 2>/dev/null && \
+          vault_ok=1
         fi
+
+        local vault_status="❌ 실패 (m4 연결 불가)"
+        [ "$vault_ok" -eq 1 ] && vault_status="✅ ~/vault/30-projects/papers/$SLUG/"
+
         cat > "$out_file" << S13_EOF
 # S13 아카이브 완료
 
-- 논문 저장 경로: ~/vault/30-projects/papers/$SLUG/draft.md
-- 로컬 경로: $PAPER_DIR/draft.md
+- 논문: $PAPER_DIR/draft.md
+- 노트: $PAPER_DIR/notes.md
+- 참고문헌: $PAPER_DIR/references.md
+- Vault: ${vault_status}
 S13_EOF
         ;;
       S14)
+        # Layer 1: bash curl로 References 섹션 URL 실제 존재 확인
         local draft14
-        draft14="$([ -f "$STATE_DIR/s11_revised.md" ] && cat "$STATE_DIR/s11_revised.md" || echo "(S11 수정본 없음)")"
-        local tmpl14="$REPO_DIR/templates/prompts/s14_citation_verify.md"
+        draft14="$([ -f "$PAPER_DIR/draft.md" ] && cat "$PAPER_DIR/draft.md" || cat "$STATE_DIR/s11_revised.md" 2>/dev/null || echo "")"
+
+        local curl_report=""
+        # draft에서 http/https URL 추출 후 curl HEAD 확인
+        local urls
+        urls="$(printf '%s\n' "$draft14" | grep -oE 'https?://[^) >"\`]+' | sort -u)"
+        if [ -n "$urls" ]; then
+          while IFS= read -r url; do
+            [ -z "$url" ] && continue
+            local http_code
+            http_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 --location "$url" 2>/dev/null || echo "ERR")"
+            local status="✅"
+            [ "$http_code" = "200" ] || [ "$http_code" = "301" ] || [ "$http_code" = "302" ] || status="❌ ($http_code)"
+            curl_report="${curl_report}- ${status} ${url}\n"
+          done <<< "$urls"
+        else
+          curl_report="(draft에서 URL 없음 — References 섹션에 URL 추가 필요)\n"
+        fi
+
+        # Layer 2: Gemini로 인용 서지 정보 일관성 검증
+        local url_summary
+        url_summary="$(printf '%b' "$curl_report")"
+        local ref_section
+        ref_section="$(printf '%s\n' "$draft14" | awk '/^## References|^## 8\. References/{found=1} found')"
+        [ -z "$ref_section" ] && ref_section="(References 섹션 없음)"
+
         local brief14
-        brief14="$(render_template "$tmpl14" "$TOPIC" "$draft14" "S14")"
+        brief14="You are running S14 citation verification.
+
+Topic: ${TOPIC}
+
+## URL Audit Results (curl HEAD check)
+${url_summary}
+
+## References Section
+$(truncate_payload "$ref_section" 4000)
+
+## Task
+Based on the URL audit results above and the references section:
+1. List each citation with its verification status (verified/partial/unverified)
+2. Flag citations with broken URLs (marked ❌), missing URLs, or incomplete bibliographic info
+3. Suggest specific fixes for each problematic citation
+
+## Output Format
+# S14 Citation Verification
+
+## Citation Status
+| Citation | URL Status | Bib Status | Verdict |
+|----------|-----------|-----------|---------|
+
+## Issues & Fixes
+- ...
+
+## Summary
+- Total citations: N
+- Verified: N | Partial: N | Unverified: N"
+
         run_stage_gemini "$stage" "$brief14" "s14-citation-verify-${SLUG}"
         ;;
       S15)
