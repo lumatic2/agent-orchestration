@@ -20,6 +20,7 @@ PIPELINE_FILE=""
 CURRENT_STAGE=1
 GATE_ARG=""
 DECISION_ARG=""
+TEMPLATE="A"   # Typst 템플릿: A(학술) B(모던) C(미니멀) D(테크다크)
 
 # ── 유틸 ───────────────────────────────────────────────────────────────
 
@@ -759,102 +760,118 @@ $(cat "$synth_out")
 S15_EOF
         ;;
       S16)
-        # pandoc → HTML → Chrome headless → PDF
-        # 논문 첫 줄(# 제목)을 파일명으로 변환 (한국어 등 비ASCII 제목은 SLUG 기반 사용)
+        # markdown → Typst → PDF (typst compile)
+        # 파일명: 논문 첫 줄 제목 기반 (한국어면 SLUG+날짜 fallback)
         local paper_title
         paper_title="$(head -1 "$PAPER_DIR/draft.md" | sed 's/^#* *//' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/_/g; s/__*/_/g; s/^_//; s/_$//')"
-        # ASCII 변환 결과가 5자 미만이면 주제 슬러그 + 날짜로 fallback
         if [ "${#paper_title}" -lt 5 ]; then
           paper_title="${SLUG}_$(date +%Y%m%d)"
         fi
-        # 최대 60자로 제한
         paper_title="${paper_title:0:60}"
         local pdf_path="$PAPER_DIR/${paper_title}.pdf"
-        local html_path="$PAPER_DIR/${paper_title}.html"
+        local typ_path="$PAPER_DIR/${paper_title}.typ"
 
-        if ! command -v pandoc >/dev/null 2>&1; then
+        if ! command -v typst >/dev/null 2>&1; then
+          echo "[pipeline] WARN: typst 미설치 — brew install typst" >&2
+          printf '# S16 PDF 변환\n\nWARN: typst 미설치\n' > "$out_file"
+        elif ! command -v pandoc >/dev/null 2>&1; then
           echo "[pipeline] WARN: pandoc 미설치 — brew install pandoc" >&2
           printf '# S16 PDF 변환\n\nWARN: pandoc 미설치\n' > "$out_file"
         else
-          # 0) 마크다운 전처리: 헤딩 전후 빈 줄 보장 + 문단 분리
-          local fmt_md="$PAPER_DIR/draft_fmt.md"
-          python3 - "$PAPER_DIR/draft.md" "$fmt_md" << 'PYEOF'
-import re, sys
-src, dst = sys.argv[1], sys.argv[2]
-content = open(src).read()
-# 헤딩 전 빈 줄 보장
-content = re.sub(r'([^\n])\n(#{1,6} )', r'\1\n\n\2', content)
-# 헤딩 후 빈 줄 보장
-content = re.sub(r'(#{1,6} [^\n]+)\n([^\n#])', r'\1\n\n\2', content)
-# 마침표/느낌표/물음표로 끝나는 줄 다음에 새 문장이 오면 빈 줄 추가
-lines = content.split('\n')
+          # 0) 논문 제목 + 초록 추출
+          local raw_title abstract_text
+          raw_title="$(head -1 "$PAPER_DIR/draft.md" | sed 's/^#* *//')"
+          abstract_text="$(python3 - "$PAPER_DIR/draft.md" << 'PYEOF'
+import sys, re
+lines = open(sys.argv[1]).read().split('\n')
+in_abstract = False
+buf = []
+for line in lines:
+    if re.match(r'^#{1,2}\s*(초록|Abstract)', line, re.IGNORECASE):
+        in_abstract = True
+        continue
+    if in_abstract:
+        if re.match(r'^#{1,2}\s+', line):
+            break
+        buf.append(line)
+print('\n'.join(buf).strip())
+PYEOF
+)"
+
+          # 1) 초록 제외한 본문을 Typst 형식으로 변환
+          local body_md="$PAPER_DIR/draft_body.md"
+          python3 - "$PAPER_DIR/draft.md" "$body_md" << 'PYEOF'
+import sys, re
+lines = open(sys.argv[1]).read().split('\n')
 out = []
-for i, line in enumerate(lines):
+skip_abstract = False
+i = 0
+while i < len(lines):
+    line = lines[i]
+    # 첫 번째 H1(제목)은 건너뜀
+    if i == 0 and re.match(r'^#\s+', line):
+        i += 1
+        continue
+    # 초록 섹션 건너뜀
+    if re.match(r'^#{1,2}\s*(초록|Abstract)', line, re.IGNORECASE):
+        skip_abstract = True
+        i += 1
+        continue
+    if skip_abstract:
+        if re.match(r'^#{1,2}\s+', line) and not re.match(r'^#{1,2}\s*(초록|Abstract)', line, re.IGNORECASE):
+            skip_abstract = False
+        else:
+            i += 1
+            continue
     out.append(line)
-    if i < len(lines) - 1:
-        nxt = lines[i + 1]
-        if (line.rstrip().endswith(('.', '!', '?', '다', '요', '임', '됨', '음'))
-                and nxt and not nxt.startswith('#') and nxt.strip()):
-            out.append('')
-# 3줄 이상 연속 빈 줄 → 2줄로
-content = '\n'.join(out)
-content = re.sub(r'\n{3,}', '\n\n', content)
-open(dst, 'w').write(content)
+    i += 1
+open(sys.argv[2], 'w').write('\n'.join(out))
 PYEOF
 
-          # 1) pandoc: markdown → standalone HTML (CSS 내장, TOC 포함)
-          #    --shift-heading-level-by=-1: H1 제목은 문서 title로 이동, 본문은 H2부터 시작
-          pandoc "$fmt_md" \
-            --from markdown \
-            --to html5 \
-            --standalone \
-            --toc \
-            --toc-depth=2 \
-            --shift-heading-level-by=-1 \
-            --css - \
-            -o "$html_path" << 'CSS_EOF'
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap');
-body { font-family: "Noto Serif KR", "Georgia", serif; max-width: 820px; margin: 40px auto; padding: 0 32px 60px; font-size: 11.5pt; line-height: 1.85; color: #1a1a1a; }
-h1.title { font-size: 22pt; font-weight: 700; margin-bottom: 8px; line-height: 1.3; }
-h1 { font-size: 17pt; margin-top: 2.5em; border-bottom: 2px solid #333; padding-bottom: 6px; }
-h2 { font-size: 13pt; margin-top: 1.8em; margin-bottom: 0.4em; }
-h3 { font-size: 11.5pt; margin-top: 1.2em; font-style: italic; }
-p { text-align: justify; margin: 0.9em 0; }
-nav#TOC { background: #f8f8f8; border: 1px solid #ddd; border-radius: 4px; padding: 16px 24px; margin: 2em 0 3em; }
-nav#TOC ul { margin: 0; padding-left: 1.2em; }
-nav#TOC li { margin: 0.3em 0; font-size: 10.5pt; }
-nav#TOC a { color: #2a5db0; text-decoration: none; }
-table { border-collapse: collapse; width: 100%; margin: 1.2em 0; font-size: 10.5pt; }
-th, td { border: 1px solid #ccc; padding: 7px 12px; text-align: left; }
-th { background: #f0f0f0; font-weight: 700; }
-code { background: #f4f4f4; padding: 1px 5px; border-radius: 3px; font-size: 10pt; font-family: monospace; }
-blockquote { border-left: 3px solid #aaa; margin: 1em 0; padding: 0.5em 1em; color: #444; font-style: italic; }
-CSS_EOF
+          # 2) pandoc: markdown body → typst
+          local body_typ="$PAPER_DIR/draft_body.typ"
+          pandoc "$body_md" --from markdown --to typst -o "$body_typ" 2>/dev/null || true
+          rm -f "$body_md"
 
-          rm -f "$fmt_md"
-
-          # 2) Chrome headless: HTML → PDF
-          local chrome_bin="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-          if [ -f "$chrome_bin" ]; then
-            "$chrome_bin" \
-              --headless=new \
-              --disable-gpu \
-              --no-sandbox \
-              --print-to-pdf="$pdf_path" \
-              --print-to-pdf-no-header \
-              "file://$html_path" 2>/dev/null
+          # 3) 템플릿 선택 및 .typ 파일 조합
+          local tmpl_file="$REPO_DIR/templates/typst/paper_${TEMPLATE}.typ"
+          if [ ! -f "$tmpl_file" ]; then
+            echo "[pipeline] WARN: 템플릿 없음 $tmpl_file — A로 대체" >&2
+            tmpl_file="$REPO_DIR/templates/typst/paper_A.typ"
           fi
 
-          local pdf_status="❌ Chrome PDF 실패"
+          # abstract 특수문자 이스케이프 (Typst 문자열용)
+          local abs_escaped
+          abs_escaped="$(printf '%s' "$abstract_text" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+          local title_escaped
+          title_escaped="$(printf '%s' "$raw_title" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+
+          # 최종 .typ 파일 생성
+          {
+            cat "$tmpl_file"
+            echo ""
+            echo "#show: conf.with("
+            echo "  title: \"${title_escaped}\","
+            echo "  abstract: ["
+            echo "${abstract_text}"
+            echo "  ],"
+            echo ")"
+            echo ""
+            cat "$body_typ"
+          } > "$typ_path"
+          rm -f "$body_typ"
+
+          # 4) typst compile
+          typst compile "$typ_path" "$pdf_path" 2>/dev/null || true
+
+          local pdf_status="❌ Typst PDF 실패"
           local vault_pdf_status="❌ Vault 저장 실패 (m4 연결 불가)"
           local desktop_pdf_status="❌ 바탕화면 복사 실패"
           if [ -f "$pdf_path" ] && [ -s "$pdf_path" ]; then
-            pdf_status="✅ $pdf_path"
-            # vault에도 저장 (성공/실패 명시)
+            pdf_status="✅ $pdf_path (템플릿: ${TEMPLATE})"
             if ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf" < "$pdf_path" 2>/dev/null; then
               vault_pdf_status="✅ ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf"
             fi
-            # 바탕화면에 복사 (바로 열어볼 수 있도록)
             local desktop_pdf="$HOME/Desktop/${paper_title}.pdf"
             if cp "$pdf_path" "$desktop_pdf" 2>/dev/null; then
               desktop_pdf_status="✅ $desktop_pdf"
@@ -862,7 +879,7 @@ CSS_EOF
           fi
 
           cat > "$out_file" << S16_EOF
-# S16 PDF 변환
+# S16 PDF 변환 (Typst 템플릿 ${TEMPLATE})
 
 - PDF: ${pdf_status}
 - Vault PDF: ${vault_pdf_status}
@@ -1016,8 +1033,12 @@ main() {
         DECISION_ARG="$2"
         shift
         ;;
+      --template)
+        TEMPLATE="${2^^}"   # 대문자 변환
+        shift
+        ;;
       --help|-h)
-        echo "사용법: bash scripts/research-pipeline.sh \"주제\" [--skip-experiment] [--approve-gate S06] [--decide PROCEED|REFINE|PIVOT]"
+        echo "사용법: bash scripts/research-pipeline.sh \"주제\" [--skip-experiment] [--approve-gate S06] [--decide PROCEED|REFINE|PIVOT] [--template A|B|C|D]"
         exit 0 ;;
       --*)
         echo "알 수 없는 옵션: $1" >&2
