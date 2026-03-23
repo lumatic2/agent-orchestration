@@ -9,7 +9,7 @@ Return only the final Markdown paper draft. Do not narrate your process.
 {SYNTHESIS}
 
 ## Task
-Draft a paper in academic markdown structure on the topic above, using the synthesis as your evidence base. Target roughly 5,000-6,000 words when the evidence supports it, but do not inflate weak sections.
+Draft a paper in academic markdown structure on the topic above, using the synthesis as your evidence base. Each section should be fully developed — write in complete, substantive paragraphs. Target 5,000-6,000 words total. Do not use placeholder text or bullet summaries in place of prose. If evidence is limited, acknowledge the limitation explicitly in the text rather than shortening the section.
 
 ## Required Sections
 - `## Abstract`

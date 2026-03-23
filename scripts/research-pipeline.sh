@@ -49,6 +49,7 @@ stage_file() {
     S12) echo "$STATE_DIR/s12_quality.md" ;;
     S13) echo "$STATE_DIR/s13_final.md" ;;
     S14) echo "$STATE_DIR/s14_citations.md" ;;
+    S15) echo "$STATE_DIR/s15_validation.md" ;;
     *) echo "" ;;
   esac
 }
@@ -72,7 +73,7 @@ save_checkpoint() {
       --arg topic "$TOPIC" \
       --arg slug "$SLUG" \
       --argjson cs "$CURRENT_STAGE" \
-      '{topic:$topic,slug:$slug,current_stage:$cs,skip_experiment:false,gate_pending_stage:null,decision_pending:false,refine_count:0,pivot_count:0,stages:{S01:{status:"pending",ts:""},S02:{status:"pending",ts:""},S03:{status:"pending",ts:""},S04:{status:"pending",ts:""},S05:{status:"pending",ts:""},S06:{status:"pending",ts:""},S07:{status:"pending",ts:""},S08:{status:"pending",ts:""},S09:{status:"pending",ts:""},S10:{status:"pending",ts:""},S11:{status:"pending",ts:""},S12:{status:"pending",ts:""},S13:{status:"pending",ts:""},S14:{status:"pending",ts:""}}}' \
+      '{topic:$topic,slug:$slug,current_stage:$cs,skip_experiment:false,gate_pending_stage:null,decision_pending:false,refine_count:0,pivot_count:0,stages:{S01:{status:"pending",ts:""},S02:{status:"pending",ts:""},S03:{status:"pending",ts:""},S04:{status:"pending",ts:""},S05:{status:"pending",ts:""},S06:{status:"pending",ts:""},S07:{status:"pending",ts:""},S08:{status:"pending",ts:""},S09:{status:"pending",ts:""},S10:{status:"pending",ts:""},S11:{status:"pending",ts:""},S12:{status:"pending",ts:""},S13:{status:"pending",ts:""},S14:{status:"pending",ts:""},S15:{status:"pending",ts:""}}}' \
       > "$PIPELINE_FILE"
   fi
 
@@ -113,7 +114,7 @@ watchdog_check() {
   local now_epoch
   now_epoch="$(date +%s)"
 
-  local stages="S01 S02 S03 S04 S05 S06 S07 S08 S09 S10 S11 S12 S13 S14"
+  local stages="S01 S02 S03 S04 S05 S06 S07 S08 S09 S10 S11 S12 S13 S14 S15"
   for s in $stages; do
     local status start_ts
     status="$(jq -r ".stages.${s}.status // \"pending\"" "$PIPELINE_FILE")"
@@ -267,6 +268,44 @@ run_stage_gemini() {
   printf '%s\n' "$result" > "$out_file"
 }
 
+run_stage_codex() {
+  local stage="$1" brief="$2" name="$3"
+  local out_file; out_file="$(stage_file "$stage")"
+  local tmp; tmp="$(mktemp)"
+  local exit_code=0
+
+  NO_VAULT=true FORCE=true bash "$ORCH" codex "$brief" "$name" > "$tmp" 2>&1 &
+  local bg_pid=$!
+  local elapsed=0; local timeout_sec=300
+  while kill -0 "$bg_pid" 2>/dev/null && [ "$elapsed" -lt "$timeout_sec" ]; do
+    sleep 5; elapsed=$((elapsed + 5))
+  done
+  if kill -0 "$bg_pid" 2>/dev/null; then
+    kill "$bg_pid" 2>/dev/null; wait "$bg_pid" 2>/dev/null; exit_code=124
+  else
+    wait "$bg_pid" || exit_code=$?
+  fi
+
+  local full_content; full_content="$(cat "$tmp")"; rm -f "$tmp"
+  if [ "$exit_code" -eq 124 ]; then
+    echo "[pipeline] ERROR: $stage Codex 호출 타임아웃 (300s)" >&2
+    save_checkpoint "$stage" "failed"
+    printf '# %s 실패\nERROR: Codex 타임아웃\n' "$stage" > "$out_file"
+    return 1
+  elif [ "$exit_code" -ne 0 ]; then
+    echo "[pipeline] ERROR: $stage Codex 호출 실패 (exit $exit_code)" >&2
+    save_checkpoint "$stage" "failed"
+    printf '# %s 실패\nERROR: Codex exit %d\n\n%s\n' "$stage" "$exit_code" "$full_content" > "$out_file"
+    return 1
+  fi
+
+  # '--- Codex Result ---' 이후 추출, 없으면 전체
+  local result
+  result="$(printf '%s\n' "$full_content" | awk '/^--- Codex Result ---/{found=1; next} found')"
+  [ -z "$result" ] && result="$full_content"
+  printf '%s\n' "$result" > "$out_file"
+}
+
 # 템플릿 변수 치환 (sed 기반)
 truncate_payload() {
   local text="$1"
@@ -372,7 +411,7 @@ run_pipeline_stages() {
   # 리줌 시: 이전 세션에서 hang으로 죽은 단계가 있으면 감지
   watchdog_check
 
-  while [ "$CURRENT_STAGE" -le 14 ]; do
+  while [ "$CURRENT_STAGE" -le 15 ]; do
     local stage="S$(printf '%02d' "$CURRENT_STAGE")"
     local status
     status="$(get_stage_status "$stage")"
@@ -478,7 +517,8 @@ S12_EOF
         fi
 
         mkdir -p "$PAPER_DIR"
-        cp "$STATE_DIR/s11_revised.md" "$PAPER_DIR/draft.md"
+        # [LOG]/[QUEUE] 메타라인 제거 후 저장
+        grep -v '^\[LOG\]\|^\[QUEUE\]' "$STATE_DIR/s11_revised.md" > "$PAPER_DIR/draft.md"
         if ! ssh -o ConnectTimeout=10 m4 "mkdir -p ~/vault/30-projects/papers/$SLUG && cat > ~/vault/30-projects/papers/$SLUG/draft.md" <<VEOF
 $(cat "$STATE_DIR/s11_revised.md")
 VEOF
@@ -499,6 +539,83 @@ S13_EOF
         local brief14
         brief14="$(render_template "$tmpl14" "$TOPIC" "$draft14" "S14")"
         run_stage_gemini "$stage" "$brief14" "s14-citation-verify-${SLUG}"
+        ;;
+      S15)
+        local final_draft
+        final_draft="$([ -f "$PAPER_DIR/draft.md" ] && cat "$PAPER_DIR/draft.md" || cat "$STATE_DIR/s11_revised.md" 2>/dev/null || echo '(draft 없음)')"
+        final_draft="$(truncate_payload "$final_draft" 6000)"
+
+        # 1) Gemini 독립 리뷰
+        local gemini_brief="## Multi-Agent Validation: Gemini Review\n\n주제: ${TOPIC}\n\n아래 논문 초안을 독립적으로 평가해라.\n평가 항목: 논리적 일관성, 근거 품질, 구조 완성도, 인용 신뢰도, 한계 명시 여부.\n각 항목을 Strong/Moderate/Weak로 평가하고 근거 1-2줄을 제시해라.\n마지막에 Overall verdict(Accept/Minor Revision/Major Revision)를 내려라.\n\n## Draft\n${final_draft}"
+        local gemini_out="${STATE_DIR}/s15_gemini_review.md"
+        local tmp_g; tmp_g="$(mktemp)"
+        local eg=0
+        NO_VAULT=true FORCE=true bash "$ORCH" gemini "$gemini_brief" "s15-gemini-${SLUG}" > "$tmp_g" 2>&1 &
+        local gp=$!; local ge=0
+        while kill -0 "$gp" 2>/dev/null && [ "$ge" -lt 180 ]; do sleep 5; ge=$((ge+5)); done
+        if kill -0 "$gp" 2>/dev/null; then kill "$gp"; wait "$gp" 2>/dev/null; eg=124; else wait "$gp" || eg=$?; fi
+        local gr; gr="$(awk '/^--- Gemini Result ---/{found=1;next}found' "$tmp_g")"; rm -f "$tmp_g"
+        [ -z "$gr" ] && gr="(Gemini 리뷰 실패 exit=$eg)"
+        printf '%s\n' "$gr" > "$gemini_out"
+
+        # 2) Codex 독립 리뷰
+        local codex_brief="Multi-Agent Validation: Codex Review\n\nTopic: ${TOPIC}\n\nReview the paper draft below independently.\nEvaluate: logical consistency, evidence quality, structure, citation reliability, limitations.\nRate each Strong/Moderate/Weak with 1-2 sentence rationale.\nGive an Overall verdict: Accept / Minor Revision / Major Revision.\n\nDraft:\n${final_draft}"
+        local codex_out="${STATE_DIR}/s15_codex_review.md"
+        local tmp_c; tmp_c="$(mktemp)"
+        local eck=0
+        NO_VAULT=true FORCE=true bash "$ORCH" codex "$codex_brief" "s15-codex-${SLUG}" > "$tmp_c" 2>&1 &
+        local cp2=$!; local ce=0
+        while kill -0 "$cp2" 2>/dev/null && [ "$ce" -lt 300 ]; do sleep 5; ce=$((ce+5)); done
+        if kill -0 "$cp2" 2>/dev/null; then kill "$cp2"; wait "$cp2" 2>/dev/null; eck=124; else wait "$cp2" || eck=$?; fi
+        local cr; cr="$(awk '/^--- Codex Result ---/{found=1;next}found' "$tmp_c")"; rm -f "$tmp_c"
+        [ -z "$cr" ] && cr="(Codex 리뷰 실패 exit=$eck)"
+        printf '%s\n' "$cr" > "$codex_out"
+
+        # 3) Claude 합성 — 두 리뷰를 orchestrate.sh gemini로 합성 (Claude 오케스트레이터 역할)
+        local synth_brief="## Multi-Agent Review Synthesis\n\n주제: ${TOPIC}\n\n아래는 동일한 논문 초안에 대한 두 AI 에이전트의 독립 리뷰다. 두 리뷰를 비교·분석해서 합의된 사항, 의견 차이, 최종 권고를 한국어로 정리해라.\n\n### Gemini 리뷰\n${gr}\n\n---\n\n### Codex 리뷰\n${cr}\n\n---\n\n## 출력 형식\n\n### 합의된 사항 (두 에이전트가 공통으로 지적한 문제)\n- ...\n\n### 의견 차이 (에이전트 간 평가가 다른 영역)\n- ...\n\n### 최종 권고\n- Overall verdict 비교 결과: ...\n- 우선 수정 사항: ..."
+        local synth_out="${STATE_DIR}/s15_synthesis.md"
+        local tmp_s; tmp_s="$(mktemp)"
+        local es=0
+        NO_VAULT=true FORCE=true bash "$ORCH" gemini "$synth_brief" "s15-synthesis-${SLUG}" > "$tmp_s" 2>&1 &
+        local sp=$!; local se=0
+        while kill -0 "$sp" 2>/dev/null && [ "$se" -lt 180 ]; do sleep 5; se=$((se+5)); done
+        if kill -0 "$sp" 2>/dev/null; then kill "$sp"; wait "$sp" 2>/dev/null; es=124; else wait "$sp" || es=$?; fi
+        local sr; sr="$(awk '/^--- Gemini Result ---/{found=1;next}found' "$tmp_s")"; rm -f "$tmp_s"
+        [ -z "$sr" ] && sr="(합성 실패 exit=$es)"
+        printf '%s\n' "$sr" > "$synth_out"
+
+        cat > "$out_file" << S15_EOF
+# S15 멀티에이전트 검증 보고서
+
+- **주제**: ${TOPIC}
+- **생성**: $(timestamp)
+- **검증 에이전트**: Gemini CLI, Codex CLI, Gemini(합성)
+
+---
+
+## Gemini 리뷰
+
+$(cat "$gemini_out")
+
+---
+
+## Codex 리뷰
+
+$(cat "$codex_out")
+
+---
+
+## 합성 의견 (Gemini가 두 리뷰 비교)
+
+$(cat "$synth_out")
+
+---
+
+## 검증 파일
+- Gemini 리뷰: state/s15_gemini_review.md
+- Codex 리뷰: state/s15_codex_review.md
+- 합성: state/s15_synthesis.md
+S15_EOF
         ;;
       S06)
         if [ "$SKIP_EXPERIMENT" = "true" ]; then
@@ -611,7 +728,7 @@ S09_EOF
       exit 1
     fi
 
-    if [ "$CURRENT_STAGE" -lt 15 ]; then
+    if [ "$CURRENT_STAGE" -lt 16 ]; then
       CURRENT_STAGE=$((CURRENT_STAGE + 1))
     fi
     save_checkpoint "$stage" "completed"
@@ -621,6 +738,7 @@ S09_EOF
   echo ""
   echo "[pipeline] 파이프라인 완료!"
   echo "  논문: $PAPER_DIR/draft.md"
+  echo "  검증: $STATE_DIR/s15_validation.md"
   echo "  상태: $PIPELINE_FILE"
 }
 
