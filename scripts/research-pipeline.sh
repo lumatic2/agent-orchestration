@@ -806,20 +806,26 @@ CSS_EOF
 
           local pdf_status="❌ Chrome PDF 실패"
           local vault_pdf_status="❌ Vault 저장 실패 (m4 연결 불가)"
+          local desktop_pdf_status="❌ 바탕화면 복사 실패"
           if [ -f "$pdf_path" ] && [ -s "$pdf_path" ]; then
             pdf_status="✅ $pdf_path"
             # vault에도 저장 (성공/실패 명시)
             if ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf" < "$pdf_path" 2>/dev/null; then
               vault_pdf_status="✅ ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf"
             fi
+            # 바탕화면에 복사 (바로 열어볼 수 있도록)
+            local desktop_pdf="$HOME/Desktop/${paper_title}.pdf"
+            if cp "$pdf_path" "$desktop_pdf" 2>/dev/null; then
+              desktop_pdf_status="✅ $desktop_pdf"
+            fi
           fi
 
           cat > "$out_file" << S16_EOF
 # S16 PDF 변환
 
-- HTML: $html_path
 - PDF: ${pdf_status}
 - Vault PDF: ${vault_pdf_status}
+- 바탕화면: ${desktop_pdf_status}
 S16_EOF
         fi
         ;;
