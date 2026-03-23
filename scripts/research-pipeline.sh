@@ -617,7 +617,7 @@ S13_EOF
         local curl_report=""
         # draft에서 http/https URL 추출 후 curl HEAD 확인
         local urls
-        urls="$(printf '%s\n' "$draft14" | grep -oE 'https?://[^) >"\`]+' | sort -u)"
+        urls="$(printf '%s\n' "$draft14" | /usr/bin/grep -oE 'https?://[^) >"\`]+' | sort -u || true)"
         if [ -n "$urls" ]; then
           while IFS= read -r url; do
             [ -z "$url" ] && continue
@@ -760,10 +760,13 @@ S15_EOF
         ;;
       S16)
         # pandoc → HTML → Chrome headless → PDF
-        # 논문 첫 줄(# 제목)을 파일명으로 변환
+        # 논문 첫 줄(# 제목)을 파일명으로 변환 (한국어 등 비ASCII 제목은 SLUG 기반 사용)
         local paper_title
         paper_title="$(head -1 "$PAPER_DIR/draft.md" | sed 's/^#* *//' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/_/g; s/__*/_/g; s/^_//; s/_$//')"
-        [ -z "$paper_title" ] && paper_title="draft"
+        # ASCII 변환 결과가 5자 미만이면 주제 슬러그 + 날짜로 fallback
+        if [ "${#paper_title}" -lt 5 ]; then
+          paper_title="${SLUG}_$(date +%Y%m%d)"
+        fi
         # 최대 60자로 제한
         paper_title="${paper_title:0:60}"
         local pdf_path="$PAPER_DIR/${paper_title}.pdf"
