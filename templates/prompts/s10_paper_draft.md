@@ -8,6 +8,8 @@ Return only the final Markdown paper draft. Do not narrate your process.
 {TOPIC}
 
 ## 합성 자료
+**⚠️ 아래 합성 자료는 실제 API(arXiv, Semantic Scholar)로 수집된 논문 기반입니다. 이 목록 외의 논문 인용 금지.**
+
 {SYNTHESIS}
 
 ## 작업
@@ -36,3 +38,5 @@ Return only the final Markdown paper draft. Do not narrate your process.
 - 불확실성과 한계를 명확히 표기
 - 수치 결과 조작 금지
 - 참고문헌 섹션: 제목, 저자(알 경우), 연도, URL 또는 DOI 포함
+- **인용 제한 (필수)**: 참고문헌은 반드시 `## 합성 자료`에 명시된 논문만 인용할 것. 합성 자료에 없는 논문을 새로 생성하거나 추가하지 말 것.
+- **DOI/URL 형식**: 합성 자료에 제공된 URL 또는 DOI를 그대로 사용할 것. 임의로 URL을 생성하지 말 것.

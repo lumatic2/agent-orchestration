@@ -446,10 +446,158 @@ run_pipeline_stages() {
       S02)
         local rq
         rq="$([ -f "$STATE_DIR/s01_scope.md" ] && head -20 "$STATE_DIR/s01_scope.md" || echo "$TOPIC")"
+
+        # ── API 우선 수집 ─────────────────────────────────────────────
+        local api_papers=""
+        local api_count=0
+        local arxiv_tmp ss_tmp
+        arxiv_tmp="$(mktemp /tmp/arxiv_XXXXXX.xml)"
+        ss_tmp="$(mktemp /tmp/ss_XXXXXX.json)"
+
+        # arXiv API
+        local arxiv_query
+        arxiv_query="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$TOPIC" 2>/dev/null || printf '%s' "$SLUG")"
+        if curl -s --max-time 30 "https://export.arxiv.org/api/query?search_query=all:${arxiv_query}&max_results=12&sortBy=relevance" -o "$arxiv_tmp" 2>/dev/null && [ -s "$arxiv_tmp" ]; then
+          api_papers="$(python3 - "$arxiv_tmp" << 'PYEOF' || true)
+import sys, re, xml.etree.ElementTree as ET
+ns = {'a': 'http://www.w3.org/2005/Atom'}
+try:
+    tree = ET.parse(sys.argv[1])
+    root = tree.getroot()
+    papers = []
+    for e in root.findall('a:entry', ns):
+        title = (e.findtext('a:title', '', ns) or '').strip().replace('\n',' ')
+        authors = [a.findtext('a:name','',ns) for a in e.findall('a:author',ns)]
+        author1 = authors[0] if authors else 'Unknown'
+        year = (e.findtext('a:published','',ns) or '')[:4]
+        url = (e.findtext('a:id','',ns) or '').strip()
+        abstract = (e.findtext('a:summary','',ns) or '').strip().replace('\n',' ')[:200]
+        if title and url:
+            papers.append(f'## {title}\n- **저자**: {author1} et al.\n- **연도**: {year}\n- **URL**: {url}\n- **초록**: {abstract}...\n- **출처**: arXiv\n')
+    print('\n'.join(papers))
+    print(f'<!-- ARXIV_COUNT: {len(papers)} -->', file=sys.stderr)
+except Exception as ex:
+    print(f'(arXiv 파싱 실패: {ex})', file=sys.stderr)
+PYEOF
+)"
+          api_count="$(printf '%s' "$api_papers" | grep -c '^## ' || true)"
+          echo "[pipeline] arXiv API: ${api_count}편 수집"
+        else
+          echo "[pipeline] WARN: arXiv API 실패" >&2
+        fi
+
+        # Semantic Scholar API
+        local ss_query
+        ss_query="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$TOPIC" 2>/dev/null || printf '%s' "$SLUG")"
+        if curl -s --max-time 30 "https://api.semanticscholar.org/graph/v1/paper/search?query=${ss_query}&limit=10&fields=title,authors,year,externalIds,abstract,url" -o "$ss_tmp" 2>/dev/null && [ -s "$ss_tmp" ]; then
+          local ss_papers
+          ss_papers="$(python3 - "$ss_tmp" << 'PYEOF' || true)
+import sys, json
+try:
+    data = json.load(open(sys.argv[1]))
+    papers = []
+    for p in data.get('data', []):
+        title = (p.get('title') or '').strip()
+        authors = p.get('authors') or []
+        author1 = authors[0].get('name','Unknown') if authors else 'Unknown'
+        year = str(p.get('year') or '')
+        ext = p.get('externalIds') or {}
+        doi = ext.get('DOI','')
+        arxiv_id = ext.get('ArXiv','')
+        url = f'https://arxiv.org/abs/{arxiv_id}' if arxiv_id else (f'https://doi.org/{doi}' if doi else (p.get('url') or ''))
+        doi_str = f'\n- **DOI**: {doi}' if doi else ''
+        abstract = (p.get('abstract') or '')[:200]
+        if title:
+            papers.append(f'## {title}\n- **저자**: {author1} et al.\n- **연도**: {year}\n- **URL**: {url}{doi_str}\n- **초록**: {abstract}...\n- **출처**: Semantic Scholar\n')
+    print('\n'.join(papers))
+except Exception as ex:
+    print(f'(SS 파싱 실패: {ex})', file=sys.stderr)
+PYEOF
+)"
+          # 중복 제거: arXiv에 없는 제목만 추가
+          if [ -n "$ss_papers" ]; then
+            local new_ss
+            new_ss="$(python3 - "$api_papers" "$ss_papers" << 'PYEOF' || true)
+import sys, re
+existing_raw = sys.argv[1]
+new_raw = sys.argv[2]
+def titles(text):
+    return [t.lower().strip() for t in re.findall(r'^## (.+)$', text, re.MULTILINE)]
+def similar(a, b):
+    a, b = set(a.split()), set(b.split())
+    if not a or not b: return False
+    return len(a & b) / max(len(a), len(b)) >= 0.7
+existing = titles(existing_raw)
+out = []
+for block in re.split(r'\n(?=## )', new_raw.strip()):
+    m = re.match(r'^## (.+)', block)
+    if not m: continue
+    t = m.group(1).lower().strip()
+    if not any(similar(t, e) for e in existing):
+        out.append(block)
+print('\n'.join(out))
+PYEOF
+)"
+            api_papers="${api_papers}${new_ss}"
+            local ss_added
+            ss_added="$(printf '%s' "$new_ss" | grep -c '^## ' || true)"
+            echo "[pipeline] Semantic Scholar API: ${ss_added}편 추가 (중복 제거 후)"
+          fi
+        else
+          echo "[pipeline] WARN: Semantic Scholar API 실패" >&2
+        fi
+        rm -f "$arxiv_tmp" "$ss_tmp"
+
+        # API 수집 결과가 있으면 Gemini에게 분석 위임, 없으면 기존 방식 fallback
         local tmpl="$REPO_DIR/templates/prompts/s02_literature_search.md"
-        local brief
-        brief="$(render_template "$tmpl" "$TOPIC" "$rq" "S02")"
-        run_stage_gemini "$stage" "$brief" "s02-literature-${SLUG}"
+        if [ -n "$api_papers" ] && [ "$api_count" -gt 0 ]; then
+          local total_api
+          total_api="$(printf '%s' "$api_papers" | grep -c '^## ' || true)"
+          echo "[pipeline] API 수집 총 ${total_api}편 — Gemini 분석 위임"
+          local brief
+          brief="주제: ${TOPIC}
+연구질문: ${rq}
+
+## 실제 수집된 논문 목록 (arXiv + Semantic Scholar API)
+아래는 실제 API로 수집된 논문들입니다. 이 목록을 기반으로 분석하세요.
+
+${api_papers}
+
+## 작업
+위 논문들의 핵심 주장, 연구 방법, 연구 주제와의 관련성을 한국어로 정리하라.
+각 논문별로 1-2문장 요약을 추가하고, 논문들 간의 공통점/차이점을 정리하라.
+목록에 없는 논문을 새로 추가하거나 생성하지 말 것.
+
+최종 출력: 위 논문 목록(메타데이터 유지) + 각 논문 분석 + 전체 동향 요약"
+          # API 논문 목록을 파일에 먼저 저장 (Gemini 실패해도 보존)
+          {
+            printf '<!-- VERIFIED_PAPERS: %d -->\n' "$total_api"
+            printf '<!-- SOURCE: arXiv+SemanticScholar API -->\n\n'
+            printf '# S02 문헌 수집\n\n'
+            printf '## 수집된 논문 목록\n\n%s\n' "$api_papers"
+          } > "$out_file"
+          # Gemini 분석 append (실패해도 기본 파일은 보존)
+          local tmp_g; tmp_g="$(mktemp)"
+          local eg=0
+          NO_VAULT=true FORCE=true bash "$ORCH" gemini "$brief" "s02-literature-${SLUG}" > "$tmp_g" 2>&1 &
+          local bg_pid=$!; local elapsed=0
+          while kill -0 "$bg_pid" 2>/dev/null && [ "$elapsed" -lt 180 ]; do sleep 5; elapsed=$((elapsed+5)); done
+          if kill -0 "$bg_pid" 2>/dev/null; then kill "$bg_pid" 2>/dev/null; wait "$bg_pid" 2>/dev/null; eg=124; else wait "$bg_pid" || eg=$?; fi
+          local g_full; g_full="$(cat "$tmp_g")"; rm -f "$tmp_g"
+          local gr; gr="$(printf '%s\n' "$g_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
+          [ -z "$gr" ] && gr="$g_full"
+          gr="$(printf '%s\n' "$gr" | /usr/bin/grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]' || true)"
+          if [ -n "$gr" ] && [ "$eg" -eq 0 ]; then
+            printf '\n## Gemini 분석\n\n%s\n' "$gr" >> "$out_file"
+          else
+            printf '\n(Gemini 분석 실패 exit=%d — API 수집 결과만 사용)\n' "$eg" >> "$out_file"
+          fi
+        else
+          echo "[pipeline] WARN: API 수집 실패 — Gemini 단독 수집으로 전환" >&2
+          local brief
+          brief="$(render_template "$tmpl" "$TOPIC" "$rq" "S02")"
+          run_stage_gemini "$stage" "$brief" "s02-literature-${SLUG}"
+        fi
         ;;
       S03)
         write_direct_stage "$stage" "$out_file"
@@ -460,6 +608,9 @@ run_pipeline_stages() {
         local tmpl="$REPO_DIR/templates/prompts/s04_knowledge_extract.md"
         local brief
         brief="$(render_template "$tmpl" "$TOPIC" "$lit" "S04")"
+        brief="${brief}
+
+⚠️ **인용 제한**: 위 문헌 목록에 포함된 논문만을 근거로 사용할 것. 목록에 없는 논문을 인용하거나 새로 생성하지 말 것."
         run_stage_gemini "$stage" "$brief" "s04-extract-${SLUG}"
         ;;
       S05)
@@ -632,13 +783,36 @@ S13_EOF
           curl_report="(draft에서 URL 없음 — References 섹션에 URL 추가 필요)\n"
         fi
 
-        # Layer 2: Gemini로 인용 서지 정보 일관성 검증
+        # Layer 2: Semantic Scholar DOI 검증
+        local dois
+        dois="$(printf '%s\n' "$draft14" | /usr/bin/grep -oE '10\.[0-9]{4,}/[^ )>"`,]+' | sort -u || true)"
+        local doi_report=""
+        if [ -n "$dois" ]; then
+          while IFS= read -r doi; do
+            [ -z "$doi" ] && continue
+            local ss_resp
+            ss_resp="$(curl -s --max-time 8 "https://api.semanticscholar.org/graph/v1/paper/DOI:${doi}?fields=title,year" 2>/dev/null || echo "")"
+            local ss_title
+            ss_title="$(printf '%s' "$ss_resp" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('title',''))" 2>/dev/null || echo "")"
+            if [ -n "$ss_title" ]; then
+              doi_report="${doi_report}- ✅ DOI:${doi} → \"${ss_title}\"\n"
+            else
+              doi_report="${doi_report}- ❌ DOI:${doi} → Semantic Scholar 미확인\n"
+            fi
+          done <<< "$dois"
+        else
+          doi_report="(draft에서 DOI 없음)\n"
+        fi
+
+        # Layer 3: Gemini로 인용 서지 정보 일관성 검증
         local url_summary
         url_summary="$(printf '%b' "$curl_report")"
         local ref_section
         ref_section="$(printf '%s\n' "$draft14" | awk '/^## References|^## 8\. References/{found=1} found')"
         [ -z "$ref_section" ] && ref_section="(References 섹션 없음)"
 
+        local doi_summary
+        doi_summary="$(printf '%b' "$doi_report")"
         local brief14
         brief14="You are running S14 citation verification.
 
@@ -647,20 +821,23 @@ Topic: ${TOPIC}
 ## URL Audit Results (curl HEAD check)
 ${url_summary}
 
+## DOI Verification (Semantic Scholar API)
+${doi_summary}
+
 ## References Section
 $(truncate_payload "$ref_section" 4000)
 
 ## Task
-Based on the URL audit results above and the references section:
+Based on the URL audit and DOI verification results above:
 1. List each citation with its verification status (verified/partial/unverified)
-2. Flag citations with broken URLs (marked ❌), missing URLs, or incomplete bibliographic info
+2. Flag citations with broken URLs (❌), unconfirmed DOIs (❌), missing URLs, or incomplete bibliographic info
 3. Suggest specific fixes for each problematic citation
 
 ## Output Format
 # S14 Citation Verification
 
 ## Citation Status
-| Citation | URL Status | Bib Status | Verdict |
+| Citation | URL Status | DOI Status | Verdict |
 |----------|-----------|-----------|---------|
 
 ## Issues & Fixes
