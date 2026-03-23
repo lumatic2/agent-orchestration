@@ -446,157 +446,240 @@ run_pipeline_stages() {
       S02)
         local rq
         rq="$([ -f "$STATE_DIR/s01_scope.md" ] && head -20 "$STATE_DIR/s01_scope.md" || echo "$TOPIC")"
-
-        # ── API 우선 수집 ─────────────────────────────────────────────
-        local api_papers=""
-        local api_count=0
-        local arxiv_tmp ss_tmp
-        arxiv_tmp="$(mktemp /tmp/arxiv_XXXXXX.xml)"
-        ss_tmp="$(mktemp /tmp/ss_XXXXXX.json)"
-
-        # arXiv API
-        local arxiv_query
-        arxiv_query="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$TOPIC" 2>/dev/null || printf '%s' "$SLUG")"
-        if curl -s --max-time 30 "https://export.arxiv.org/api/query?search_query=all:${arxiv_query}&max_results=12&sortBy=relevance" -o "$arxiv_tmp" 2>/dev/null && [ -s "$arxiv_tmp" ]; then
-          api_papers="$(python3 - "$arxiv_tmp" << 'PYEOF' || true)
-import sys, re, xml.etree.ElementTree as ET
-ns = {'a': 'http://www.w3.org/2005/Atom'}
-try:
-    tree = ET.parse(sys.argv[1])
-    root = tree.getroot()
-    papers = []
-    for e in root.findall('a:entry', ns):
-        title = (e.findtext('a:title', '', ns) or '').strip().replace('\n',' ')
-        authors = [a.findtext('a:name','',ns) for a in e.findall('a:author',ns)]
-        author1 = authors[0] if authors else 'Unknown'
-        year = (e.findtext('a:published','',ns) or '')[:4]
-        url = (e.findtext('a:id','',ns) or '').strip()
-        abstract = (e.findtext('a:summary','',ns) or '').strip().replace('\n',' ')[:200]
-        if title and url:
-            papers.append(f'## {title}\n- **저자**: {author1} et al.\n- **연도**: {year}\n- **URL**: {url}\n- **초록**: {abstract}...\n- **출처**: arXiv\n')
-    print('\n'.join(papers))
-    print(f'<!-- ARXIV_COUNT: {len(papers)} -->', file=sys.stderr)
-except Exception as ex:
-    print(f'(arXiv 파싱 실패: {ex})', file=sys.stderr)
-PYEOF
-)"
-          api_count="$(printf '%s' "$api_papers" | grep -c '^## ' || true)"
-          echo "[pipeline] arXiv API: ${api_count}편 수집"
-        else
-          echo "[pipeline] WARN: arXiv API 실패" >&2
-        fi
-
-        # Semantic Scholar API
-        local ss_query
-        ss_query="$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))" "$TOPIC" 2>/dev/null || printf '%s' "$SLUG")"
-        if curl -s --max-time 30 "https://api.semanticscholar.org/graph/v1/paper/search?query=${ss_query}&limit=10&fields=title,authors,year,externalIds,abstract,url" -o "$ss_tmp" 2>/dev/null && [ -s "$ss_tmp" ]; then
-          local ss_papers
-          ss_papers="$(python3 - "$ss_tmp" << 'PYEOF' || true)
-import sys, json
-try:
-    data = json.load(open(sys.argv[1]))
-    papers = []
-    for p in data.get('data', []):
-        title = (p.get('title') or '').strip()
-        authors = p.get('authors') or []
-        author1 = authors[0].get('name','Unknown') if authors else 'Unknown'
-        year = str(p.get('year') or '')
-        ext = p.get('externalIds') or {}
-        doi = ext.get('DOI','')
-        arxiv_id = ext.get('ArXiv','')
-        url = f'https://arxiv.org/abs/{arxiv_id}' if arxiv_id else (f'https://doi.org/{doi}' if doi else (p.get('url') or ''))
-        doi_str = f'\n- **DOI**: {doi}' if doi else ''
-        abstract = (p.get('abstract') or '')[:200]
-        if title:
-            papers.append(f'## {title}\n- **저자**: {author1} et al.\n- **연도**: {year}\n- **URL**: {url}{doi_str}\n- **초록**: {abstract}...\n- **출처**: Semantic Scholar\n')
-    print('\n'.join(papers))
-except Exception as ex:
-    print(f'(SS 파싱 실패: {ex})', file=sys.stderr)
-PYEOF
-)"
-          # 중복 제거: arXiv에 없는 제목만 추가
-          if [ -n "$ss_papers" ]; then
-            local new_ss
-            new_ss="$(python3 - "$api_papers" "$ss_papers" << 'PYEOF' || true)
-import sys, re
-existing_raw = sys.argv[1]
-new_raw = sys.argv[2]
-def titles(text):
-    return [t.lower().strip() for t in re.findall(r'^## (.+)$', text, re.MULTILINE)]
-def similar(a, b):
-    a, b = set(a.split()), set(b.split())
-    if not a or not b: return False
-    return len(a & b) / max(len(a), len(b)) >= 0.7
-existing = titles(existing_raw)
-out = []
-for block in re.split(r'\n(?=## )', new_raw.strip()):
-    m = re.match(r'^## (.+)', block)
-    if not m: continue
-    t = m.group(1).lower().strip()
-    if not any(similar(t, e) for e in existing):
-        out.append(block)
-print('\n'.join(out))
-PYEOF
-)"
-            api_papers="${api_papers}${new_ss}"
-            local ss_added
-            ss_added="$(printf '%s' "$new_ss" | grep -c '^## ' || true)"
-            echo "[pipeline] Semantic Scholar API: ${ss_added}편 추가 (중복 제거 후)"
-          fi
-        else
-          echo "[pipeline] WARN: Semantic Scholar API 실패" >&2
-        fi
-        rm -f "$arxiv_tmp" "$ss_tmp"
-
-        # API 수집 결과가 있으면 Gemini에게 분석 위임, 없으면 기존 방식 fallback
         local tmpl="$REPO_DIR/templates/prompts/s02_literature_search.md"
-        if [ -n "$api_papers" ] && [ "$api_count" -gt 0 ]; then
+        local fallback_brief
+        fallback_brief="$(render_template "$tmpl" "$TOPIC" "$rq" "S02")"
+        local skip_api_flow=0
+
+        local arxiv_raw ss_raw arxiv_json ss_json merged_md
+        arxiv_raw="$(mktemp /tmp/arxiv_raw_XXXXXX.xml)"
+        ss_raw="$(mktemp /tmp/ss_raw_XXXXXX.json)"
+        arxiv_json="$(mktemp /tmp/arxiv_parsed_XXXXXX.json)"
+        ss_json="$(mktemp /tmp/ss_parsed_XXXXXX.json)"
+        merged_md="$(mktemp /tmp/s02_lit_XXXXXX.md)"
+
+        local slug_query
+        slug_query="$(python3 - "$SLUG" << 'PYEOF' 2>/dev/null || true
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1]))
+PYEOF
+)"
+        [ -z "$slug_query" ] && slug_query="$SLUG"
+
+        local arxiv_url
+        arxiv_url="https://export.arxiv.org/api/query?search_query=all:${slug_query}&max_results=15&sortBy=relevance"
+        curl -s --max-time 30 "$arxiv_url" -o "$arxiv_raw" 2>/dev/null || true
+
+        local arxiv_count
+        arxiv_count="$(python3 - "$arxiv_raw" "$arxiv_json" << 'PYEOF' 2>/dev/null || true
+import json, re, sys, xml.etree.ElementTree as ET
+raw_path, out_path = sys.argv[1], sys.argv[2]
+papers = []
+try:
+    root = ET.parse(raw_path).getroot()
+except Exception:
+    root = None
+if root is not None:
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    for e in root.findall("a:entry", ns):
+        title = re.sub(r"\s+", " ", (e.findtext("a:title", "", ns) or "")).strip()
+        if not title:
+            continue
+        authors = e.findall("a:author", ns)
+        author = "N/A"
+        if authors:
+            author = (authors[0].findtext("a:name", "", ns) or "").strip() or "N/A"
+        year = (e.findtext("a:published", "", ns) or "")[:4] or "N/A"
+        url = (e.findtext("a:id", "", ns) or "").strip() or "N/A"
+        abstract = re.sub(r"\s+", " ", (e.findtext("a:summary", "", ns) or "")).strip()[:200] or "N/A"
+        papers.append({
+            "title": title,
+            "author": author,
+            "year": year,
+            "url": url,
+            "doi": "",
+            "abstract": abstract
+        })
+with open(out_path, "w") as f:
+    json.dump(papers, f, ensure_ascii=False)
+print(len(papers))
+PYEOF
+)"
+        [ -z "$arxiv_count" ] && arxiv_count="0"
+        if [ "$arxiv_count" -eq 0 ] 2>/dev/null; then
+          echo "[pipeline] WARN: arXiv API 결과 없음 (주제: ${SLUG})"
+        fi
+
+        if [ "$skip_api_flow" -eq 0 ]; then
+          local ss_query
+          ss_query="$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$TOPIC" 2>/dev/null || true)"
+          local ss_url
+          ss_url="https://api.semanticscholar.org/graph/v1/paper/search?query=${ss_query}&limit=10&fields=title,authors,year,externalIds,abstract,url"
+          curl -s --max-time 30 "$ss_url" -o "$ss_raw" 2>/dev/null || true
+          python3 - "$ss_raw" "$ss_json" << 'PYEOF' 2>/dev/null || true
+import json, re, sys
+raw_path, out_path = sys.argv[1], sys.argv[2]
+papers = []
+try:
+    data = json.load(open(raw_path))
+except Exception:
+    data = {}
+for p in data.get("data", []) if isinstance(data, dict) else []:
+    title = re.sub(r"\s+", " ", (p.get("title") or "")).strip()
+    if not title:
+        continue
+    authors = p.get("authors") or []
+    author = "N/A"
+    if isinstance(authors, list) and authors:
+        author = ((authors[0] or {}).get("name") or "N/A").strip() or "N/A"
+    year = str(p.get("year") or "N/A")
+    ext = p.get("externalIds") or {}
+    doi = (ext.get("DOI") or "").strip()
+    arxiv_id = (ext.get("ArXiv") or "").strip()
+    if arxiv_id:
+        url = f"https://arxiv.org/abs/{arxiv_id}"
+    elif p.get("url"):
+        url = (p.get("url") or "").strip()
+    else:
+        url = "N/A"
+    abstract = re.sub(r"\s+", " ", (p.get("abstract") or "")).strip()[:200] or "N/A"
+    papers.append({
+        "title": title,
+        "author": author,
+        "year": year,
+        "url": url,
+        "doi": doi,
+        "abstract": abstract
+    })
+with open(out_path, "w") as f:
+    json.dump(papers, f, ensure_ascii=False)
+PYEOF
+
           local total_api
-          total_api="$(printf '%s' "$api_papers" | grep -c '^## ' || true)"
-          echo "[pipeline] API 수집 총 ${total_api}편 — Gemini 분석 위임"
-          local brief
-          brief="주제: ${TOPIC}
-연구질문: ${rq}
+          total_api="$(python3 - "$arxiv_json" "$ss_json" "$merged_md" << 'PYEOF' 2>/dev/null || true
+import difflib, json, re, sys
+arxiv_path, ss_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
+def read(path):
+    try:
+        return json.load(open(path))
+    except Exception:
+        return []
+items = list(read(arxiv_path)) + list(read(ss_path))
+final = []
+seen = []
+for p in items:
+    title = re.sub(r"\s+", " ", (p.get("title") or "")).strip()
+    if not title:
+        continue
+    low = title.lower()
+    dup = False
+    for prev in seen:
+        if low == prev or difflib.SequenceMatcher(None, low, prev).ratio() >= 0.8:
+            dup = True
+            break
+    if dup:
+        continue
+    seen.append(low)
+    final.append(p)
+with open(out_path, "w") as f:
+    f.write(f"<!-- VERIFIED_PAPERS: {len(final)} -->\n\n")
+    for idx, p in enumerate(final, 1):
+        f.write(f"## 논문 {idx}: {(p.get('title') or 'N/A').strip()}\n")
+        f.write(f"- 저자: {(p.get('author') or 'N/A').strip()}\n")
+        f.write(f"- 연도: {(str(p.get('year') or 'N/A')).strip()}\n")
+        f.write(f"- URL: {(p.get('url') or 'N/A').strip()}\n")
+        doi = (p.get('doi') or '').strip()
+        f.write(f"- DOI: {doi if doi else 'N/A'}\n")
+        f.write(f"- Abstract: {(p.get('abstract') or 'N/A').strip()}\n\n")
+print(len(final))
+PYEOF
+)"
+          [ -z "$total_api" ] && total_api="0"
 
-## 실제 수집된 논문 목록 (arXiv + Semantic Scholar API)
-아래는 실제 API로 수집된 논문들입니다. 이 목록을 기반으로 분석하세요.
+          if [ "$total_api" -eq 0 ] 2>/dev/null; then
+            # API에서 논문 0편: Gemini 논문 생성(할루시네이션) 대신 게이트로 차단
+            rm -f "$arxiv_raw" "$ss_raw" "$arxiv_json" "$ss_json" "$merged_md" || true
+            cat > "$out_file" << S02_WARN_EOF
+<!-- VERIFIED_PAPERS: 0 -->
+<!-- WARNING: API_NO_RESULTS -->
 
-${api_papers}
+# S02 문헌 수집 — API 결과 없음
 
-## 작업
-위 논문들의 핵심 주장, 연구 방법, 연구 주제와의 관련성을 한국어로 정리하라.
-각 논문별로 1-2문장 요약을 추가하고, 논문들 간의 공통점/차이점을 정리하라.
-목록에 없는 논문을 새로 추가하거나 생성하지 말 것.
+- **주제**: ${TOPIC}
+- **arXiv 결과**: 0편
+- **Semantic Scholar 결과**: 0편
+- **생성**: $(timestamp)
 
-최종 출력: 위 논문 목록(메타데이터 유지) + 각 논문 분석 + 전체 동향 요약"
-          # API 논문 목록을 파일에 먼저 저장 (Gemini 실패해도 보존)
-          {
-            printf '<!-- VERIFIED_PAPERS: %d -->\n' "$total_api"
-            printf '<!-- SOURCE: arXiv+SemanticScholar API -->\n\n'
-            printf '# S02 문헌 수집\n\n'
-            printf '## 수집된 논문 목록\n\n%s\n' "$api_papers"
-          } > "$out_file"
-          # Gemini 분석 append (실패해도 기본 파일은 보존)
-          local tmp_g; tmp_g="$(mktemp)"
-          local eg=0
-          NO_VAULT=true FORCE=true bash "$ORCH" gemini "$brief" "s02-literature-${SLUG}" > "$tmp_g" 2>&1 &
-          local bg_pid=$!; local elapsed=0
-          while kill -0 "$bg_pid" 2>/dev/null && [ "$elapsed" -lt 180 ]; do sleep 5; elapsed=$((elapsed+5)); done
-          if kill -0 "$bg_pid" 2>/dev/null; then kill "$bg_pid" 2>/dev/null; wait "$bg_pid" 2>/dev/null; eg=124; else wait "$bg_pid" || eg=$?; fi
-          local g_full; g_full="$(cat "$tmp_g")"; rm -f "$tmp_g"
-          local gr; gr="$(printf '%s\n' "$g_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
-          [ -z "$gr" ] && gr="$g_full"
-          gr="$(printf '%s\n' "$gr" | /usr/bin/grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]' || true)"
-          if [ -n "$gr" ] && [ "$eg" -eq 0 ]; then
-            printf '\n## Gemini 분석\n\n%s\n' "$gr" >> "$out_file"
+## 원인 분석
+
+arXiv 및 Semantic Scholar API에서 이 주제에 해당하는 논문을 찾지 못했습니다.
+
+가능한 원인:
+1. 주제가 너무 구체적이거나 신조어 포함
+2. 학술 논문 데이터베이스에 미등재 주제 (실무/산업 주제)
+3. 검색 키워드가 논문 제목/초록과 불일치
+
+## 권장 조치
+
+- 주제를 더 일반적인 학술 용어로 재범위화
+- 예: "openclaw" → "AI agent skill marketplace security"
+- 또는 --skip-experiment 없이 Gemini 웹 검색 기반 접근 사용
+
+## 상태
+
+이 단계에서 검증된 논문이 없으므로 파이프라인이 중단됩니다.
+후속 단계(S04, S10)에서 인용할 실제 논문이 없어 할루시네이션 위험이 매우 높습니다.
+S02_WARN_EOF
+            save_checkpoint "$stage" "completed"
+            echo "[pipeline] S02 API 결과 없음 → 재범위화 게이트 진입"
+            jq --arg gs "S02_NO_RESULTS" '.gate_pending_stage = $gs' "$PIPELINE_FILE" > "${PIPELINE_FILE}.tmp" && mv "${PIPELINE_FILE}.tmp" "$PIPELINE_FILE"
+            exit 42
           else
-            printf '\n(Gemini 분석 실패 exit=%d — API 수집 결과만 사용)\n' "$eg" >> "$out_file"
+
+            cp "$merged_md" "$out_file" 2>/dev/null || true
+            local collected
+            collected="$(cat "$out_file" 2>/dev/null || true)"
+            local analyze_brief
+            analyze_brief="아래 실제 수집된 논문들을 분석하고, 각 논문의 핵심 주장과 연구 주제와의 관련성을 한국어로 정리하라.
+
+연구 주제: ${TOPIC}
+
+${collected}"
+            local tmp_g
+            tmp_g="$(mktemp)"
+            local eg=0
+            NO_VAULT=true FORCE=true bash "$ORCH" gemini "$analyze_brief" "s02-literature-analysis-${SLUG}" > "$tmp_g" 2>&1 &
+            local bg_pid=$!
+            local elapsed=0
+            while kill -0 "$bg_pid" 2>/dev/null && [ "$elapsed" -lt 180 ]; do
+              sleep 5
+              elapsed=$((elapsed + 5))
+            done
+            if kill -0 "$bg_pid" 2>/dev/null; then
+              kill "$bg_pid" 2>/dev/null || true
+              wait "$bg_pid" 2>/dev/null || true
+              eg=124
+            else
+              wait "$bg_pid" || eg=$?
+            fi
+            local g_full gr
+            g_full="$(cat "$tmp_g" 2>/dev/null || true)"
+            rm -f "$tmp_g" || true
+            gr="$(printf '%s\n' "$g_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
+            [ -z "$gr" ] && gr="$g_full"
+            gr="$(printf '%s\n' "$gr" | /usr/bin/grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]' || true)"
+            {
+              echo ""
+              echo "## API 수집 논문 보강 분석 (Gemini)"
+              echo ""
+              if [ -n "$gr" ] && [ "$eg" -eq 0 ]; then
+                printf '%s\n' "$gr"
+              else
+                printf '(Gemini 분석 실패 exit=%d)\n' "$eg"
+              fi
+            } >> "$out_file"
+            rm -f "$arxiv_raw" "$ss_raw" "$arxiv_json" "$ss_json" "$merged_md" || true
           fi
-        else
-          echo "[pipeline] WARN: API 수집 실패 — Gemini 단독 수집으로 전환" >&2
-          local brief
-          brief="$(render_template "$tmpl" "$TOPIC" "$rq" "S02")"
-          run_stage_gemini "$stage" "$brief" "s02-literature-${SLUG}"
         fi
         ;;
       S03)
@@ -610,7 +693,7 @@ ${api_papers}
         brief="$(render_template "$tmpl" "$TOPIC" "$lit" "S04")"
         brief="${brief}
 
-⚠️ **인용 제한**: 위 문헌 목록에 포함된 논문만을 근거로 사용할 것. 목록에 없는 논문을 인용하거나 새로 생성하지 말 것."
+주의: 위 문헌 목록에 포함된 논문만을 근거로 사용할 것. 목록에 없는 논문을 인용하거나 생성하지 말 것."
         run_stage_gemini "$stage" "$brief" "s04-extract-${SLUG}"
         ;;
       S05)
@@ -633,8 +716,12 @@ ${api_papers}
         local draft
         draft="$([ -f "$STATE_DIR/s10_draft.md" ] && cat "$STATE_DIR/s10_draft.md" || echo "(S10 초안 없음)")"
         local tmpl11="$REPO_DIR/templates/prompts/s11_peer_review.md"
+        # S11은 논문 전체를 검토해야 하므로 truncation 한도를 20000으로 확대
+        local tmpl11_content; tmpl11_content="$(cat "$tmpl11")"
+        local draft_truncated; draft_truncated="$(truncate_payload "$draft" 20000)"
         local brief11
-        brief11="$(render_template "$tmpl11" "$TOPIC" "$draft" "S11")"
+        brief11="${tmpl11_content//\{TOPIC\}/$TOPIC}"
+        brief11="${brief11//\{DRAFT\}/$draft_truncated}"
         run_stage_gemini "$stage" "$brief11" "s11-peer-review-${SLUG}"
         ;;
       S12)
@@ -785,19 +872,19 @@ S13_EOF
 
         # Layer 2: Semantic Scholar DOI 검증
         local dois
-        dois="$(printf '%s\n' "$draft14" | /usr/bin/grep -oE '10\.[0-9]{4,}/[^ )>"`,]+' | sort -u || true)"
+        dois="$(printf '%s\n' "$draft14" | /usr/bin/grep -oE '10\.[0-9]{4,}/[^ )>"`]+' | sort -u || true)"
         local doi_report=""
         if [ -n "$dois" ]; then
           while IFS= read -r doi; do
             [ -z "$doi" ] && continue
-            local ss_resp
-            ss_resp="$(curl -s --max-time 8 "https://api.semanticscholar.org/graph/v1/paper/DOI:${doi}?fields=title,year" 2>/dev/null || echo "")"
-            local ss_title
-            ss_title="$(printf '%s' "$ss_resp" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('title',''))" 2>/dev/null || echo "")"
-            if [ -n "$ss_title" ]; then
+            local ss_result
+            ss_result="$(curl -s --max-time 8 "https://api.semanticscholar.org/graph/v1/paper/DOI:${doi}?fields=title,year" 2>/dev/null || echo "")"
+            if printf '%s' "$ss_result" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('title',''))" 2>/dev/null | grep -q .; then
+              local ss_title
+              ss_title="$(printf '%s' "$ss_result" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('title',''))" 2>/dev/null || true)"
               doi_report="${doi_report}- ✅ DOI:${doi} → \"${ss_title}\"\n"
             else
-              doi_report="${doi_report}- ❌ DOI:${doi} → Semantic Scholar 미확인\n"
+              doi_report="${doi_report}- ❌ DOI:${doi} → Semantic Scholar에서 확인 불가\n"
             fi
           done <<< "$dois"
         else
@@ -821,7 +908,7 @@ Topic: ${TOPIC}
 ## URL Audit Results (curl HEAD check)
 ${url_summary}
 
-## DOI Verification (Semantic Scholar API)
+## DOI Verification (Semantic Scholar)
 ${doi_summary}
 
 ## References Section
@@ -848,11 +935,34 @@ Based on the URL audit and DOI verification results above:
 - Verified: N | Partial: N | Unverified: N"
 
         run_stage_gemini "$stage" "$brief14" "s14-citation-verify-${SLUG}"
+
+        # S14 하드 스톱: 미검증 비율 50% 초과 시 게이트 진입
+        local s14_total s14_verified s14_unverified s14_unverified_rate
+        s14_total="$(grep -oE 'Total citations: [0-9]+' "$out_file" | grep -oE '[0-9]+' | head -1 || true)"
+        s14_verified="$(grep -oE 'Verified: [0-9]+' "$out_file" | grep -oE '[0-9]+' | head -1 || true)"
+        s14_unverified="$(grep -oE 'Unverified: [0-9]+' "$out_file" | grep -oE '[0-9]+' | head -1 || true)"
+        s14_total="${s14_total:-0}"; s14_verified="${s14_verified:-0}"; s14_unverified="${s14_unverified:-0}"
+        if [ "$s14_total" -gt 0 ] 2>/dev/null; then
+          s14_unverified_rate=$(( s14_unverified * 100 / s14_total ))
+          if [ "$s14_unverified_rate" -ge 50 ] 2>/dev/null; then
+            echo "[pipeline] S14 경고: 미검증 인용 ${s14_unverified_rate}% (${s14_unverified}/${s14_total}) — 게이트 진입"
+            {
+              printf '\n\n---\n\n## ⚠️ 인용 품질 경고\n\n'
+              printf '- 전체: %d | 검증: %d | 미검증: %d\n' "$s14_total" "$s14_verified" "$s14_unverified"
+              printf '- 미검증 비율: **%d%%** (임계값 50%%)\n' "$s14_unverified_rate"
+              printf '\n파이프라인이 인용 품질 문제로 일시 중단되었습니다.\n'
+              printf '`--approve-gate S14` 로 강제 진행하거나, 논문 초안을 수정 후 재실행하세요.\n'
+            } >> "$out_file"
+            save_checkpoint "$stage" "completed"
+            jq --arg gs "S14" '.gate_pending_stage = $gs' "$PIPELINE_FILE" > "${PIPELINE_FILE}.tmp" && mv "${PIPELINE_FILE}.tmp" "$PIPELINE_FILE"
+            exit 42
+          fi
+        fi
         ;;
       S15)
         local final_draft
         final_draft="$([ -f "$PAPER_DIR/draft.md" ] && cat "$PAPER_DIR/draft.md" || cat "$STATE_DIR/s11_revised.md" 2>/dev/null || echo '(draft 없음)')"
-        final_draft="$(truncate_payload "$final_draft" 6000)"
+        final_draft="$(truncate_payload "$final_draft" 20000)"
 
         # 1) Gemini 독립 리뷰
         local gemini_brief="## Multi-Agent Validation: Gemini Review\n\n주제: ${TOPIC}\n\n아래 논문 초안을 독립적으로 평가해라.\n평가 항목: 논리적 일관성, 근거 품질, 구조 완성도, 인용 신뢰도, 한계 명시 여부.\n각 항목을 Strong/Moderate/Weak로 평가하고 근거 1-2줄을 제시해라.\n마지막에 Overall verdict(Accept/Minor Revision/Major Revision)를 내려라.\n\n## Draft\n${final_draft}"
@@ -935,13 +1045,110 @@ $(cat "$synth_out")
 - Codex 리뷰: state/s15_codex_review.md
 - 합성: state/s15_synthesis.md
 S15_EOF
+
+        # S15 Auto-Revision: verdict가 Revision이면 Gemini로 자동 수정
+        local s15_verdict
+        s15_verdict="$(cat "$synth_out" | grep -iE 'Overall verdict|최종 권고|overall verdict' | grep -oiE 'Accept|Minor Revision|Major Revision' | head -1 || true)"
+        if [[ "$s15_verdict" == *"Revision"* ]]; then
+          echo "[pipeline] S15 verdict: $s15_verdict — 자동 수정 시작..."
+          local current_draft
+          current_draft="$(cat "$PAPER_DIR/draft.md" 2>/dev/null || cat "$STATE_DIR/s11_revised.md" 2>/dev/null || echo '')"
+          local synth_report
+          synth_report="$(cat "$synth_out")"
+          local rev_brief
+          rev_brief="## 논문 자동 수정 요청
+
+주제: ${TOPIC}
+
+아래는 멀티에이전트 검증(S15) 결과 합성 보고서다. Overall verdict는 '${s15_verdict}'였다.
+보고서에서 지적된 문제들을 반영하여 논문 초안을 수정해라.
+
+**수정 규칙:**
+- 검증 보고서의 '합의된 사항(두 에이전트 공통 지적 문제)'을 우선 수정
+- 논리적 일관성, 근거 품질, 구조 완성도 문제를 고쳐라
+- 원문의 핵심 주장과 인용은 유지하되, 약한 부분만 강화해라
+- 출력: 수정된 완전한 논문 마크다운 전체 (섹션 헤딩, 초록, 본문, 참고문헌 포함)
+
+## 검증 보고서 (S15 Synthesis)
+$(printf '%s' "$synth_report" | head -200)
+
+## 현재 논문 초안
+$(printf '%s' "$current_draft" | head -300)"
+
+          local rev_tmp; rev_tmp="$(mktemp)"
+          local er=0
+          NO_VAULT=true FORCE=true bash "$ORCH" gemini "$rev_brief" "s15-revision-${SLUG}" > "$rev_tmp" 2>&1 &
+          local rp=$!; local re=0
+          while kill -0 "$rp" 2>/dev/null && [ "$re" -lt 300 ]; do sleep 5; re=$((re+5)); done
+          if kill -0 "$rp" 2>/dev/null; then kill "$rp"; wait "$rp" 2>/dev/null; er=124; else wait "$rp" || er=$?; fi
+          local r_full; r_full="$(cat "$rev_tmp")"; rm -f "$rev_tmp"
+          local revised; revised="$(printf '%s\n' "$r_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
+          [ -z "$revised" ] && revised="$r_full"
+          revised="$(printf '%s\n' "$revised" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]')"
+          # Gemini 서두 제거: 첫 번째 마크다운 헤딩(#) 이전 줄 제거 (heading 없으면 원본 유지)
+          local revised_stripped; revised_stripped="$(printf '%s\n' "$revised" | awk '/^#/{found=1} found')"
+          [ -n "$revised_stripped" ] && revised="$revised_stripped"
+          if [ -n "$revised" ] && [ "$er" -eq 0 ]; then
+            cp "$PAPER_DIR/draft.md" "$PAPER_DIR/draft_pre_s15_revision.md" 2>/dev/null || true
+            printf '%s\n' "$revised" > "$PAPER_DIR/draft.md"
+            echo "[pipeline] S15 자동 수정 완료 → draft.md 업데이트 (백업: draft_pre_s15_revision.md)"
+            printf '\n\n---\n\n## S15 자동 수정\n\n- verdict: %s\n- 수정 완료: %s\n- 백업: draft_pre_s15_revision.md\n' \
+              "$s15_verdict" "$(timestamp)" >> "$out_file"
+
+            # 경량 재검증: 수정 후 주요 문제가 해결됐는지 확인
+            echo "[pipeline] S15 수정 후 경량 재검증 시작..."
+            local recheck_draft; recheck_draft="$(head -c 4000 "$PAPER_DIR/draft.md")"
+            local recheck_brief
+            recheck_brief="## S15 수정 후 경량 재검증
+
+이전 검토에서 지적된 핵심 문제가 수정된 논문 초안에서 해결되었는지만 확인하라.
+
+### 이전 주요 지적사항 (합성 보고서 요약)
+$(printf '%s\n' "$sr" | head -30)
+
+### 수정된 초안 (앞부분)
+${recheck_draft}
+
+### 확인 항목 (각 항목 Yes/No/Partial)
+1. 근거 품질 개선 여부
+2. 인용 신뢰도 개선 여부
+3. 논리적 일관성 유지 여부
+
+### 결론: 수정이 충분한가? (Sufficient / Insufficient)"
+
+            local rck_tmp; rck_tmp="$(mktemp)"
+            local rck_e=0
+            NO_VAULT=true FORCE=true bash "$ORCH" gemini "$recheck_brief" "s15-recheck-${SLUG}" > "$rck_tmp" 2>&1 &
+            local rck_pid=$!; local rck_t=0
+            while kill -0 "$rck_pid" 2>/dev/null && [ "$rck_t" -lt 120 ]; do sleep 5; rck_t=$((rck_t+5)); done
+            if kill -0 "$rck_pid" 2>/dev/null; then kill "$rck_pid"; wait "$rck_pid" 2>/dev/null; rck_e=124; else wait "$rck_pid" || rck_e=$?; fi
+            local rck_full; rck_full="$(cat "$rck_tmp")"; rm -f "$rck_tmp"
+            local rck_result; rck_result="$(printf '%s\n' "$rck_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
+            [ -z "$rck_result" ] && rck_result="$rck_full"
+            rck_result="$(printf '%s\n' "$rck_result" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]' || true)"
+            local rck_verdict; rck_verdict="$(printf '%s\n' "$rck_result" | grep -oiE 'Sufficient|Insufficient' | head -1 || true)"
+            printf '\n\n---\n\n## S15 재검증 결과\n\n%s\n\n- 판정: **%s**\n' \
+              "$rck_result" "${rck_verdict:-확인불가}" >> "$out_file"
+            if [ "${rck_verdict}" = "Insufficient" ]; then
+              echo "[pipeline] WARN: S15 재검증 결과 Insufficient — S15 게이트 진입"
+              jq --arg gs "S15" '.gate_pending_stage = $gs' "$PIPELINE_FILE" > "${PIPELINE_FILE}.tmp" && mv "${PIPELINE_FILE}.tmp" "$PIPELINE_FILE"
+              exit 42
+            fi
+          else
+            echo "[pipeline] WARN: S15 자동 수정 실패 (exit=$er) — 원본 초안 유지"
+          fi
+        else
+          echo "[pipeline] S15 verdict: ${s15_verdict:-확인불가} — 수정 불필요, S16으로 진행"
+        fi
         ;;
       S16)
         # markdown → Typst → PDF (typst compile)
-        # 파일명: 논문 첫 줄 제목 기반 (한국어면 SLUG+날짜 fallback)
+        # 파일명: 논문 첫 줄 제목 기반 (한국어 포함, 파일명 불가 문자만 제거)
         local paper_title
-        paper_title="$(head -1 "$PAPER_DIR/draft.md" | sed 's/^#* *//' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/_/g; s/__*/_/g; s/^_//; s/_$//')"
-        if [ "${#paper_title}" -lt 5 ]; then
+        paper_title="$(grep -m1 '^#' "$PAPER_DIR/draft.md" | sed 's/^#* *//')"
+        # 파일명 불가 문자(/ \ : * ? " < > |)와 공백 → 언더스코어, 연속 언더스코어 정리
+        paper_title="$(printf '%s' "$paper_title" | sed 's|[/\\:*?"<>|]|_|g; s/[[:space:]]/_/g; s/__*/_/g; s/^_//; s/_$//')"
+        if [ "${#paper_title}" -lt 2 ]; then
           paper_title="${SLUG}_$(date +%Y%m%d)"
         fi
         paper_title="${paper_title:0:60}"
@@ -1222,7 +1429,7 @@ main() {
         shift
         ;;
       --template)
-        TEMPLATE="${2^^}"   # 대문자 변환
+        TEMPLATE="$(echo "$2" | tr '[:lower:]' '[:upper:]')"
         shift
         ;;
       --help|-h)

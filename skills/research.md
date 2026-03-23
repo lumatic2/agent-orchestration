@@ -133,52 +133,86 @@ Phase 3에서 추가로:
 
 `--paper`와 `--deep`가 함께 있으면 위 3단계 루프 대신 `scripts/research-pipeline.sh`를 호출한다.
 
-### 5-1. 호출 규칙
+### 5-1. 템플릿 선택
 
-주제 추출 후:
+파이프라인 실행 전, 사용자에게 반드시 템플릿을 물어봐라:
 
-```bash
-bash ~/projects/agent-orchestration/scripts/research-pipeline.sh "{주제}" [--skip-experiment]
+```
+PDF 템플릿을 선택해주세요:
+
+A — Academic  (2단 컬럼, IEEE 스타일, 번호 있는 섹션)
+B — Modern    (파란 배너 헤더, 사이드 액센트 라인)
+C — Minimal   (넓은 여백, 명조체, 절제된 타이포그래피)
+D — Tech Dark (다크 헤더 블록, 파란 액센트)
+
+기본값: A
 ```
 
-- 이 모드는 vault `30-projects/papers/{topic-slug}/` 아래에 상태를 저장한다.
-- `pipeline.json`이 이미 있으면 같은 주제로 다시 호출해 리줌한다.
+사용자가 선택하면 `--template {A|B|C|D}` 옵션으로 파이프라인을 호출한다.
+
+### 5-2. 호출 규칙
+
+```bash
+bash ~/projects/agent-orchestration/scripts/research-pipeline.sh "{주제}" --template {A|B|C|D} [--skip-experiment]
+```
+
+- vault `30-projects/papers/{topic-slug}/` 아래에 상태를 저장한다.
+- `pipeline.json`이 이미 있으면 리줌한다 (5-4 참고).
 - `--skip-experiment`가 있으면 S06-S08을 건너뛴다.
 
-### 5-2. 게이트 프로토콜
+### 5-3. 게이트 프로토콜 (인터랙티브 루프)
 
-스크립트가 exit `42`로 멈추면 `pipeline.json`과 해당 stage 파일을 읽고 다음처럼 처리한다.
+파이프라인을 실행하고, exit code를 확인해 아래 루프를 반복한다:
 
-1. `gate_pending_stage`가 `S03`, `S06`, `S12` 중 하나면:
-   - 대응 파일: `state/s03_screened.md`, `state/s06_experiment.md`, `state/s12_quality.md`
-   - 파일 핵심을 검토해 승인 여부를 판단한다.
-   - 계속 진행 시:
-
-```bash
-bash ~/projects/agent-orchestration/scripts/research-pipeline.sh "{주제}" [--skip-experiment] --approve-gate s03
+```
+exit 0  → 완료. 5-5로 이동.
+exit 42 → 게이트 대기. 아래 절차 수행:
+  1. pipeline.json을 읽어 gate_pending_stage 확인
+  2. 해당 stage 파일을 읽어 핵심을 사용자에게 요약 (3-5줄)
+  3. 사용자에게 승인 여부 질문: "계속 진행할까요? (y/n)"
+  4a. 사용자가 y → --approve-gate {stage} 로 파이프라인 재시작 → 루프 반복
+  4b. 사용자가 n → 파이프라인 중단, 이유 저장
+exit 43 → 결정 대기. 아래 절차 수행:
+  1. state/s09_decision.md를 읽어 사용자에게 요약
+  2. PROCEED / REFINE / PIVOT 선택 요청
+  3. --decide {선택} 로 재시작 → 루프 반복
+그 외 → 에러 보고 후 중단
 ```
 
-2. `decision_pending: true` 이면:
-   - `state/s09_decision.md`를 읽고 `PROCEED`, `REFINE`, `PIVOT` 중 하나를 고른다.
-   - 계속 진행 시:
+**게이트 대응 파일:**
+- S03 게이트: `state/s03_screened.md` (문헌 스크리닝 결과)
+- S06 게이트: `state/s06_experiment.md` (실험 설계)
+- S12 게이트: `state/s12_quality.md` (품질 체크리스트)
 
-```bash
-bash ~/projects/agent-orchestration/scripts/research-pipeline.sh "{주제}" [--skip-experiment] --decide PROCEED
+**요약 형식:**
+```
+[S03 게이트 — 문헌 스크리닝]
+수집 논문: N편 → 선별: M편
+주요 논문: ...
+제외 이유: ...
+
+계속 진행할까요? (y/n)
 ```
 
-### 5-3. 리줌 감지
+### 5-4. 리줌 감지
 
-- 리줌 여부는 `30-projects/papers/{topic-slug}/pipeline.json` 존재로 판단한다.
-- 상태가 `completed`가 아니면 새 파이프라인을 만들지 말고 같은 주제로 재호출한다.
-- 상태가 `completed`면 결과 파일만 열어 요약한다:
-  - `draft.md`
-  - `notes.md`
-  - `references.md`
+파이프라인 호출 전, `pipeline.json` 존재 여부를 확인한다:
 
-### 5-4. 완료 후 보고
+```bash
+# slug = 주제를 소문자 하이픈으로 변환
+PAPER_DIR=~/vault/30-projects/papers/{slug}
+[ -f "$PAPER_DIR/pipeline.json" ] && echo "기존 파이프라인 발견"
+```
 
-완료되면 아래를 짧게 보고한다.
+- `pipeline.json`의 `status`가 `completed`가 아니면 → 리줌 여부를 사용자에게 물어라.
+- 리줌 선택 시 → 동일 주제 + `--template` 옵션으로 재호출 (추가 플래그 불필요, 스크립트가 자동 감지).
+- `completed` 상태면 → 결과 파일만 열어 요약 후 종료.
+
+### 5-5. 완료 후 보고
+
+완료되면 아래를 짧게 보고한다:
 
 - 프로젝트 경로
-- 최종 상태 (`pipeline.json.status`)
-- 산출물 경로: `draft.md`, `notes.md`, `references.md`
+- 생성된 PDF 경로 및 파일명
+- 산출물: `draft.md`, `notes.md`, `references.md`
+- S15 검증 결과 요약 (verdict, 자동 수정 여부)
