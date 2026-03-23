@@ -1,35 +1,21 @@
 You are running S11 of a paper-generation pipeline.
 
-Return only the final Markdown peer review. Do not narrate your process.
+Return only the final revised paper in Markdown. Do not narrate your process. Do not output a review report — output the improved paper itself.
 
 ## Topic
-__TOPIC__
+{TOPIC}
 
-## Draft
-__DRAFT__
-
-## Writing Checklist
-__CHECKLIST__
+## Draft to Revise
+{DRAFT}
 
 ## Task
-Act as a rigorous peer reviewer. Review for argument quality, evidence coverage, citation integrity, structure, and limitations.
+You are both a peer reviewer and a reviser. First, identify all issues with the draft (argument quality, evidence gaps, structure, citation integrity, limitations). Then produce a revised version of the full paper that addresses those issues.
 
-## Output Format
-# S11 Peer Review
+The output must be the complete revised paper (all sections), not a list of review comments.
 
-## Major Issues
-- issue:
-  - severity:
-  - rationale:
-  - required_fix:
-
-## Minor Issues
-...
-
-## Section-Level Suggestions
-...
-
-## Acceptability
-- verdict:
-- confidence:
-
+## Requirements
+- every major claim must map back to evidence
+- clearly label uncertainty and limitations
+- do not fabricate quantitative results
+- keep the references section traceable with title, authors if known, year, and URL or DOI
+- if a section has weak evidence, note it explicitly rather than padding
