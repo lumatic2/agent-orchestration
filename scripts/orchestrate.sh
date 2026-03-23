@@ -1219,7 +1219,7 @@ vault_check() {
 
   local pattern="${TASK_NAME}_"
   local hit
-  hit=$(ssh -o ConnectTimeout=5 m1 "
+  hit=$(ssh -o ConnectTimeout=5 m4 "
     cutoff=\$(date -v-7d +%Y-%m-%d 2>/dev/null || date -d '7 days ago' +%Y-%m-%d 2>/dev/null || echo '1970-01-01')
     find ~/vault -name '${pattern}*.md' -type f 2>/dev/null | while IFS= read -r f; do
       fname=\$(basename \"\$f\" .md)
@@ -1233,7 +1233,7 @@ vault_check() {
   echo "[VAULT_HIT] 기존 리서치 발견 (7일 이내): $hit"
 
   local cached_content
-  cached_content=$(ssh -o ConnectTimeout=5 m1 "cat '$hit'" 2>/dev/null || echo "")
+  cached_content=$(ssh -o ConnectTimeout=5 m4 "cat '$hit'" 2>/dev/null || echo "")
   [ -z "$cached_content" ] && return 1
 
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
@@ -1287,7 +1287,7 @@ $(cat "$checklist_file")"
   # Write task to temp file and pass via stdin to avoid shell escaping issues
   # with long Korean prompts containing special characters ('-p "$TASK"' was silently failing)
   local tmp_prompt
-  tmp_prompt=$(mktemp /tmp/gemini_prompt_XXXXXX.txt)
+  tmp_prompt="/tmp/gemini_prompt_$$.tmp"
   printf '%s' "$gemini_task" > "$tmp_prompt"
 
   gemini \
@@ -1325,7 +1325,7 @@ $(cat "$checklist_file")"
     local vault_file="${TASK_NAME}_$(date +%Y-%m-%d).md"
     local clean_result
     clean_result=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$")
-    ssh m1 "mkdir -p ~/vault/${vault_dir} && cat > ~/vault/${vault_dir}/${vault_file}" << VAULTEOF
+    ssh -o ConnectTimeout=10 m4 "mkdir -p ~/vault/${vault_dir} && cat > ~/vault/${vault_dir}/${vault_file}" << VAULTEOF
 ---
 type: knowledge
 domain: ${effective_domain}

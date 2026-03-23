@@ -128,3 +128,57 @@ Phase 3에서 추가로:
 - AI 추론은 반드시 Speculative로 태그
 - 1차 소스(공식 문서, 논문, API docs)를 2차 소스(블로그, 포럼)보다 우선
 - 수치/통계는 원본 출처 필수
+
+## 5. --paper --deep 모드
+
+`--paper`와 `--deep`가 함께 있으면 위 3단계 루프 대신 `scripts/research-pipeline.sh`를 호출한다.
+
+### 5-1. 호출 규칙
+
+주제 추출 후:
+
+```bash
+bash ~/projects/agent-orchestration/scripts/research-pipeline.sh "{주제}" [--skip-experiment]
+```
+
+- 이 모드는 vault `30-projects/papers/{topic-slug}/` 아래에 상태를 저장한다.
+- `pipeline.json`이 이미 있으면 같은 주제로 다시 호출해 리줌한다.
+- `--skip-experiment`가 있으면 S06-S08을 건너뛴다.
+
+### 5-2. 게이트 프로토콜
+
+스크립트가 exit `42`로 멈추면 `pipeline.json`과 해당 stage 파일을 읽고 다음처럼 처리한다.
+
+1. `gate_pending_stage`가 `S03`, `S06`, `S12` 중 하나면:
+   - 대응 파일: `state/s03_screened.md`, `state/s06_experiment.md`, `state/s12_quality.md`
+   - 파일 핵심을 검토해 승인 여부를 판단한다.
+   - 계속 진행 시:
+
+```bash
+bash ~/projects/agent-orchestration/scripts/research-pipeline.sh "{주제}" [--skip-experiment] --approve-gate s03
+```
+
+2. `decision_pending: true` 이면:
+   - `state/s09_decision.md`를 읽고 `PROCEED`, `REFINE`, `PIVOT` 중 하나를 고른다.
+   - 계속 진행 시:
+
+```bash
+bash ~/projects/agent-orchestration/scripts/research-pipeline.sh "{주제}" [--skip-experiment] --decide PROCEED
+```
+
+### 5-3. 리줌 감지
+
+- 리줌 여부는 `30-projects/papers/{topic-slug}/pipeline.json` 존재로 판단한다.
+- 상태가 `completed`가 아니면 새 파이프라인을 만들지 말고 같은 주제로 재호출한다.
+- 상태가 `completed`면 결과 파일만 열어 요약한다:
+  - `draft.md`
+  - `notes.md`
+  - `references.md`
+
+### 5-4. 완료 후 보고
+
+완료되면 아래를 짧게 보고한다.
+
+- 프로젝트 경로
+- 최종 상태 (`pipeline.json.status`)
+- 산출물 경로: `draft.md`, `notes.md`, `references.md`
