@@ -44,6 +44,11 @@ stage_file() {
     S07) echo "$STATE_DIR/s07_code" ;;
     S08) echo "$STATE_DIR/s08_results.md" ;;
     S09) echo "$STATE_DIR/s09_decision.md" ;;
+    S10) echo "$STATE_DIR/s10_draft.md" ;;
+    S11) echo "$STATE_DIR/s11_revised.md" ;;
+    S12) echo "$STATE_DIR/s12_quality.md" ;;
+    S13) echo "$STATE_DIR/s13_final.md" ;;
+    S14) echo "$STATE_DIR/s14_citations.md" ;;
     *) echo "" ;;
   esac
 }
@@ -67,7 +72,7 @@ save_checkpoint() {
       --arg topic "$TOPIC" \
       --arg slug "$SLUG" \
       --argjson cs "$CURRENT_STAGE" \
-      '{topic:$topic,slug:$slug,current_stage:$cs,skip_experiment:false,gate_pending_stage:null,decision_pending:false,refine_count:0,pivot_count:0,stages:{S01:{status:"pending",ts:""},S02:{status:"pending",ts:""},S03:{status:"pending",ts:""},S04:{status:"pending",ts:""},S05:{status:"pending",ts:""},S06:{status:"pending",ts:""},S07:{status:"pending",ts:""},S08:{status:"pending",ts:""},S09:{status:"pending",ts:""}}}' \
+      '{topic:$topic,slug:$slug,current_stage:$cs,skip_experiment:false,gate_pending_stage:null,decision_pending:false,refine_count:0,pivot_count:0,stages:{S01:{status:"pending",ts:""},S02:{status:"pending",ts:""},S03:{status:"pending",ts:""},S04:{status:"pending",ts:""},S05:{status:"pending",ts:""},S06:{status:"pending",ts:""},S07:{status:"pending",ts:""},S08:{status:"pending",ts:""},S09:{status:"pending",ts:""},S10:{status:"pending",ts:""},S11:{status:"pending",ts:""},S12:{status:"pending",ts:""},S13:{status:"pending",ts:""},S14:{status:"pending",ts:""}}}' \
       > "$PIPELINE_FILE"
   fi
 
@@ -108,14 +113,14 @@ handle_decision() {
 
   case "$decision" in
     PROCEED)
-      CURRENT_STAGE=10
+      CURRENT_STAGE=9
       ;;
     REFINE)
       local refine_count
       refine_count="$(jq -r '.refine_count // 0' "$PIPELINE_FILE")"
       if [ "$refine_count" -ge 3 ]; then
         echo "[pipeline] 최대 REFINE 횟수 초과 → PROCEED 강제"
-        CURRENT_STAGE=10
+        CURRENT_STAGE=9
       else
         tmp="$(mktemp)"
         jq ".refine_count = $((refine_count + 1)) | .stages.S08.status = \"pending\" | .stages.S09.status = \"pending\" | .current_stage = 8" "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
@@ -127,7 +132,7 @@ handle_decision() {
       pivot_count="$(jq -r '.pivot_count // 0' "$PIPELINE_FILE")"
       if [ "$pivot_count" -ge 2 ]; then
         echo "[pipeline] 최대 PIVOT 횟수 초과 → PROCEED 강제"
-        CURRENT_STAGE=10
+        CURRENT_STAGE=9
       else
         tmp="$(mktemp)"
         jq ".pivot_count = $((pivot_count + 1)) | .stages.S05.status = \"pending\" | .stages.S06.status = \"pending\" | .stages.S07.status = \"pending\" | .stages.S08.status = \"pending\" | .stages.S09.status = \"pending\" | .current_stage = 5" "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
@@ -204,6 +209,8 @@ render_template() {
     S05) out="${out//\{EXTRACTED\}/$payload}" ;;
     S06) out="${out//\{TOPIC\}/$topic}" ;;
     S07) out="${out//__TOPIC__/$topic}" ;;
+    S10) out="${out//\{SYNTHESIS\}/$payload}" ;;
+    S11|S14) out="${out//\{DRAFT\}/$payload}" ;;
   esac
   printf '%s' "$out"
 }
@@ -278,7 +285,7 @@ S06_EOF
 # ── 단계별 실행 ───────────────────────────────────────────────────────
 
 run_pipeline_stages() {
-  while [ "$CURRENT_STAGE" -le 9 ]; do
+  while [ "$CURRENT_STAGE" -le 14 ]; do
     local stage="S$(printf '%02d' "$CURRENT_STAGE")"
     local status
     status="$(get_stage_status "$stage")"
@@ -324,6 +331,87 @@ run_pipeline_stages() {
         local brief
         brief="$(render_template "$tmpl" "$TOPIC" "$ext" "S05")"
         run_stage_gemini "$stage" "$brief" "s05-synthesis-${SLUG}"
+        ;;
+      S10)
+        local synthesis
+        synthesis="$([ -f "$STATE_DIR/s05_synthesis.md" ] && cat "$STATE_DIR/s05_synthesis.md" || echo "(S05 결과 없음)")"
+        local tmpl10="$REPO_DIR/templates/prompts/s10_paper_draft.md"
+        local brief10
+        brief10="$(render_template "$tmpl10" "$TOPIC" "$synthesis" "S10")"
+        run_stage_gemini "$stage" "$brief10" "s10-paper-draft-${SLUG}"
+        ;;
+      S11)
+        local draft
+        draft="$([ -f "$STATE_DIR/s10_draft.md" ] && cat "$STATE_DIR/s10_draft.md" || echo "(S10 초안 없음)")"
+        local tmpl11="$REPO_DIR/templates/prompts/s11_peer_review.md"
+        local brief11
+        brief11="$(render_template "$tmpl11" "$TOPIC" "$draft" "S11")"
+        run_stage_gemini "$stage" "$brief11" "s11-peer-review-${SLUG}"
+        ;;
+      S12)
+        if [ ! -f "$STATE_DIR/s11_revised.md" ]; then
+          echo "[pipeline] ERROR: S11 수정본이 없습니다: $STATE_DIR/s11_revised.md" >&2
+          save_checkpoint "$stage" "failed"
+          exit 1
+        fi
+
+        cat > "$out_file" << S12_EOF
+# S12 품질 게이트
+
+## 핵심 초안
+
+$(cat "$STATE_DIR/s11_revised.md")
+
+## 품질 체크리스트
+
+- 핵심 주장과 근거의 정합성
+- 실험/분석 절차의 한계 명시
+- 근거·논리 전개와 결론의 일관성
+- 재현성 및 오류 처리 경로 점검
+- 오해 가능성이 있는 문장/과장 표현 제거
+- 표기 형식의 일관성(단위/약어/참고문헌)
+S12_EOF
+
+        local gate_arg_upper
+        gate_arg_upper="$(echo "$GATE_ARG" | tr '[:lower:]' '[:upper:]')"
+        if [ "$gate_arg_upper" = "S12" ]; then
+          local tmp
+          tmp="$(mktemp)"
+          jq '.gate_pending_stage = null' "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
+          GATE_ARG=""
+        else
+          wait_gate "S12"
+        fi
+        ;;
+      S13)
+        if [ ! -f "$STATE_DIR/s11_revised.md" ]; then
+          echo "[pipeline] ERROR: S11 수정본 파일이 없습니다: $STATE_DIR/s11_revised.md" >&2
+          save_checkpoint "$stage" "failed"
+          exit 1
+        fi
+
+        mkdir -p "$PAPER_DIR"
+        cp "$STATE_DIR/s11_revised.md" "$PAPER_DIR/draft.md"
+        if ! ssh -o ConnectTimeout=10 m4 "mkdir -p ~/vault/30-projects/papers/$SLUG && cat > ~/vault/30-projects/papers/$SLUG/draft.md" <<VEOF
+$(cat "$STATE_DIR/s11_revised.md")
+VEOF
+        then
+          : 
+        fi
+        cat > "$out_file" << S13_EOF
+# S13 아카이브 완료
+
+- 논문 저장 경로: ~/vault/30-projects/papers/$SLUG/draft.md
+- 로컬 경로: $PAPER_DIR/draft.md
+S13_EOF
+        ;;
+      S14)
+        local draft14
+        draft14="$([ -f "$STATE_DIR/s11_revised.md" ] && cat "$STATE_DIR/s11_revised.md" || echo "(S11 수정본 없음)")"
+        local tmpl14="$REPO_DIR/templates/prompts/s14_citation_verify.md"
+        local brief14
+        brief14="$(render_template "$tmpl14" "$TOPIC" "$draft14" "S14")"
+        run_stage_gemini "$stage" "$brief14" "s14-citation-verify-${SLUG}"
         ;;
       S06)
         if [ "$SKIP_EXPERIMENT" = "true" ]; then
@@ -436,7 +524,7 @@ S09_EOF
       exit 1
     fi
 
-    if [ "$CURRENT_STAGE" -lt 10 ]; then
+    if [ "$CURRENT_STAGE" -lt 15 ]; then
       CURRENT_STAGE=$((CURRENT_STAGE + 1))
     fi
     save_checkpoint "$stage" "completed"
@@ -444,8 +532,9 @@ S09_EOF
   done
 
   echo ""
-  echo "[pipeline] Phase 2 완료!"
-  echo "  논문 디렉토리: $PAPER_DIR"
+  echo "[pipeline] 파이프라인 완료!"
+  echo "  논문: $PAPER_DIR/draft.md"
+  echo "  상태: $PIPELINE_FILE"
 }
 
 # ── 진입점 ────────────────────────────────────────────────────────────
