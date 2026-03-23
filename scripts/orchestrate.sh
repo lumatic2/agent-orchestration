@@ -594,6 +594,70 @@ def infer_tier(task: str) -> str:
 
     return "medium"
 
+def infer_role(task: str) -> str:
+    """Infer task role from text for checklist injection."""
+    lower = (task or "").lower()
+    # Order matters: more specific roles first, generic ones last
+    security_kw = [
+        "security", "보안", "취약점", "vulnerability", "auth", "인증", "권한",
+        "injection", "xss", "csrf", "secret", "credential", "penetration",
+        "보안 감사", "보안 점검", "보안 리뷰",
+    ]
+    testing_kw = [
+        "test", "테스트", "테스팅", "unit test", "e2e test", "integration test",
+        "regression", "coverage", "커버리지", "테스트 작성", "테스트 추가",
+    ]
+    performance_kw = [
+        "performance", "성능", "병목", "bottleneck", "latency", "throughput",
+        "최적화", "optimization", "slow", "느린", "속도", "profil",
+    ]
+    review_kw = [
+        "review", "리뷰", "코드 리뷰", "code review", "pr review",
+        "감사", "audit", "검토", "점검", "코드 점검", "코드 검토",
+    ]
+    refactor_kw = [
+        "refactor", "리팩토링", "리팩터", "리팩토", "restructure", "구조 개선",
+        "코드 정리", "모듈화", "중복 제거", "dedup",
+    ]
+    doc_kw = [
+        "document", "문서", "입문서", "가이드", "readme", "설명서", "매뉴얼",
+        "documentation", "docs", "튜토리얼", "howto",
+    ]
+    trend_kw = [
+        "trend", "트렌드", "동향", "adoption", "채택", "hype", "emerging",
+        "신기술", "기술 동향", "시장 동향",
+    ]
+    research_kw = [
+        "research", "리서치", "조사", "investigate", "분석", "analysis",
+        "비교", "compare", "평가", "evaluation", "검토 보고",
+        "알아봐", "알아보", "찾아봐", "찾아보", "파악",
+    ]
+    data_kw = [
+        "data", "데이터", "지표", "metric", "통계", "statistics",
+        "수치", "정량", "quantitative", "dataset", "매출", "비용",
+    ]
+    roles = [
+        (security_kw, "security"),
+        (testing_kw, "testing"),
+        (performance_kw, "performance"),
+        (review_kw, "reviewer"),
+        (refactor_kw, "refactoring"),
+        (trend_kw, "trend"),
+        (data_kw, "data"),
+        (research_kw, "research"),
+        (doc_kw, "documentation"),  # generic — last (가이드/문서 are common words)
+    ]
+    # Score each role by number of keyword hits; highest wins.
+    # Tie-break by list order (earlier = higher priority).
+    best_role = ""
+    best_score = 0
+    for keywords, role_name in roles:
+        score = sum(1 for k in keywords if k in lower)
+        if score > best_score:
+            best_score = score
+            best_role = role_name
+    return best_role
+
 def agent_family(agent_name: str) -> str:
     if agent_name.startswith("codex"):
         return "codex"
@@ -696,17 +760,18 @@ def resolve_legacy(agent_name: str):
 
 family = agent_family(agent)
 tier = infer_tier(task_text)
+role = infer_role(task_text)
 
 if agent in ALIAS_OVERRIDES:
     family, model_name, effort, source = resolve_legacy(agent)
-    print(f"{tier}\t{model_name}\t{effort}\t{family}\t{source}", end="")
+    print(f"{tier}\t{model_name}\t{effort}\t{family}\t{source}\t{role}", end="")
     sys.exit(0)
 
 model_name, effort, source = resolve_from_complexity(family, tier)
 if not model_name:
     family, model_name, effort, source = resolve_legacy(agent)
 
-print(f"{tier}\t{model_name}\t{effort}\t{family}\t{source}", end="")
+print(f"{tier}\t{model_name}\t{effort}\t{family}\t{source}\t{role}", end="")
 PYEOF
 }
 
@@ -769,7 +834,8 @@ select_dispatch_profile() {
   SELECTED_REASONING=""
   SELECTED_FAMILY=""
   SELECTED_PROFILE_SOURCE=""
-  IFS=$'\t' read -r SELECTED_COMPLEXITY_TIER SELECTED_MODEL SELECTED_REASONING SELECTED_FAMILY SELECTED_PROFILE_SOURCE <<< "$resolved"
+  SELECTED_ROLE=""
+  IFS=$'\t' read -r SELECTED_COMPLEXITY_TIER SELECTED_MODEL SELECTED_REASONING SELECTED_FAMILY SELECTED_PROFILE_SOURCE SELECTED_ROLE <<< "$resolved"
 
   if [ -z "${SELECTED_MODEL:-}" ] || [ -z "${SELECTED_FAMILY:-}" ]; then
     echo "[WARN] Complexity routing unavailable for agent=$agent. Falling back to legacy defaults."
@@ -781,7 +847,7 @@ select_dispatch_profile() {
     return 1
   fi
 
-  echo "[ROUTER] tier=${SELECTED_COMPLEXITY_TIER:-unknown} agent=$agent family=${SELECTED_FAMILY:-unknown} model=${SELECTED_MODEL:-unknown} reasoning=${SELECTED_REASONING:-auto}"
+  echo "[ROUTER] tier=${SELECTED_COMPLEXITY_TIER:-unknown} agent=$agent family=${SELECTED_FAMILY:-unknown} model=${SELECTED_MODEL:-unknown} reasoning=${SELECTED_REASONING:-auto} role=${SELECTED_ROLE:-none}"
   if [ -n "${SELECTED_PROFILE_SOURCE:-}" ] && [ "$SELECTED_PROFILE_SOURCE" != "complexity" ]; then
     echo "[ROUTER] profile_source=${SELECTED_PROFILE_SOURCE}"
   fi
@@ -1101,6 +1167,18 @@ run_codex() {
     fi
   fi
 
+  # Auto-append role checklist if role was inferred
+  local task_with_checklist="$TASK"
+  if [ -n "${SELECTED_ROLE:-}" ]; then
+    local checklist_file="$SCRIPT_DIR/../configs/checklists/${SELECTED_ROLE}.md"
+    if [ -f "$checklist_file" ]; then
+      task_with_checklist="${TASK}
+
+$(cat "$checklist_file")"
+      echo "[CHECKLIST] Appended role checklist: ${SELECTED_ROLE}"
+    fi
+  fi
+
   # Build codex command args
   local codex_args=(
     exec
@@ -1113,7 +1191,7 @@ run_codex() {
   [ -n "$work_dir" ] && codex_args+=(-C "$work_dir")
 
   # Write directly to file to avoid shell variable truncation
-  codex "${codex_args[@]}" "$TASK" > "$log_file" 2>&1 || true
+  codex "${codex_args[@]}" "$task_with_checklist" > "$log_file" 2>&1 || true
 
   local result
   result=$(cat "$log_file")
@@ -1194,11 +1272,23 @@ run_gemini() {
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
   [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s/\"model\": *\"[^\"]*\"/\"model\": \"$model\"/" "$QUEUE_TASK_DIR/meta.json"
 
+  # Auto-append role checklist if role was inferred
+  local gemini_task="$TASK"
+  if [ -n "${SELECTED_ROLE:-}" ]; then
+    local checklist_file="$SCRIPT_DIR/../configs/checklists/${SELECTED_ROLE}.md"
+    if [ -f "$checklist_file" ]; then
+      gemini_task="${TASK}
+
+$(cat "$checklist_file")"
+      echo "[CHECKLIST] Appended role checklist: ${SELECTED_ROLE}"
+    fi
+  fi
+
   # Write task to temp file and pass via stdin to avoid shell escaping issues
   # with long Korean prompts containing special characters ('-p "$TASK"' was silently failing)
   local tmp_prompt
   tmp_prompt=$(mktemp /tmp/gemini_prompt_XXXXXX.txt)
-  printf '%s' "$TASK" > "$tmp_prompt"
+  printf '%s' "$gemini_task" > "$tmp_prompt"
 
   gemini \
     --yolo \
@@ -1957,7 +2047,13 @@ esac
 # --- Generate task brief from args ---
 if [[ "${1:-}" == "--brief" ]]; then
   shift
-  GOAL="${1:?Usage: orchestrate.sh --brief <goal> <scope> <constraints>}"
+  # Parse --role flag if present
+  BRIEF_ROLE=""
+  if [[ "${1:-}" == "--role" ]]; then
+    BRIEF_ROLE="${2:-}"
+    shift 2
+  fi
+  GOAL="${1:?Usage: orchestrate.sh --brief [--role reviewer|refactoring|documentation] <goal> <scope> <constraints>}"
   SCOPE="${2:-unspecified}"
   CONSTRAINTS="${3:-none}"
   BRIEF_FILE="$LOG_DIR/brief_${TIMESTAMP}.md"
@@ -1975,6 +2071,17 @@ $GOAL
 - [ ] Task completed successfully
 - [ ] No errors in output
 BRIEF_EOF
+  # Append role-specific checklist if --role was given
+  if [ -n "$BRIEF_ROLE" ]; then
+    CHECKLIST_FILE="$SCRIPT_DIR/../configs/checklists/${BRIEF_ROLE}.md"
+    if [ -f "$CHECKLIST_FILE" ]; then
+      printf '\n' >> "$BRIEF_FILE"
+      cat "$CHECKLIST_FILE" >> "$BRIEF_FILE"
+      echo "[BRIEF] Role checklist appended: $BRIEF_ROLE"
+    else
+      echo "[WARN] Checklist not found: $CHECKLIST_FILE (available: reviewer, refactoring, documentation)"
+    fi
+  fi
   echo "[BRIEF] Generated: $BRIEF_FILE"
   echo "$BRIEF_FILE"
   exit 0

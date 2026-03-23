@@ -268,6 +268,19 @@ main() {
   check_agent "codex" || true
   check_agent "gemini" || true
 
+  # Ensure PyYAML is installed (required for agent_config.yaml parsing)
+  if ! python3 -c "import yaml" 2>/dev/null; then
+    echo "[FIX] PyYAML not found — installing..."
+    pip3 install pyyaml --quiet 2>/dev/null || python3 -m pip install pyyaml --quiet 2>/dev/null || true
+    if python3 -c "import yaml" 2>/dev/null; then
+      echo "[OK] PyYAML installed"
+    else
+      echo "[WARN] PyYAML install failed — complexity routing will use builtin defaults"
+    fi
+  else
+    echo "[OK] PyYAML available"
+  fi
+
   if [ "$mode" = "--check" ]; then
     echo ""
     echo "[DONE] Check complete. No files modified."

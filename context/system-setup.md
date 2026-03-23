@@ -121,7 +121,7 @@ ssh windows  # Windows (Git Bash — 2026-03-16 변경)
 | 개인 Notion | MCP `mcp__claude_ai_Notion__*` |
 | Slack | MCP `mcp__claude_ai_Slack__*` |
 | Google Workspace | MCP `mcp__google-workspace__*` (yusung8307@gmail.com) |
-| Obsidian vault | MCP `mcp__obsidian-vault__*` (m1:~/vault/) |
+| Obsidian vault | MCP `mcp__obsidian-vault__*` (m4:~/vault/) |
 | 대용량 멀티문서 | `orchestrate.sh gemini` 위임 |
 
 ## 텔레그램 봇

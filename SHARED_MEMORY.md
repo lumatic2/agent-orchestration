@@ -52,7 +52,7 @@ vault에 쌓인 리서치를 SHARED_MEMORY로 올리는 기준:
 - **태스크 관리**: `SCHEDULE.md` (Today / Deadline / Anytime)
 - **오케스트레이션 사용법**: `orchestrate.sh schema --json`
 - **기기 SSH·설정**: `context/system-setup.md`
-- **Knowledge Vault**: `luma2@m1:~/vault/` (MCP: `obsidian-vault`)
+- **Knowledge Vault**: `luma3@m4:~/vault/` (MCP: `obsidian-vault`)
 - **슬라이드**: `bash scripts/slides.sh "주제" [슬라이드수]` → Gemini JSON → inject → PDF. 9타입(title_panel/card_grid/numbered_list/bar_chart/big_statement/comparison_table/timeline/quote_close/before_after). 아이콘 24개 내장.
 - **문서**: `bash scripts/docs.sh "주제" [type]` → PDF. `--word` 추가 시 DOCX도 생성. type: proposal/report/business_plan/summary/meeting. 7섹션 타입(cover/section/bullet_section/table_section/highlight_box/two_col/closing).
 - **Notion 개인**: `PERSONAL_NOTION_TOKEN` / 회사: `COMPANY_NOTION_TOKEN`
@@ -95,7 +95,7 @@ _Tracked here when agents encounter blockers._
 1. **계정/서버**: 현재 개인 Claude Code OAuth. 정식 출시 시 회사 공용 계정 + 서버 이전
 2. **뉴스 구독 시스템**: 4개 분야 일부 통합/개선 필요
 3. **홈 탭 버튼 정비**: 필요한 것만 유지. 문서 작성·슬라이드 → 실제 파이프라인(slides-bridge.sh) 연동, 버그 없이 일정 품질
-4. **Vault 접근 제어**: M1 vault 중 회사 파일 + 전문가 도메인만 봇에 노출 (개인 폴더 차단)
+4. **Vault 접근 제어**: M4 vault 중 회사 파일 + 전문가 도메인만 봇에 노출 (개인 폴더 차단)
 5. **신입 온보딩**: 봇과 대화로 회사 지식 습득 + 작업 방향 설정
 
 ### Phase 3 — 최적화
