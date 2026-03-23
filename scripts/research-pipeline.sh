@@ -50,6 +50,7 @@ stage_file() {
     S13) echo "$STATE_DIR/s13_final.md" ;;
     S14) echo "$STATE_DIR/s14_citations.md" ;;
     S15) echo "$STATE_DIR/s15_validation.md" ;;
+    S16) echo "$STATE_DIR/s16_pdf.md" ;;
     *) echo "" ;;
   esac
 }
@@ -73,7 +74,7 @@ save_checkpoint() {
       --arg topic "$TOPIC" \
       --arg slug "$SLUG" \
       --argjson cs "$CURRENT_STAGE" \
-      '{topic:$topic,slug:$slug,current_stage:$cs,skip_experiment:false,gate_pending_stage:null,decision_pending:false,refine_count:0,pivot_count:0,stages:{S01:{status:"pending",ts:""},S02:{status:"pending",ts:""},S03:{status:"pending",ts:""},S04:{status:"pending",ts:""},S05:{status:"pending",ts:""},S06:{status:"pending",ts:""},S07:{status:"pending",ts:""},S08:{status:"pending",ts:""},S09:{status:"pending",ts:""},S10:{status:"pending",ts:""},S11:{status:"pending",ts:""},S12:{status:"pending",ts:""},S13:{status:"pending",ts:""},S14:{status:"pending",ts:""},S15:{status:"pending",ts:""}}}' \
+      '{topic:$topic,slug:$slug,current_stage:$cs,skip_experiment:false,gate_pending_stage:null,decision_pending:false,refine_count:0,pivot_count:0,stages:{S01:{status:"pending",ts:""},S02:{status:"pending",ts:""},S03:{status:"pending",ts:""},S04:{status:"pending",ts:""},S05:{status:"pending",ts:""},S06:{status:"pending",ts:""},S07:{status:"pending",ts:""},S08:{status:"pending",ts:""},S09:{status:"pending",ts:""},S10:{status:"pending",ts:""},S11:{status:"pending",ts:""},S12:{status:"pending",ts:""},S13:{status:"pending",ts:""},S14:{status:"pending",ts:""},S15:{status:"pending",ts:""},S16:{status:"pending",ts:""}}}' \
       > "$PIPELINE_FILE"
   fi
 
@@ -114,7 +115,7 @@ watchdog_check() {
   local now_epoch
   now_epoch="$(date +%s)"
 
-  local stages="S01 S02 S03 S04 S05 S06 S07 S08 S09 S10 S11 S12 S13 S14 S15"
+  local stages="S01 S02 S03 S04 S05 S06 S07 S08 S09 S10 S11 S12 S13 S14 S15 S16"
   for s in $stages; do
     local status start_ts
     status="$(jq -r ".stages.${s}.status // \"pending\"" "$PIPELINE_FILE")"
@@ -411,7 +412,7 @@ run_pipeline_stages() {
   # 리줌 시: 이전 세션에서 hang으로 죽은 단계가 있으면 감지
   watchdog_check
 
-  while [ "$CURRENT_STAGE" -le 15 ]; do
+  while [ "$CURRENT_STAGE" -le 16 ]; do
     local stage="S$(printf '%02d' "$CURRENT_STAGE")"
     local status
     status="$(get_stage_status "$stage")"
@@ -517,8 +518,47 @@ S12_EOF
         fi
 
         mkdir -p "$PAPER_DIR"
-        # [LOG]/[QUEUE] 메타라인 제거 후 저장
-        grep -v '^\[LOG\]\|^\[QUEUE\]' "$STATE_DIR/s11_revised.md" > "$PAPER_DIR/draft.md"
+        # S10 base + S11 additions 병합 (python3) → draft.md
+        local base_file="$STATE_DIR/s10_draft.md"
+        local additions_file="$STATE_DIR/s11_revised.md"
+        python3 - "$base_file" "$additions_file" > "$PAPER_DIR/draft.md" << 'PYEOF'
+import sys, re
+
+base_path, add_path = sys.argv[1], sys.argv[2]
+with open(base_path) as f:
+    base = f.read()
+try:
+    with open(add_path) as f:
+        additions_raw = f.read()
+except Exception:
+    additions_raw = ""
+
+# SECTION_ADDITION 블록 파싱
+blocks = re.findall(
+    r'^## SECTION_ADDITION:\s*(.+?)\n(.*?)(?=^## SECTION_ADDITION:|\Z)',
+    additions_raw, re.MULTILINE | re.DOTALL
+)
+
+result = base
+for heading, content in blocks:
+    heading = heading.strip()
+    content = content.strip()
+    if not content:
+        continue
+    # 섹션 다음에 삽입 (## 로 시작하는 다음 헤더 바로 앞)
+    pattern = r'(## ' + re.escape(heading) + r'(?:\n.+?)*?)(\n(?=## )|\Z)'
+    replacement = r'\1\n\n' + content + r'\2'
+    new_result = re.sub(pattern, replacement, result, count=1, flags=re.DOTALL)
+    if new_result != result:
+        result = new_result
+    else:
+        # 섹션 못 찾으면 References 앞에 추가
+        result = re.sub(r'(\n## References|\Z)', '\n\n' + content + r'\1', result, count=1)
+
+# [LOG]/[QUEUE] 메타라인 제거
+lines = [l for l in result.splitlines() if not l.startswith('[LOG]') and not l.startswith('[QUEUE]')]
+print('\n'.join(lines))
+PYEOF
 
         # notes.md — 합성 + 가설 요약
         {
@@ -708,6 +748,62 @@ $(cat "$synth_out")
 - 합성: state/s15_synthesis.md
 S15_EOF
         ;;
+      S16)
+        # pandoc → HTML → Chrome headless → PDF
+        local pdf_path="$PAPER_DIR/draft.pdf"
+        local html_path="$PAPER_DIR/draft.html"
+
+        if ! command -v pandoc >/dev/null 2>&1; then
+          echo "[pipeline] WARN: pandoc 미설치 — brew install pandoc" >&2
+          printf '# S16 PDF 변환\n\nWARN: pandoc 미설치\n' > "$out_file"
+        else
+          # 1) pandoc: markdown → standalone HTML (CSS 내장)
+          pandoc "$PAPER_DIR/draft.md" \
+            --from markdown \
+            --to html5 \
+            --standalone \
+            --metadata title="$(head -1 "$PAPER_DIR/draft.md" | sed 's/^# //')" \
+            --css - \
+            -o "$html_path" << 'CSS_EOF'
+body { font-family: "Georgia", serif; max-width: 800px; margin: 40px auto; padding: 0 20px; font-size: 12pt; line-height: 1.7; color: #111; }
+h1 { font-size: 20pt; margin-bottom: 4px; }
+h2 { font-size: 14pt; margin-top: 2em; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+h3 { font-size: 12pt; margin-top: 1.5em; }
+p { text-align: justify; margin: 0.6em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; }
+th { background: #f5f5f5; }
+code { background: #f4f4f4; padding: 1px 4px; border-radius: 3px; font-size: 10pt; }
+CSS_EOF
+
+          # 2) Chrome headless: HTML → PDF
+          local chrome_bin="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          if [ -f "$chrome_bin" ]; then
+            "$chrome_bin" \
+              --headless=new \
+              --disable-gpu \
+              --no-sandbox \
+              --print-to-pdf="$pdf_path" \
+              --print-to-pdf-no-header \
+              "file://$html_path" 2>/dev/null
+          fi
+
+          local pdf_status="❌ Chrome PDF 실패"
+          if [ -f "$pdf_path" ] && [ -s "$pdf_path" ]; then
+            pdf_status="✅ $pdf_path"
+            # vault에도 저장
+            ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/draft.pdf" < "$pdf_path" 2>/dev/null || true
+          fi
+
+          cat > "$out_file" << S16_EOF
+# S16 PDF 변환
+
+- HTML: $html_path
+- PDF: ${pdf_status}
+- Vault PDF: ~/vault/30-projects/papers/$SLUG/draft.pdf
+S16_EOF
+        fi
+        ;;
       S06)
         if [ "$SKIP_EXPERIMENT" = "true" ]; then
           CURRENT_STAGE=6; save_checkpoint "S06" "skipped"
@@ -819,7 +915,7 @@ S09_EOF
       exit 1
     fi
 
-    if [ "$CURRENT_STAGE" -lt 16 ]; then
+    if [ "$CURRENT_STAGE" -lt 17 ]; then
       CURRENT_STAGE=$((CURRENT_STAGE + 1))
     fi
     save_checkpoint "$stage" "completed"
@@ -828,7 +924,8 @@ S09_EOF
 
   echo ""
   echo "[pipeline] 파이프라인 완료!"
-  echo "  논문: $PAPER_DIR/draft.md"
+  echo "  논문(MD): $PAPER_DIR/draft.md"
+  echo "  논문(PDF): $PAPER_DIR/draft.pdf"
   echo "  검증: $STATE_DIR/s15_validation.md"
   echo "  상태: $PIPELINE_FILE"
 }

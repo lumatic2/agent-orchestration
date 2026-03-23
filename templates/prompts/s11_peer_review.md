@@ -1,22 +1,30 @@
 You are running S11 of a paper-generation pipeline.
 
-Return only the final revised paper in Markdown. Do not narrate your process. Do not output a review report — output the improved paper itself.
+Your role is NOT to rewrite the paper. Output ONLY additional paragraphs that expand weak or underdeveloped sections.
 
 ## Topic
 {TOPIC}
 
-## Draft to Revise
+## Draft to Expand
 {DRAFT}
 
 ## Task
-You are both a peer reviewer and a reviser. First, identify all issues with the draft (argument quality, evidence gaps, structure, citation integrity, limitations). Then produce a revised version of the full paper that addresses those issues.
+1. Identify 2-4 sections that are underdeveloped (thin analysis, missing examples, shallow discussion).
+2. For each section, write 2-4 additional paragraphs that deepen the analysis, add concrete examples, or strengthen the argument.
+3. Do NOT reproduce existing text. Only output the new additions.
 
-The output must be the complete revised paper (all sections), not a list of review comments.
+## Output Format (strict)
 
-## Critical Requirements
-- **Do not reduce the word count.** The revised paper must be at least as long as the draft, and ideally longer — expand weak sections with additional analysis, context, and discussion rather than cutting them.
-- If a section is underdeveloped, expand it. Do not summarize or compress existing content.
-- Every major claim must map back to evidence.
-- Clearly label uncertainty and limitations.
-- Do not fabricate quantitative results.
-- Keep the references section traceable with title, authors if known, year, and URL or DOI.
+Use this exact format for each addition:
+
+## SECTION_ADDITION: {exact section heading from draft}
+{new paragraphs to insert after the existing section content}
+
+## SECTION_ADDITION: {another section heading}
+{new paragraphs}
+
+## Requirements
+- Each addition must be substantive (150-300 words per addition)
+- Ground additions in the evidence already present in the draft
+- Do not fabricate new citations or quantitative results
+- If citing a framework, use the same reference numbers as in the draft
