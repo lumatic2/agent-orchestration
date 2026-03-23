@@ -798,7 +798,7 @@ print('\n'.join(buf).strip())
 PYEOF
 )"
 
-          # 1) 초록 제외한 본문을 Typst 형식으로 변환
+          # 1) 초록 제외한 본문 추출 + 헤딩 전후 빈 줄 보장
           local body_md="$PAPER_DIR/draft_body.md"
           python3 - "$PAPER_DIR/draft.md" "$body_md" << 'PYEOF'
 import sys, re
@@ -825,12 +825,23 @@ while i < len(lines):
             continue
     out.append(line)
     i += 1
-open(sys.argv[2], 'w').write('\n'.join(out))
+
+content = '\n'.join(out)
+# 헤딩 전 빈 줄 보장 (pandoc이 헤딩으로 인식하도록)
+content = re.sub(r'([^\n])\n(#{1,6} )', r'\1\n\n\2', content)
+# 헤딩 후 빈 줄 보장
+content = re.sub(r'(#{1,6} [^\n]+)\n([^\n#\s])', r'\1\n\n\2', content)
+# 3줄 이상 연속 빈 줄 → 2줄로
+content = re.sub(r'\n{3,}', '\n\n', content)
+open(sys.argv[2], 'w').write(content)
 PYEOF
 
           # 2) pandoc: markdown body → typst
+          #    --shift-heading-level-by=-1: ##(H2) → level1(=), ###(H3) → level2(==)
           local body_typ="$PAPER_DIR/draft_body.typ"
-          pandoc "$body_md" --from markdown --to typst -o "$body_typ" 2>/dev/null || true
+          pandoc "$body_md" --from markdown --to typst \
+            --shift-heading-level-by=-1 \
+            -o "$body_typ" 2>/dev/null || true
           rm -f "$body_md"
 
           # 3) 템플릿 선택 및 .typ 파일 조합
