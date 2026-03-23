@@ -21,10 +21,11 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
 ## Step 0: Do I Need Orchestration?
 
 1. 리서치가 필요한가? → Gemini 선행
-2. 1-3파일, 5분 내 작업인가? → Claude 직접 처리
-3. 순수 리서치인가? → Gemini 단독
-4. 대규모 코드 작업(5+ 파일, 테스트 루프)인가? → Codex 단독
-5. 리서치+구현 결합인가?
+2. 브라우저/GUI/시각화 작업인가? → **OpenClaw** (아래 참조)
+3. 1-3파일, 5분 내 작업인가? → Claude 직접 처리
+4. 순수 리서치인가? → Gemini 단독
+5. 대규모 코드 작업(5+ 파일, 테스트 루프)인가? → Codex 단독
+6. 리서치+구현 결합인가?
    - 소규모 구현: Claude + Gemini
    - 대규모 구현: Claude + Codex
    - 심층 리서치+대규모 구현: Full orchestration
@@ -45,6 +46,11 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
 | 리서치 후 소규모 반영 | Claude + Gemini |
 | 분석 후 대규모 구현 | Claude + Codex |
 | 리서치+대규모 구현 동시 | Full orchestration |
+| JS SPA 스크레이핑 | **OpenClaw** |
+| 웹 폼 인터랙션 (클릭/입력) | **OpenClaw** |
+| canvas 차트/시각화 렌더링 | **OpenClaw** |
+| 로그인 세션 필요한 웹 작업 | **OpenClaw** |
+| 브라우저 스크린샷 | **OpenClaw** |
 
 ---
 
@@ -58,6 +64,20 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
 | Notion 조사+초안 | Gemini | 빠른 원스톱 |
 | Notion DB/복잡 편집 | Claude(MCP) | 판단 중심 |
 | CI/CD, DevOps | Codex | 에러 원인 분석은 Gemini |
+| 웹 브라우저 자동화 | **OpenClaw** | JS SPA, 폼 인터랙션, 세션 유지 |
+| 데이터 시각화 (차트/그래프) | **OpenClaw** | canvas.eval → PNG → Telegram |
+| 실시간 웹 시세/데이터 | **OpenClaw** | JS 렌더링 필요 사이트 |
+
+### OpenClaw 라우팅 트리거 키워드
+- "브라우저로 열어", "사이트에서 가져와", "클릭해서", "검색해서 결과"
+- "차트 그려줘", "시각화해줘", "그래프로 보여줘"
+- "JS 렌더링", "SPA", "로그인하고"
+- "스크린샷 찍어"
+
+### OpenClaw 제약 (2026-03-23 기준)
+- screen.record: macOS 26 (Tahoe beta) 미지원 → screencapture 폴백
+- system.run: 헤드리스 환경에서 approval UI 없어 제한적
+- Mac mini M4에만 설치 → Windows/MacAir는 SSH 자동 위임
 
 ---
 

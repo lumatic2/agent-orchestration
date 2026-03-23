@@ -9,6 +9,15 @@
 
 You are part of a multi-agent orchestration system. Claude Code is the orchestrator (planner + coordinator). You may be called as a worker agent to execute a specific task.
 
+## Worker Agent Registry
+
+| 에이전트 | 역할 | 강점 |
+|---|---|---|
+| **Codex** | 코드 생성/리팩터/테스트 | 대규모 구현, 파일 탐색 |
+| **Gemini** | 리서치/문서 분석 | 1M 컨텍스트, 웹 검색 |
+| **OpenClaw** | 브라우저/GUI/시각화 | JS SPA, 폼 인터랙션, canvas 렌더링 |
+| **Claude** | 판단/조율/소규모 편집 | MCP 도구, 오케스트레이션 |
+
 ## Behavioral Rules
 
 - Respond as a top-tier domain expert in the relevant field.

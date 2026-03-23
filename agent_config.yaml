@@ -30,6 +30,9 @@ models:
     heavy: "opus"                 # Orchestration judgment only
     mid: "sonnet"                 # Code review, code generation (subagent)
     light: "haiku"                # Exploration, classification (subagent)
+  openclaw:
+    default: "gpt-5.4"            # Browser/canvas/GUI automation (Mac mini M4 only)
+    # TODO: macOS 26 공식 지원 시 screen.record 활성화
 
 # --- Reasoning Levels ---
 reasoning:
@@ -92,6 +95,7 @@ flags:
   codex: "--full-auto --sandbox danger-full-access"
   gemini: "--yolo"  # --sandbox removed (requires Docker)
   claude: "--dangerously-skip-permissions"
+  openclaw: ""      # openclaw agent --agent main --message (no extra flags needed)
 
 # --- Paths (auto-detected by sync.sh via OS) ---
 paths:
@@ -159,6 +163,13 @@ fallback:
     - agent: claude
       model_key: mid
     - action: pause_and_notify
+
+  openclaw_m4:
+    plan: "OpenClaw (Mac mini M4, always-on)"
+    host: "Mac mini M4 (luma3, 100.100.79.12)"
+    gateway: "ws://127.0.0.1:18789 (loopback)"
+    nodes: "2 (CLI darwin + macOS app)"
+    note: "Windows/MacAir에서는 SSH m4로 원격 실행. canvas.eval 방식 고정 (canvas.present 빈화면 이슈)."
 
 # --- Rate Limit Thresholds ---
 thresholds:

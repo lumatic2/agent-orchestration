@@ -53,6 +53,7 @@ Then apply the Self-Execution Guard before writing a single line of code:
 | 50+ lines of code to write | STOP → `orchestrate.sh codex "task" name` |
 | 4+ files to create/modify | STOP → `orchestrate.sh codex "task" name` |
 | Any research needed | STOP → `orchestrate.sh gemini "task" name` |
+| Browser/GUI/canvas/JS SPA needed | STOP → `orchestrate.sh openclaw "task" name` |
 | Simple edit (1-3 files, <50 lines) | Proceed directly |
 
 > ⚠️ **리서치 위임 방법**: 반드시 `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"task\" name")` 직접 호출.
@@ -62,6 +63,8 @@ Examples:
 - "지뢰찾기 게임 만들어줘" → Python ~100줄 → **`orchestrate.sh codex`로 위임**
 - "README 첫 줄 수정" → 1파일 1줄 → 직접 수행
 - "이 라이브러리 최신 버전 찾아줘" → 리서치 → **`orchestrate.sh gemini`로 위임**
+- "빗썸 시세 긁어줘" / "차트 만들어줘" / "네이버 검색해줘" → **`orchestrate.sh openclaw`로 위임**
+- OpenClaw 작업 템플릿 → `~/projects/agent-orchestration/templates/handoff_openclaw.md`
 
 상세 오케스트레이션 규칙 (Pre-flight, Multi-Agent, Routing, Handoff, Queue) → `/orchestrate` 스킬 참조.
 

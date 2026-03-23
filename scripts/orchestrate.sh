@@ -1350,6 +1350,78 @@ VAULTEOF
   return 0
 }
 
+# --- Shared status writer (OpenClaw Telegram 세션 → main 세션 상태 조회) ---
+write_shared_status() {
+  local agent="$1" status="$2" summary="${3:-}"
+  local shared_dir="$HOME/.openclaw/shared"
+  [ -d "$shared_dir" ] || return 0
+  cat > "$shared_dir/status.md" << STATUSEOF
+# OpenClaw Shared Status
+_orchestrate.sh 자동 업데이트. OpenClaw Telegram 세션에서 읽어라._
+
+## 마지막 업데이트
+$(date '+%Y-%m-%d %H:%M:%S')
+
+## 최근 작업
+- 이름: ${TASK_NAME:-unknown}
+- 에이전트: $agent
+- 상태: $status
+$([ -n "$summary" ] && printf '%s' "- 요약: $(echo "$summary" | head -3)")
+
+## 큐 전체 현황
+$(ls "$HOME/projects/agent-orchestration/queue/" 2>/dev/null | grep -v "activity" | tail -10 || echo "없음")
+STATUSEOF
+}
+
+# --- Screen capture helper (openclaw nodes screen record 폴백) ---
+# TODO: OpenClaw macOS 26 (Tahoe) 공식 지원 시 openclaw nodes screen record 로 교체
+screen_capture() {
+  local out="${1:-/tmp/openclaw_screen_$(date +%s).png}"
+  screencapture -x "$out" 2>/dev/null && echo "$out"
+}
+
+# --- Run OpenClaw (browser / canvas / computer-use 워커) ---
+run_openclaw() {
+  local thinking="${1:-medium}"
+  local log_file="$LOG_DIR/openclaw_${TASK_NAME}_${TIMESTAMP}.txt"
+
+  if [ "${DRY_RUN:-false}" = "true" ]; then
+    echo "[DRY-RUN] openclaw (thinking=$thinking) — task: $TASK_NAME"
+    return 0
+  fi
+
+  echo "[DISPATCH] OpenClaw (thinking=$thinking) — task: $TASK_NAME"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
+
+  # openclaw CLI가 없으면 M4 SSH로 원격 실행 (Windows/MacAir → M4)
+  if command -v openclaw &>/dev/null; then
+    openclaw agent --agent main \
+      --message "$TASK" \
+      2>&1 > "$log_file" || true
+  else
+    echo "[INFO] openclaw CLI not found locally — running via SSH on m4"
+    ssh m4 "openclaw agent --agent main --message $(printf '%q' "$TASK")" \
+      2>&1 > "$log_file" || true
+  fi
+
+  local result
+  result=$(cat "$log_file")
+
+  if [ -z "$result" ]; then
+    echo "[ERROR] OpenClaw returned empty response"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "failed"
+    write_shared_status "openclaw" "failed"
+    return 1
+  fi
+
+  [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
+  [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
+  write_shared_status "openclaw" "completed" "$result"
+
+  echo "$result"
+  return 0
+}
+
 # --- Fallback logic ---
 run_with_fallback_chain() {
   local chain_key="$1"
@@ -2173,6 +2245,12 @@ case "$AGENT" in
     select_dispatch_profile "$AGENT"
     run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_chain "general" "$SELECTED_FAMILY" "$SELECTED_MODEL"
     ;;
+  openclaw)
+    run_openclaw "medium"
+    ;;
+  openclaw-high)
+    run_openclaw "high"
+    ;;
   codex-fallback)
     run_with_fallback_code
     ;;
@@ -2181,7 +2259,7 @@ case "$AGENT" in
     ;;
   *)
     echo "[ERROR] Unknown agent: $AGENT"
-    echo "Available: codex, codex-spark, chatgpt, chatgpt-mini, chatgpt-light, gemini, gemini-pro"
+    echo "Available: codex, codex-spark, chatgpt, chatgpt-mini, chatgpt-light, gemini, gemini-pro, openclaw, openclaw-high"
     echo "Options:   run <blueprint_file> [--var key=value ...]"
     echo "           --boot, --status, --resume, --complete <ID> <summary>, schema [agent] [--json]"
     echo "           --brief <goal> <scope> <constraints>"
