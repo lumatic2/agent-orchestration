@@ -6,7 +6,8 @@ $ARGUMENTS 형식: [주제] [옵션]
 
 ## 0. 인수 없이 호출 시
 
-$ARGUMENTS가 비어 있으면:
+$ARGUMENTS가 비어 있으면 아래를 출력해라:
+
 ```
 어떤 주제를 연구할까요?
 
@@ -17,10 +18,69 @@ $ARGUMENTS가 비어 있으면:
 🏢 산업 분석 — 시장/트렌드/경쟁사 분석
 🧪 실험 설계 — 가설 수립 + 검증 계획 + 데이터 수집 방법론
 
+──────────────────────────────────────────────
+ 모드 1  /research {주제}                  ← 기본
+──────────────────────────────────────────────
+절차: 스코핑(RQ 확인) → Gemini 리서치 → 종합
+소요: 3~5분 / 사용자 개입 1회 (RQ 승인)
+결과물: 구조화된 리서치 노트 (채팅창 출력, ~500~1000자)
+  · RQ별 Key Findings (confidence 태그 포함)
+  · 소스 간 교차검증 결과
+  · Open Questions / 시사점
+
 예시:
-  /research LLM 교차검증 파이프라인 설계
+  /research WebAssembly vs Docker 성능 비교
+  /research 국내 SaaS 스타트업 시장 규모 2024
+  /research Claude API tool_use 동작 원리
+
+──────────────────────────────────────────────
+ 모드 2  /research --vault {주제}
+──────────────────────────────────────────────
+모드 1과 동일 + vault 10-knowledge/{domain}/ 에 .md 파일로 저장
+저장 경로 예: vault/10-knowledge/ai/llm-tool-use.md
+
+──────────────────────────────────────────────
+ 모드 3  /research --paper {주제}
+──────────────────────────────────────────────
+절차: 스코핑 → Gemini 리서치 → 논문 초안 구조화
+소요: 5~10분 / 사용자 개입 1회 (RQ 승인)
+결과물: 리서치 노트 + 논문 초안 (채팅창 출력)
+  · Abstract (~200단어)
+  · Introduction / Related Work / Methodology
+  · Findings / Discussion / Conclusion
+  · References (소스 목록)
+  총 분량: A4 3~5페이지 분량 마크다운
+vault 30-projects/papers/{주제}/ 에 자동 저장:
+  draft.md / notes.md / references.md
+
+예시:
   /research --paper AI가 중소기업 재무관리에 미치는 영향
-  /research --deep WebAssembly vs Docker 성능 비교
+  /research --paper 멀티에이전트 시스템의 할루시네이션 제어 기법
+
+──────────────────────────────────────────────
+ 모드 4  /research --paper --deep {주제}   ← 풀 파이프라인
+──────────────────────────────────────────────
+절차: 16단계 자동화 파이프라인
+  S01 스코핑 → S02 arXiv+Semantic Scholar 논문 수집
+  → S03 [GATE] 문헌 스크리닝 승인
+  → S04~S05 지식 추출·종합
+  → S09 [결정] PROCEED/REFINE/PIVOT
+  → S10~S11 논문 초안 작성·수정
+  → S12 [GATE] 품질 체크리스트 승인
+  → S13~S14 최종 편집·인용 검증
+  → S15 멀티에이전트 검증 (Gemini+Codex 독립 리뷰 → 자동 수정)
+  → S16 PDF 생성 (Typst 템플릿 A/B/C/D)
+소요: 30~60분 / 사용자 개입 2~3회 (게이트 승인)
+결과물:
+  · PDF 논문 (디자인 템플릿 선택 가능)
+  · draft.md (A4 8~15페이지 분량 학술 논문)
+  · 인용 검증 보고서 (arXiv DOI 실증)
+  · S15 멀티에이전트 검증 리포트
+특징: 실제 논문 API 기반 수집 → 할루시네이션 최소화
+
+예시:
+  /research --paper --deep LLM 기반 코드 자동 수정 시스템의 정확성
+  /research --paper --deep 강화학습을 활용한 자율주행 경로 최적화
 ```
 
 ## 1. 연구 프로세스 (3단계 자율 루프)
