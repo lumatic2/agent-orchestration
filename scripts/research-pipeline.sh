@@ -79,16 +79,60 @@ save_checkpoint() {
   local ts_val=""
   [ "$status" = "pending" ] || ts_val="$now"
 
+  # in_progress 시작 시 start_ts 기록 (watchdog용)
+  local start_ts_val=""
+  [ "$status" = "in_progress" ] && start_ts_val="$now"
+
   local tmp
   tmp="$(mktemp)"
-  jq \
-    --arg s "$stage" \
-    --arg st "$status" \
-    --arg ts "$ts_val" \
-    --argjson cs "$CURRENT_STAGE" \
-    '.stages[$s] = {status:$st,ts:$ts} | .current_stage = $cs' \
-    "$PIPELINE_FILE" > "$tmp"
+  if [ "$status" = "in_progress" ]; then
+    jq \
+      --arg s "$stage" \
+      --arg st "$status" \
+      --arg ts "$ts_val" \
+      --arg start_ts "$start_ts_val" \
+      --argjson cs "$CURRENT_STAGE" \
+      '.stages[$s] = {status:$st,ts:$ts,start_ts:$start_ts} | .current_stage = $cs' \
+      "$PIPELINE_FILE" > "$tmp"
+  else
+    jq \
+      --arg s "$stage" \
+      --arg st "$status" \
+      --arg ts "$ts_val" \
+      --argjson cs "$CURRENT_STAGE" \
+      '.stages[$s].status = $st | .stages[$s].ts = $ts | .current_stage = $cs' \
+      "$PIPELINE_FILE" > "$tmp"
+  fi
   mv "$tmp" "$PIPELINE_FILE"
+}
+
+# watchdog: in_progress 상태로 N분 이상 지속된 단계가 있으면 경고
+watchdog_check() {
+  [ -f "$PIPELINE_FILE" ] || return 0
+  local stale_minutes=10
+  local now_epoch
+  now_epoch="$(date +%s)"
+
+  local stages="S01 S02 S03 S04 S05 S06 S07 S08 S09 S10 S11 S12 S13 S14"
+  for s in $stages; do
+    local status start_ts
+    status="$(jq -r ".stages.${s}.status // \"pending\"" "$PIPELINE_FILE")"
+    start_ts="$(jq -r ".stages.${s}.start_ts // \"\"" "$PIPELINE_FILE")"
+    if [ "$status" = "in_progress" ] && [ -n "$start_ts" ]; then
+      local start_epoch elapsed_min
+      start_epoch="$(date -j -f '%Y-%m-%d %H:%M:%S' "$start_ts" +%s 2>/dev/null || date -d "$start_ts" +%s 2>/dev/null || echo 0)"
+      if [ "$start_epoch" -gt 0 ]; then
+        elapsed_min=$(( (now_epoch - start_epoch) / 60 ))
+        if [ "$elapsed_min" -ge "$stale_minutes" ]; then
+          echo "[pipeline] ⚠️  WATCHDOG: $s 이(가) ${elapsed_min}분째 in_progress — hang 가능성 있음" >&2
+          echo "[pipeline] ⚠️  재실행하려면: bash $0 \"$TOPIC\" --skip-experiment (또는 해당 옵션 유지)" >&2
+          save_checkpoint "$s" "failed"
+          echo "[pipeline] $s → failed 로 강제 마킹됨" >&2
+          exit 1
+        fi
+      fi
+    fi
+  done
 }
 
 wait_gate() {
@@ -182,12 +226,28 @@ run_stage_gemini() {
   out_file="$(stage_file "$stage")"
   local tmp
   tmp="$(mktemp)"
-  # NO_VAULT=true: vault 저장 건너뜀 / FORCE=true: vault 캐시 무시 (항상 신선한 실행)
-  NO_VAULT=true FORCE=true bash "$ORCH" gemini "$brief" "$name" > "$tmp" 2>&1
-  # "--- Gemini Result ---" 이후 내용만 추출 (메타 로그 제거)
+
+  # 타임아웃 180초 — 초과 시 실패로 처리
+  local exit_code=0
+  NO_VAULT=true FORCE=true timeout 180 bash "$ORCH" gemini "$brief" "$name" > "$tmp" 2>&1 || exit_code=$?
+
   local result full_content
   full_content="$(cat "$tmp")"
   rm -f "$tmp"
+
+  if [ "$exit_code" -eq 124 ]; then
+    echo "[pipeline] ERROR: $stage Gemini 호출 타임아웃 (180s 초과)" >&2
+    save_checkpoint "$stage" "failed"
+    echo "# $stage 실패\nERROR: Gemini 호출 타임아웃 (180s)" > "$out_file"
+    return 1
+  elif [ "$exit_code" -ne 0 ]; then
+    echo "[pipeline] ERROR: $stage Gemini 호출 실패 (exit $exit_code)" >&2
+    save_checkpoint "$stage" "failed"
+    echo "# $stage 실패\nERROR: Gemini exit $exit_code\n\n$full_content" > "$out_file"
+    return 1
+  fi
+
+  # "--- Gemini Result ---" 이후 내용만 추출 (메타 로그 제거)
   result="$(printf '%s\n' "$full_content" | awk '/^--- Gemini Result ---/{found=1; next} found')"
   # fallback: --- 없으면 전체 사용
   [ -z "$result" ] && result="$full_content"
@@ -195,10 +255,21 @@ run_stage_gemini() {
 }
 
 # 템플릿 변수 치환 (sed 기반)
+truncate_payload() {
+  local text="$1"
+  local limit="${2:-8000}"
+  if [ "${#text}" -gt "$limit" ]; then
+    printf '%s\n...(truncated: %d → %d chars)' "${text:0:$limit}" "${#text}" "$limit"
+  else
+    printf '%s' "$text"
+  fi
+}
+
 render_template() {
   local tmpl="$1"
   local topic="$2"
-  local payload="$3"
+  local payload
+  payload="$(truncate_payload "$3")"
   local stage="$4"
   local out
   out="$(cat "$tmpl")"
@@ -285,6 +356,9 @@ S06_EOF
 # ── 단계별 실행 ───────────────────────────────────────────────────────
 
 run_pipeline_stages() {
+  # 리줌 시: 이전 세션에서 hang으로 죽은 단계가 있으면 감지
+  watchdog_check
+
   while [ "$CURRENT_STAGE" -le 14 ]; do
     local stage="S$(printf '%02d' "$CURRENT_STAGE")"
     local status
