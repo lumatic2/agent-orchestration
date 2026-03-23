@@ -805,10 +805,13 @@ CSS_EOF
           fi
 
           local pdf_status="❌ Chrome PDF 실패"
+          local vault_pdf_status="❌ Vault 저장 실패 (m4 연결 불가)"
           if [ -f "$pdf_path" ] && [ -s "$pdf_path" ]; then
             pdf_status="✅ $pdf_path"
-            # vault에도 저장
-            ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf" < "$pdf_path" 2>/dev/null || true
+            # vault에도 저장 (성공/실패 명시)
+            if ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf" < "$pdf_path" 2>/dev/null; then
+              vault_pdf_status="✅ ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf"
+            fi
           fi
 
           cat > "$out_file" << S16_EOF
@@ -816,7 +819,7 @@ CSS_EOF
 
 - HTML: $html_path
 - PDF: ${pdf_status}
-- Vault PDF: ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf
+- Vault PDF: ${vault_pdf_status}
 S16_EOF
         fi
         ;;
