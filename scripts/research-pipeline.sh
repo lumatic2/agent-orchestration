@@ -760,8 +760,14 @@ S15_EOF
         ;;
       S16)
         # pandoc → HTML → Chrome headless → PDF
-        local pdf_path="$PAPER_DIR/draft.pdf"
-        local html_path="$PAPER_DIR/draft.html"
+        # 논문 첫 줄(# 제목)을 파일명으로 변환
+        local paper_title
+        paper_title="$(head -1 "$PAPER_DIR/draft.md" | sed 's/^#* *//' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/_/g; s/__*/_/g; s/^_//; s/_$//')"
+        [ -z "$paper_title" ] && paper_title="draft"
+        # 최대 60자로 제한
+        paper_title="${paper_title:0:60}"
+        local pdf_path="$PAPER_DIR/${paper_title}.pdf"
+        local html_path="$PAPER_DIR/${paper_title}.html"
 
         if ! command -v pandoc >/dev/null 2>&1; then
           echo "[pipeline] WARN: pandoc 미설치 — brew install pandoc" >&2
@@ -802,7 +808,7 @@ CSS_EOF
           if [ -f "$pdf_path" ] && [ -s "$pdf_path" ]; then
             pdf_status="✅ $pdf_path"
             # vault에도 저장
-            ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/draft.pdf" < "$pdf_path" 2>/dev/null || true
+            ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf" < "$pdf_path" 2>/dev/null || true
           fi
 
           cat > "$out_file" << S16_EOF
@@ -810,7 +816,7 @@ CSS_EOF
 
 - HTML: $html_path
 - PDF: ${pdf_status}
-- Vault PDF: ~/vault/30-projects/papers/$SLUG/draft.pdf
+- Vault PDF: ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf
 S16_EOF
         fi
         ;;
