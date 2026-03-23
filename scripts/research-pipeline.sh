@@ -227,9 +227,22 @@ run_stage_gemini() {
   local tmp
   tmp="$(mktemp)"
 
-  # 타임아웃 180초 — 초과 시 실패로 처리
+  # 타임아웃 180초 — 초과 시 실패로 처리 (macOS timeout 없으므로 bash 구현)
   local exit_code=0
-  NO_VAULT=true FORCE=true timeout 180 bash "$ORCH" gemini "$brief" "$name" > "$tmp" 2>&1 || exit_code=$?
+  NO_VAULT=true FORCE=true bash "$ORCH" gemini "$brief" "$name" > "$tmp" 2>&1 &
+  local bg_pid=$!
+  local elapsed=0
+  local timeout_sec=180
+  while kill -0 "$bg_pid" 2>/dev/null && [ "$elapsed" -lt "$timeout_sec" ]; do
+    sleep 5
+    elapsed=$((elapsed + 5))
+  done
+  if kill -0 "$bg_pid" 2>/dev/null; then
+    kill "$bg_pid" 2>/dev/null; wait "$bg_pid" 2>/dev/null
+    exit_code=124
+  else
+    wait "$bg_pid" || exit_code=$?
+  fi
 
   local result full_content
   full_content="$(cat "$tmp")"
@@ -366,8 +379,8 @@ run_pipeline_stages() {
     local out_file
     out_file="$(stage_file "$stage")"
 
-    if [ "$status" = "completed" ]; then
-      echo "[pipeline] $stage — 이미 완료, 건너뜀"
+    if [ "$status" = "completed" ] || [ "$status" = "skipped" ]; then
+      echo "[pipeline] $stage — 이미 완료/스킵, 건너뜀"
       CURRENT_STAGE=$((CURRENT_STAGE + 1))
       continue
     fi
