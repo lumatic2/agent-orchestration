@@ -18,6 +18,8 @@ PAPER_DIR=""
 STATE_DIR=""
 PIPELINE_FILE=""
 CURRENT_STAGE=1
+GATE_ARG=""
+DECISION_ARG=""
 
 # ── 유틸 ───────────────────────────────────────────────────────────────
 
@@ -38,6 +40,10 @@ stage_file() {
     S03) echo "$STATE_DIR/s03_screened.md" ;;
     S04) echo "$STATE_DIR/s04_extracted.md" ;;
     S05) echo "$STATE_DIR/s05_synthesis.md" ;;
+    S06) echo "$STATE_DIR/s06_experiment.md" ;;
+    S07) echo "$STATE_DIR/s07_code" ;;
+    S08) echo "$STATE_DIR/s08_results.md" ;;
+    S09) echo "$STATE_DIR/s09_decision.md" ;;
     *) echo "" ;;
   esac
 }
@@ -61,7 +67,7 @@ save_checkpoint() {
       --arg topic "$TOPIC" \
       --arg slug "$SLUG" \
       --argjson cs "$CURRENT_STAGE" \
-      '{topic:$topic,slug:$slug,current_stage:$cs,skip_experiment:false,stages:{S01:{status:"pending",ts:""},S02:{status:"pending",ts:""},S03:{status:"pending",ts:""},S04:{status:"pending",ts:""},S05:{status:"pending",ts:""}}}' \
+      '{topic:$topic,slug:$slug,current_stage:$cs,skip_experiment:false,gate_pending_stage:null,decision_pending:false,refine_count:0,pivot_count:0,stages:{S01:{status:"pending",ts:""},S02:{status:"pending",ts:""},S03:{status:"pending",ts:""},S04:{status:"pending",ts:""},S05:{status:"pending",ts:""},S06:{status:"pending",ts:""},S07:{status:"pending",ts:""},S08:{status:"pending",ts:""},S09:{status:"pending",ts:""}}}' \
       > "$PIPELINE_FILE"
   fi
 
@@ -78,6 +84,64 @@ save_checkpoint() {
     '.stages[$s] = {status:$st,ts:$ts} | .current_stage = $cs' \
     "$PIPELINE_FILE" > "$tmp"
   mv "$tmp" "$PIPELINE_FILE"
+}
+
+wait_gate() {
+  local stage="$1"
+  local tmp
+  tmp="$(mktemp)"
+  jq --arg s "$stage" '.gate_pending_stage = $s' "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
+  echo "[pipeline] GATE: $stage — 검토 후 --approve-gate $stage 로 재실행"
+  exit 42
+}
+
+handle_decision() {
+  local decision="${DECISION_ARG:-}"
+  local tmp
+
+  if [ -z "$decision" ]; then
+    tmp="$(mktemp)"
+    jq '.decision_pending = true' "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
+    echo "[pipeline] DECISION: s09_decision.md 검토 후 --decide PROCEED|REFINE|PIVOT"
+    exit 42
+  fi
+
+  case "$decision" in
+    PROCEED)
+      CURRENT_STAGE=10
+      ;;
+    REFINE)
+      local refine_count
+      refine_count="$(jq -r '.refine_count // 0' "$PIPELINE_FILE")"
+      if [ "$refine_count" -ge 3 ]; then
+        echo "[pipeline] 최대 REFINE 횟수 초과 → PROCEED 강제"
+        CURRENT_STAGE=10
+      else
+        tmp="$(mktemp)"
+        jq ".refine_count = $((refine_count + 1)) | .stages.S08.status = \"pending\" | .stages.S09.status = \"pending\" | .current_stage = 8" "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
+        CURRENT_STAGE=8
+      fi
+      ;;
+    PIVOT)
+      local pivot_count
+      pivot_count="$(jq -r '.pivot_count // 0' "$PIPELINE_FILE")"
+      if [ "$pivot_count" -ge 2 ]; then
+        echo "[pipeline] 최대 PIVOT 횟수 초과 → PROCEED 강제"
+        CURRENT_STAGE=10
+      else
+        tmp="$(mktemp)"
+        jq ".pivot_count = $((pivot_count + 1)) | .stages.S05.status = \"pending\" | .stages.S06.status = \"pending\" | .stages.S07.status = \"pending\" | .stages.S08.status = \"pending\" | .stages.S09.status = \"pending\" | .current_stage = 5" "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
+        CURRENT_STAGE=5
+      fi
+      ;;
+    *)
+      echo "[pipeline] 알 수 없는 결정값: $decision" >&2
+      exit 1
+      ;;
+  esac
+
+  tmp="$(mktemp)"
+  jq '.decision_pending = false' "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
 }
 
 # ── 초기화 / 리줌 ──────────────────────────────────────────────────────
@@ -138,6 +202,8 @@ render_template() {
     S02) out="${out//\{RQ\}/$payload}" ;;
     S04) out="${out//\{LITERATURE\}/$payload}" ;;
     S05) out="${out//\{EXTRACTED\}/$payload}" ;;
+    S06) out="${out//\{TOPIC\}/$topic}" ;;
+    S07) out="${out//__TOPIC__/$topic}" ;;
   esac
   printf '%s' "$out"
 }
@@ -150,10 +216,10 @@ write_direct_stage() {
   [ -f "$file" ] && return
 
   if [ "$stage" = "S01" ]; then
-    cat > "$file" << EOF
+    cat > "$file" << S01_EOF
 # S01 스코핑
 
-- **주제**: $TOPIC
+- **주제**: ${TOPIC}
 - **생성**: $(timestamp)
 
 ## 핵심 연구 질문 (RQ)
@@ -165,12 +231,13 @@ write_direct_stage() {
 - **포함**: ${TOPIC} 관련 최근 5년 이내 연구, 실증 데이터 포함 논문
 - **제외**: 이론 추론만 있는 미검증 연구, 관련성 낮은 주변 주제
 - **평가 기준**: 재현 가능성, 실용적 기여도, 인용 수
-EOF
+S01_EOF
   else
-    cat > "$file" << EOF
+    if [ "$stage" = "S03" ]; then
+    cat > "$file" << S03_EOF
 # S03 스크리닝
 
-- **주제**: $TOPIC
+- **주제**: ${TOPIC}
 - **생성**: $(timestamp)
 
 ## 포함 기준
@@ -183,16 +250,36 @@ EOF
 
 ## 스크리닝 결과
 S02 문헌 기반으로 Claude가 직접 선별. state/s02_literature.md 참조.
-EOF
+S03_EOF
+    elif [ "$stage" = "S06" ]; then
+      cat > "$file" << S06_EOF
+# S06 실험 설계
+
+- **주제**: ${TOPIC}
+- **생성**: $(timestamp)
+
+## 실험 가설
+1. 실험 설계의 목적은 S05 합성 결과 기반의 핵심 가설 검증이다.
+2. 주요 지표/종속변수는 재현 가능성을 기준으로 정의한다.
+
+## 실험 프로토콜(초안)
+- 데이터/입력: 기존 실험 자원 및 샘플 문헌 기반의 정량 지표를 활용한다.
+- 반복 횟수: 최소 3회 반복
+- 평가지표: 정확도, 비용/시간, 안정성
+
+## 위험 요소
+- 입력 형식 불일치
+- 계산 자원 제한
+S06_EOF
+    fi
   fi
 }
 
 # ── 단계별 실행 ───────────────────────────────────────────────────────
 
 run_pipeline_stages() {
-  local n
-  for n in 1 2 3 4 5; do
-    local stage="S0${n}"
+  while [ "$CURRENT_STAGE" -le 9 ]; do
+    local stage="S$(printf '%02d' "$CURRENT_STAGE")"
     local status
     status="$(get_stage_status "$stage")"
     local out_file
@@ -200,11 +287,10 @@ run_pipeline_stages() {
 
     if [ "$status" = "completed" ]; then
       echo "[pipeline] $stage — 이미 완료, 건너뜀"
-      CURRENT_STAGE=$((n + 1))
+      CURRENT_STAGE=$((CURRENT_STAGE + 1))
       continue
     fi
 
-    CURRENT_STAGE=$n
     echo "[pipeline] $stage 시작..."
     save_checkpoint "$stage" "in_progress"
 
@@ -239,23 +325,127 @@ run_pipeline_stages() {
         brief="$(render_template "$tmpl" "$TOPIC" "$ext" "S05")"
         run_stage_gemini "$stage" "$brief" "s05-synthesis-${SLUG}"
         ;;
+      S06)
+        if [ "$SKIP_EXPERIMENT" = "true" ]; then
+          CURRENT_STAGE=6; save_checkpoint "S06" "skipped"
+          CURRENT_STAGE=7; save_checkpoint "S07" "skipped"
+          CURRENT_STAGE=8; save_checkpoint "S08" "skipped"
+          CURRENT_STAGE=9; save_checkpoint "S09" "skipped"
+          CURRENT_STAGE=10
+          continue
+        fi
+
+        local synth
+        synth="$([ -f "$STATE_DIR/s05_synthesis.md" ] && cat "$STATE_DIR/s05_synthesis.md" || echo "(S05 결과 없음)")"
+        local exp
+        exp="$([ -f "$STATE_DIR/s06_experiment.md" ] && cat "$STATE_DIR/s06_experiment.md" || echo "(S06 실험 설계 없음)")"
+        local prompt
+        prompt="$(cat "$REPO_DIR/templates/prompts/s07_code_gen.md")"
+        prompt="${prompt//__TOPIC__/$TOPIC}"
+        prompt="${prompt//__SYNTHESIS__/$synth}"
+        prompt="${prompt//__EXPERIMENT__/$exp}"
+        write_direct_stage "$stage" "$out_file"
+
+        local gate_arg_upper
+        gate_arg_upper="$(echo "$GATE_ARG" | tr '[:lower:]' '[:upper:]')"
+        if [ "$gate_arg_upper" = "S06" ]; then
+          local tmp
+          tmp="$(mktemp)"
+          jq '.gate_pending_stage = null' "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
+          GATE_ARG=""
+        else
+          wait_gate "S06"
+        fi
+        ;;
+      S07)
+        if [ "$SKIP_EXPERIMENT" = "true" ]; then
+          CURRENT_STAGE=10
+          save_checkpoint "$stage" "skipped"
+          continue
+        fi
+
+        mkdir -p "$STATE_DIR/s07_code"
+        local code_tmp
+        code_tmp="$(mktemp)"
+        local s05
+        s05="$([ -f "$STATE_DIR/s05_synthesis.md" ] && cat "$STATE_DIR/s05_synthesis.md" || echo "(S05 결과 없음)")"
+        local s06
+        s06="$([ -f "$STATE_DIR/s06_experiment.md" ] && cat "$STATE_DIR/s06_experiment.md" || echo "(S06 실험 설계 없음)")"
+        local brief
+        brief="$(cat "$REPO_DIR/templates/prompts/s07_code_gen.md")"
+        brief="${brief//__TOPIC__/$TOPIC}"
+        brief="${brief//__SYNTHESIS__/$s05}"
+        brief="${brief//__EXPERIMENT__/$s06}"
+        NO_VAULT=true FORCE=true bash "$ORCH" codex-spark "$brief" "s07-code-${SLUG}" > "$code_tmp" 2>&1
+        cp "$code_tmp" "$STATE_DIR/s07_code/experiment.py"
+        rm -f "$code_tmp"
+        ;;
+      S08)
+        if [ "$SKIP_EXPERIMENT" = "true" ]; then
+          CURRENT_STAGE=10
+          save_checkpoint "$stage" "skipped"
+          continue
+        fi
+
+        if [ ! -f "$STATE_DIR/s07_code/experiment.py" ]; then
+          echo "[pipeline] ERROR: S07 결과가 없습니다: $STATE_DIR/s07_code/experiment.py" >&2
+          save_checkpoint "$stage" "failed"
+          exit 1
+        fi
+
+        printf '실행 결과: [수동 입력 필요]\n' > "$out_file"
+        ;;
+      S09)
+        if [ "$SKIP_EXPERIMENT" = "true" ]; then
+          CURRENT_STAGE=10
+          save_checkpoint "$stage" "skipped"
+          continue
+        fi
+
+        if [ ! -f "$STATE_DIR/s08_results.md" ]; then
+          echo "[pipeline] ERROR: S08 결과 파일이 없습니다: $STATE_DIR/s08_results.md" >&2
+          save_checkpoint "$stage" "failed"
+          exit 1
+        fi
+
+        cat > "$out_file" << S09_EOF
+# S09 분석 및 결정
+
+- **주제**: ${TOPIC}
+- **생성**: $(timestamp)
+
+## 실험 결과
+$(cat "$STATE_DIR/s08_results.md")
+
+## 제안
+- PROCEED / REFINE / PIVOT 중 하나를 선택해야 함
+S09_EOF
+        handle_decision
+        ;;
     esac
 
-    if [ ! -s "$out_file" ]; then
+    if [ "$stage" = "S07" ]; then
+      if [ ! -f "$STATE_DIR/s07_code/experiment.py" ]; then
+        echo "[pipeline] ERROR: $stage 출력 없음" >&2
+        save_checkpoint "$stage" "failed"
+        exit 1
+      fi
+    elif [ ! -s "$out_file" ]; then
       echo "[pipeline] ERROR: $stage 출력 없음" >&2
       save_checkpoint "$stage" "failed"
       exit 1
     fi
 
-    CURRENT_STAGE=$((n + 1))
+    if [ "$CURRENT_STAGE" -lt 10 ]; then
+      CURRENT_STAGE=$((CURRENT_STAGE + 1))
+    fi
     save_checkpoint "$stage" "completed"
     echo "[pipeline] $stage 완료 → $(stage_file "$stage")"
   done
 
   echo ""
-  echo "[pipeline] Phase 1 완료!"
+  echo "[pipeline] Phase 2 완료!"
   echo "  논문 디렉토리: $PAPER_DIR"
-  echo "  다음 단계: /research --paper --deep 로 Phase 2 계속"
 }
 
 # ── 진입점 ────────────────────────────────────────────────────────────
@@ -270,10 +460,21 @@ main() {
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --skip-experiment) SKIP_EXPERIMENT="true" ;;
+      --approve-gate)
+        GATE_ARG="$2"
+        shift
+        ;;
+      --decide)
+        DECISION_ARG="$2"
+        shift
+        ;;
       --help|-h)
-        echo "사용법: bash scripts/research-pipeline.sh \"주제\" [--skip-experiment]"
+        echo "사용법: bash scripts/research-pipeline.sh \"주제\" [--skip-experiment] [--approve-gate S06] [--decide PROCEED|REFINE|PIVOT]"
         exit 0 ;;
-      --*) echo "알 수 없는 옵션: $1" >&2; exit 1 ;;
+      --*)
+        echo "알 수 없는 옵션: $1" >&2
+        exit 1
+        ;;
       *)
         [ -z "$topic" ] && topic="$1" || topic="$topic $1"
         ;;
