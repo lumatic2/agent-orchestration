@@ -37,6 +37,12 @@ else
     NVM_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
     [[ -n "$NVM_BIN" && ":$PATH:" != *":$NVM_BIN:"* ]] && export PATH="$NVM_BIN:$PATH"
   fi
+  # Homebrew bin이 PATH에 없으면 추가 (SSH 세션 대비)
+  for _brew_bin in /opt/homebrew/bin /usr/local/bin; do
+    [[ -d "$_brew_bin" && ":$PATH:" != *":$_brew_bin:"* ]] && export PATH="$_brew_bin:$PATH"
+  done
+  # ~/bin (codex 래퍼 등 사용자 스크립트)
+  [[ -d "$HOME/bin" && ":$PATH:" != *":$HOME/bin:"* ]] && export PATH="$HOME/bin:$PATH"
 fi
 
 # ── mktemp 헬퍼 ──────────────────────────────────────────────
