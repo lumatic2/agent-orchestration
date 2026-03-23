@@ -554,7 +554,10 @@ S13_EOF
         local gp=$!; local ge=0
         while kill -0 "$gp" 2>/dev/null && [ "$ge" -lt 180 ]; do sleep 5; ge=$((ge+5)); done
         if kill -0 "$gp" 2>/dev/null; then kill "$gp"; wait "$gp" 2>/dev/null; eg=124; else wait "$gp" || eg=$?; fi
-        local gr; gr="$(awk '/^--- Gemini Result ---/{found=1;next}found' "$tmp_g")"; rm -f "$tmp_g"
+        local g_full; g_full="$(cat "$tmp_g")"; rm -f "$tmp_g"
+        local gr; gr="$(printf '%s\n' "$g_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
+        [ -z "$gr" ] && gr="$g_full"
+        gr="$(printf '%s\n' "$gr" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]')"
         [ -z "$gr" ] && gr="(Gemini 리뷰 실패 exit=$eg)"
         printf '%s\n' "$gr" > "$gemini_out"
 
@@ -567,7 +570,11 @@ S13_EOF
         local cp2=$!; local ce=0
         while kill -0 "$cp2" 2>/dev/null && [ "$ce" -lt 300 ]; do sleep 5; ce=$((ce+5)); done
         if kill -0 "$cp2" 2>/dev/null; then kill "$cp2"; wait "$cp2" 2>/dev/null; eck=124; else wait "$cp2" || eck=$?; fi
-        local cr; cr="$(awk '/^--- Codex Result ---/{found=1;next}found' "$tmp_c")"; rm -f "$tmp_c"
+        local c_full; c_full="$(cat "$tmp_c")"; rm -f "$tmp_c"
+        local cr; cr="$(printf '%s\n' "$c_full" | awk '/^--- Codex Summary ---/{found=1;next}found')"
+        [ -z "$cr" ] && cr="$c_full"   # fallback: 전체 출력 사용
+        # node.js 스택트레이스 및 메타라인 제거
+        cr="$(printf '%s\n' "$cr" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]')"
         [ -z "$cr" ] && cr="(Codex 리뷰 실패 exit=$eck)"
         printf '%s\n' "$cr" > "$codex_out"
 
@@ -580,7 +587,10 @@ S13_EOF
         local sp=$!; local se=0
         while kill -0 "$sp" 2>/dev/null && [ "$se" -lt 180 ]; do sleep 5; se=$((se+5)); done
         if kill -0 "$sp" 2>/dev/null; then kill "$sp"; wait "$sp" 2>/dev/null; es=124; else wait "$sp" || es=$?; fi
-        local sr; sr="$(awk '/^--- Gemini Result ---/{found=1;next}found' "$tmp_s")"; rm -f "$tmp_s"
+        local s_full; s_full="$(cat "$tmp_s")"; rm -f "$tmp_s"
+        local sr; sr="$(printf '%s\n' "$s_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
+        [ -z "$sr" ] && sr="$s_full"
+        sr="$(printf '%s\n' "$sr" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]')"
         [ -z "$sr" ] && sr="(합성 실패 exit=$es)"
         printf '%s\n' "$sr" > "$synth_out"
 
