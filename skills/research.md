@@ -85,10 +85,13 @@ vault 30-projects/papers/{주제}/ 에 자동 저장:
 
 ## 1. 연구 프로세스 (3단계 자율 루프)
 
-### Phase 1 — 스코핑 (Scoping)
+### Phase 1 — 스코핑 + 쿼리 분해 (Scoping & Query Decomposition)
 1. 주제에서 핵심 연구 질문(RQ) 1~3개 도출
-2. 연구 범위 정의 (포함/제외 기준)
-3. 사용자에게 RQ + 범위 확인 요청 → 승인 후 Phase 2
+2. 각 RQ를 **3~5개의 하위 질문(Sub-Q)**으로 분해:
+   - Sub-Q 유형: 정의/개념, 핵심 메커니즘, 장점, 단점/한계, 비교/대안, 미래 전망
+   - 예: "GPT-Researcher 아키텍처" → "Planner-Executor 구조란?", "병렬 크롤링 방식은?", "교차검증은 어떻게 하나?", "한계점은?" 등
+3. Sub-Q를 바탕으로 **최종 보고서 개요(Outline)** 먼저 생성 (섹션 제목 목록)
+4. 사용자에게 RQ + 개요 확인 요청 → 승인 후 Phase 2
 
 ### Phase 2 — 수집 + 교차검증 (Collection & Verification)
 Gemini에게 리서치 위임 (`orchestrate.sh gemini`):
@@ -99,30 +102,59 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
 ### Research Questions
 {RQ 목록}
 
-### Scope
-{범위 정의}
+### Sub-Questions (각 RQ별 하위 질문)
+{Sub-Q 목록 — RQ별로 그룹화}
+
+### Report Outline (이 구조에 맞춰 결과 작성)
+{Phase 1에서 생성한 개요 섹션 목록}
 
 ### Instructions
-1. 각 RQ에 대해 2+ 독립 소스에서 evidence 수집
+1. 각 Sub-Q를 독립적으로 조사 — Sub-Q별로 2+ 독립 소스에서 evidence 수집
 2. 소스별 신뢰도 평가 (primary/secondary)
-3. 교차검증: 소스 간 일치/불일치 명시
+3. 교차검증: 동일 주제를 다룬 Sub-Q 결과 간 일치/불일치 명시
+   - 2+ 소스에서 일관되면 Strong, 단일 소스면 Moderate, 추론이면 Speculative
 4. 각 finding에 confidence tier 부여:
    - **Strong**: 2+ primary sources, reproducible
    - **Moderate**: single reliable source, likely correct
    - **Speculative**: partial data, plausible but unverified
-5. gap 분석: 답 못 찾은 영역 + 추가 조사 방향
+5. 결과를 Report Outline의 섹션 구조에 맞춰 작성 (섹션별로 관련 Sub-Q 결과를 채워 넣기)
+6. gap 분석: 답 못 찾은 Sub-Q + 추가 조사 방향
 
 ### Stop Conditions
-- 모든 RQ가 Moderate 이상으로 답변됨
+- 모든 Sub-Q가 Moderate 이상으로 답변됨
 - OR 추가 소스 없음 + 남은 gap 문서화 완료
 " research-{주제요약}
 ```
 
-### Phase 3 — 종합 + 산출물 (Synthesis)
+### Phase 3 — 종합 + 산출물 + 검증 (Synthesis & Verification)
 Gemini 결과를 받아서:
-1. **구조화된 리서치 노트** 작성 (아래 템플릿)
-2. `--paper` 옵션 시: 논문 초안 구조까지 생성
-3. `--vault` 옵션 시: vault `10-knowledge/{domain}/`에 저장
+1. **보고서 조립**: Phase 1 개요의 각 섹션에 Gemini 결과를 채워 넣어 완성
+2. **구조화된 리서치 노트** 작성 (아래 템플릿)
+3. **[S14 경량] 인용 검증**: 조립 완료 후 아래 명령으로 소스 목록 검증
+
+```
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
+다음 리서치 결과의 Evidence/소스 목록을 검토해줘.
+각 소스를 아래 기준으로 분류하라:
+- ✅ OK — 제목·저자·연도·URL 모두 충분히 구체적
+- ⚠️ Suspicious — 제목/저자가 모호하거나 검증 불가 수준으로 추상적
+- ❌ No URL — URL 없이 출처명만 있어 추적 불가
+
+분류 후:
+- 미검증(Suspicious + No URL) 비율 계산
+- 50% 초과 시 첫 줄에 [CITATION WARNING] 표기
+- 각 소스별 한 줄 판정 + 개선 제안 출력
+
+## 소스 목록
+{보고서 Evidence 섹션 전체}
+" citation-check-{주제요약}
+```
+
+- `[CITATION WARNING]` 발생 시: 사용자에게 알리고 계속 진행 여부 확인 후 진행
+- 경고 없으면: 검증 결과를 보고서 하단 `## Citation Check` 섹션에 요약 추가
+
+4. `--paper` 옵션 시: 논문 초안 구조까지 생성 → S11 섹션 보완 (아래 §3 참조)
+5. `--vault` 옵션 시: vault `10-knowledge/{domain}/`에 저장
 
 ## 2. 리서치 노트 템플릿
 
@@ -142,19 +174,27 @@ confidence: {overall: strong/moderate/speculative}
 1. {RQ1}
 2. {RQ2}
 
-## Key Findings
+## Report Outline
+1. {섹션1}
+2. {섹션2}
+3. ...
 
-### Finding 1: {제목}
+## {섹션1 제목}
+
+### Sub-Q: {관련 하위 질문}
 - **Confidence**: Strong/Moderate/Speculative
 - **Evidence**: {소스1}, {소스2}
 - **Summary**: ...
-- **Cross-check**: {소스 간 일치 여부}
+- **Cross-check**: {소스 간 일치 여부 — 2+ 소스 일치 시 Strong 근거}
 
-### Finding 2: ...
+## {섹션2 제목}
+
+### Sub-Q: {관련 하위 질문}
+- ...
 
 ## Contradictions & Open Questions
 - {소스 간 불일치 사항}
-- {답 못 찾은 영역}
+- {답 못 찾은 Sub-Q}
 
 ## Implications
 - {실행 가능한 시사점}
@@ -177,8 +217,33 @@ Phase 3에서 추가로:
    - Conclusion
    - References
 
-2. vault `30-projects/papers/{주제}/` 에 저장:
-   - `draft.md` — 논문 초안
+2. **[S11] 섹션 보완**: 논문 초안 생성 직후 아래 명령으로 빈약한 섹션 자동 보완
+
+```
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
+아래 논문 초안에서 분석이 얕거나 근거가 부족한 섹션 2~4개를 찾아 보완 단락을 작성해줘.
+
+규칙:
+- 기존 텍스트를 재출력하지 말 것 — 추가할 단락만 출력
+- 각 보완은 150~300단어
+- 기존 초안에 있는 근거/인용만 사용 (새 인용 지어내기 금지)
+- 아래 형식으로만 출력:
+
+## SECTION_ADDITION: {초안의 정확한 섹션 제목}
+{해당 섹션 끝에 삽입할 보완 단락}
+
+## SECTION_ADDITION: {다른 섹션 제목}
+{보완 단락}
+
+## 논문 초안
+{생성된 논문 초안 전문}
+" s11-expand-{주제요약}
+```
+
+- 반환된 각 `SECTION_ADDITION` 블록을 해당 섹션 끝에 삽입하여 초안 업데이트
+
+3. vault `30-projects/papers/{주제}/` 에 저장:
+   - `draft.md` — 논문 초안 (S11 보완 적용본)
    - `notes.md` — 리서치 노트
    - `references.md` — 참고문헌 목록
 
