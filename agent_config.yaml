@@ -154,11 +154,21 @@ fallback:
     - action: queue_and_wait
 
   research:
-    - agent: gemini
-      model_key: default
-    - agent: gemini
-      model_key: heavy
-    - action: queue_and_wait
+    light:
+      - { agent: gemini, model_key: light }
+      - { agent: chatgpt, model_key: light }
+      - { agent: claude, model_key: light }
+      - action: queue_and_wait
+    default:
+      - { agent: gemini, model_key: default }
+      - { agent: chatgpt, model_key: default }
+      - { agent: claude, model_key: light }
+      - action: queue_and_wait
+    heavy:
+      - { agent: gemini, model_key: heavy }
+      - { agent: chatgpt, model_key: heavy }
+      - { agent: claude, model_key: mid }
+      - action: queue_and_wait
 
   general:                           # Non-coding tasks (writing, data, translation)
     - agent: codex

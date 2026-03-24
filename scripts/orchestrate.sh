@@ -273,11 +273,32 @@ fallback_chain_key_for_agent() {
   esac
 }
 
+fallback_research_tier_for_complexity() {
+  local complexity_tier="${1:-}"
+  case "$complexity_tier" in
+    light|default|heavy) echo "$complexity_tier" ;;
+    low) echo "light" ;;
+    medium|high) echo "default" ;;
+    ultra) echo "heavy" ;;
+    *) echo "default" ;;
+  esac
+}
+
+fallback_subchain_tier_for_chain() {
+  local chain_key="$1"
+  local complexity_tier="${2:-}"
+  case "$chain_key" in
+    research) fallback_research_tier_for_complexity "$complexity_tier" ;;
+    *) echo "" ;;
+  esac
+}
+
 describe_fallback_chain() {
   local chain_key="$1"
+  local chain_tier="${2:-}"
   [ -n "$chain_key" ] || return 0
 
-  python3 - "$AGENT_CONFIG_FILE" "$chain_key" << 'PYEOF'
+  python3 - "$AGENT_CONFIG_FILE" "$chain_key" "$chain_tier" << 'PYEOF'
 import sys
 from pathlib import Path
 
@@ -289,10 +310,11 @@ except ImportError:
 
 config_path = Path(sys.argv[1])
 chain_key = sys.argv[2]
+chain_tier = str(sys.argv[3]).strip()
 config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
 models = config.get("models") or {}
 reasoning = config.get("reasoning") or {}
-chain = ((config.get("fallback") or {}).get(chain_key) or [])
+chain_root = (config.get("fallback") or {}).get(chain_key)
 
 def agent_family(agent_name: str) -> str:
     if agent_name.startswith("codex"):
@@ -305,38 +327,67 @@ def agent_family(agent_name: str) -> str:
         return "claude"
     return agent_name
 
+def format_chain(chain):
+    if not isinstance(chain, list):
+        return ""
+    parts = []
+    for step in chain:
+        if not isinstance(step, dict):
+            continue
+        if "action" in step:
+            parts.append(str(step["action"]).strip())
+            continue
+
+        agent = str(step.get("agent", "")).strip()
+        model_ref = str(step.get("model_key", "")).strip()
+        family = agent_family(agent)
+        model_key = model_ref
+        if "." in model_ref:
+            family, model_key = model_ref.split(".", 1)
+
+        model = str(((models.get(family) or {}).get(model_key) or "")).strip()
+        effort = str(((reasoning.get(family) or {}).get(model_key) or "")).strip()
+
+        label = f"{agent}:{model or model_key or 'unresolved'}"
+        if effort and effort != "auto":
+            label += f"[{effort}]"
+        parts.append(label)
+    return " -> ".join(parts)
+
+if isinstance(chain_root, list):
+    print(format_chain(chain_root))
+    raise SystemExit(0)
+
+if not isinstance(chain_root, dict):
+    print("")
+    raise SystemExit(0)
+
+if chain_tier:
+    chosen_tier = chain_tier if chain_tier in chain_root else "default"
+    print(format_chain(chain_root.get(chosen_tier) or []))
+    raise SystemExit(0)
+
+ordered_tiers = ["light", "default", "heavy"]
+seen = set()
 parts = []
-for step in chain:
-    if not isinstance(step, dict):
+for tier_name in ordered_tiers + [k for k in chain_root.keys() if k not in ordered_tiers]:
+    if tier_name in seen:
         continue
-    if "action" in step:
-        parts.append(str(step["action"]).strip())
-        continue
+    seen.add(tier_name)
+    chain_desc = format_chain(chain_root.get(tier_name) or [])
+    if chain_desc:
+        parts.append(f"{tier_name}: {chain_desc}")
 
-    agent = str(step.get("agent", "")).strip()
-    model_ref = str(step.get("model_key", "")).strip()
-    family = agent_family(agent)
-    model_key = model_ref
-    if "." in model_ref:
-        family, model_key = model_ref.split(".", 1)
-
-    model = str(((models.get(family) or {}).get(model_key) or "")).strip()
-    effort = str(((reasoning.get(family) or {}).get(model_key) or "")).strip()
-
-    label = f"{agent}:{model or model_key or 'unresolved'}"
-    if effort and effort != "auto":
-        label += f"[{effort}]"
-    parts.append(label)
-
-print(" -> ".join(parts))
+print(" || ".join(parts))
 PYEOF
 }
 
 get_fallback_chain_steps() {
   local chain_key="$1"
+  local chain_tier="${2:-}"
   [ -n "$chain_key" ] || return 0
 
-  python3 - "$AGENT_CONFIG_FILE" "$chain_key" << 'PYEOF'
+  python3 - "$AGENT_CONFIG_FILE" "$chain_key" "$chain_tier" << 'PYEOF'
 import sys
 from pathlib import Path
 
@@ -347,10 +398,11 @@ except ImportError:
 
 config_path = Path(sys.argv[1])
 chain_key = sys.argv[2]
+chain_tier = str(sys.argv[3]).strip()
 config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
 models = config.get("models") or {}
 reasoning = config.get("reasoning") or {}
-chain = ((config.get("fallback") or {}).get(chain_key) or [])
+chain_root = (config.get("fallback") or {}).get(chain_key)
 
 def agent_family(agent_name: str) -> str:
     if agent_name.startswith("codex"):
@@ -362,6 +414,14 @@ def agent_family(agent_name: str) -> str:
     if agent_name.startswith("claude"):
         return "claude"
     return agent_name
+
+if isinstance(chain_root, list):
+    chain = chain_root
+elif isinstance(chain_root, dict):
+    chosen_tier = chain_tier if chain_tier in chain_root else "default"
+    chain = chain_root.get(chosen_tier) or []
+else:
+    chain = []
 
 for step in chain:
     if not isinstance(step, dict):
@@ -958,10 +1018,16 @@ select_dispatch_profile() {
     echo "[ROUTER] profile_source=${SELECTED_PROFILE_SOURCE}"
   fi
   local fallback_key fallback_desc
+  local fallback_tier=""
   fallback_key="$(fallback_chain_key_for_agent "$agent")"
-  fallback_desc="$(describe_fallback_chain "$fallback_key" 2>/dev/null || true)"
+  fallback_tier="$(fallback_subchain_tier_for_chain "$fallback_key" "${SELECTED_COMPLEXITY_TIER:-}")"
+  fallback_desc="$(describe_fallback_chain "$fallback_key" "$fallback_tier" 2>/dev/null || true)"
   if [ -n "$fallback_key" ] && [ -n "$fallback_desc" ]; then
-    echo "[ROUTER] fallback=${fallback_key}: ${fallback_desc}"
+    if [ -n "$fallback_tier" ]; then
+      echo "[ROUTER] fallback=${fallback_key}(${fallback_tier}): ${fallback_desc}"
+    else
+      echo "[ROUTER] fallback=${fallback_key}: ${fallback_desc}"
+    fi
   fi
 }
 
@@ -1719,10 +1785,16 @@ run_with_fallback_chain() {
   local chain_key="$1"
   local skip_family="${2:-}"
   local skip_model="${3:-}"
+  local chain_tier="${4:-}"
+  [ -n "$chain_tier" ] || chain_tier="$(fallback_subchain_tier_for_chain "$chain_key" "${SELECTED_COMPLEXITY_TIER:-}")"
   local chain_desc
-  chain_desc="$(describe_fallback_chain "$chain_key")"
+  chain_desc="$(describe_fallback_chain "$chain_key" "$chain_tier")"
 
-  echo "[INFO] Attempting fallback chain: ${chain_key}${chain_desc:+ ($chain_desc)}"
+  if [ -n "$chain_tier" ]; then
+    echo "[INFO] Attempting fallback chain: ${chain_key}(${chain_tier})${chain_desc:+ ($chain_desc)}"
+  else
+    echo "[INFO] Attempting fallback chain: ${chain_key}${chain_desc:+ ($chain_desc)}"
+  fi
 
   local step_type step_value step_family step_model step_reasoning
   while IFS=$'\t' read -r step_type step_value step_family step_model step_reasoning; do
@@ -1772,7 +1844,7 @@ run_with_fallback_chain() {
         esac
         ;;
     esac
-  done < <(get_fallback_chain_steps "$chain_key")
+  done < <(get_fallback_chain_steps "$chain_key" "$chain_tier")
 
   echo "[QUEUED] No executable fallback step succeeded. Task queued for retry."
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "fallback_exhausted"
@@ -1784,7 +1856,7 @@ run_with_fallback_code() {
 }
 
 run_with_fallback_research() {
-  run_with_fallback_chain "research" "${1:-}" "${2:-}"
+  run_with_fallback_chain "research" "${1:-}" "${2:-}" "${3:-}"
 }
 
 # ============================================================
