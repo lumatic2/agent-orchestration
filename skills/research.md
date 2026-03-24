@@ -164,7 +164,25 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
 - 경고 없으면: 검증 결과를 보고서 하단 `## Citation Check` 섹션에 요약 추가
 
 4. `--paper` 옵션 시: 논문 초안 구조까지 생성 → S11 섹션 보완 (아래 §3 참조)
-5. `--vault` 옵션 시: vault `10-knowledge/{domain}/`에 저장
+5. `--vault` 옵션 시: 아래 규칙으로 vault `10-knowledge/{domain}/`에 저장
+
+**domain 분류 규칙 (주제 키워드 매핑):**
+| 키워드 | domain |
+|---|---|
+| llm, gpt, 딥러닝, 머신러닝, transformer, 강화학습, ai, 신경망, 임베딩, 멀티에이전트 | `ai` |
+| react, python, rust, api, 코드, 아키텍처, 프레임워크, docker, kubernetes, 백엔드, 프론트엔드, 웹 | `dev` |
+| 스타트업, 마케팅, 전략, okr, saas, 시장, 경영, 비즈니스, 투자, 재무 | `business` |
+| 물리, 화학, 생물, 의학, 논문, 실험, 과학 | `science` |
+| 그 외 | `general` |
+
+**파일명 규칙:** `{주제-slug}.md`
+- 주제를 소문자 + 하이픈으로 변환, 공백·특수문자 제거
+- 예: "React Server Components 동작 원리" → `react-server-components-dong-jak-wonri.md`
+- 날짜 불필요 (frontmatter date 필드에 기록됨)
+- 충돌 시: `{slug}-2.md`
+6. **자동 임시저장**: `--vault`나 `--paper` 옵션이 없어도, 리포트 완성 시 vault `00-inbox/{주제-slug}-{YYYY-MM-DD}.md` 에 자동 저장한다.
+   - 저장 후: "→ vault/00-inbox/{파일명} 저장 완료" 한 줄 출력
+   - 이미 존재하면 덮어쓰기
 
 ## 2. 리서치 노트 템플릿
 
@@ -231,6 +249,41 @@ Phase 3에서 추가로:
    - Conclusion
    - References
 
+아래 Gemini 호출로 논문 초안을 생성한다:
+
+```
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
+## Paper Draft Brief
+
+### Topic
+{주제}
+
+### Research Questions
+{RQ 목록}
+
+### Research Findings
+{Phase 3에서 조립된 보고서 전체}
+
+### Instructions
+아래 학술 논문 구조로 논문 초안을 작성해줘.
+
+1. Abstract (200단어)
+2. 1. 서론 (배경 + 문제 정의 + 연구 목적 + RQ)
+3. 2. 관련 연구 (기존 연구 및 선행 문헌 정리)
+4. 3. 연구 방법론 (분석 방법, 데이터 수집 방식)
+5. 4. 연구 결과 (Phase 2 findings 기반, 섹션별 서술)
+6. 5. 논의 (시사점 + 한계 + 향후 연구 방향)
+7. 6. 결론
+8. References (Phase 2 소스 목록 기반, (저자, 연도) 형식)
+
+규칙:
+- Phase 2 findings에 없는 내용 지어내기 금지
+- 각 섹션 최소 200단어
+- 전체 A4 3~5페이지 분량 마크다운
+- 불확실성 태그([불확실성: 상반된 관점 존재])는 그대로 유지
+" paper-draft-{주제요약}
+```
+
 2. **[S11] 섹션 보완**: 논문 초안 생성 직후 아래 명령으로 빈약한 섹션 자동 보완
 
 ```
@@ -294,6 +347,12 @@ D — Tech Dark (다크 헤더 블록, 파란 액센트)
 ```bash
 bash ~/projects/agent-orchestration/scripts/research-pipeline.sh "{주제}" --template {A|B|C|D} [--skip-experiment]
 ```
+
+**사전 요구사항 (S16 PDF 생성):**
+- typst 설치 필수: `winget install typst` (Windows) / `brew install typst` (Mac)
+- pandoc 설치 필수: `winget install pandoc` (Windows) / `brew install pandoc` (Mac)
+- 미설치 시 S16에서 PDF 생성 실패 → draft.md만 최종 산출물로 대체
+- 설치 확인: `typst --version && pandoc --version`
 
 - vault `30-projects/papers/{topic-slug}/` 아래에 상태를 저장한다.
 - `pipeline.json`이 이미 있으면 리줌한다 (5-4 참고).
