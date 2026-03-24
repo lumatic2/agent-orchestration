@@ -20,7 +20,7 @@
       ]
     },
   )
-  set text(font: ("Apple SD Gothic Neo", "Helvetica"), size: 10.5pt, lang: "ko")
+  set text(font: ("Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans CJK KR"), size: 10.5pt, lang: "ko")
   set par(justify: true, leading: 0.75em, spacing: 1.1em)
 
   // Dark header

@@ -223,9 +223,27 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
 " s14c-fix-{주제요약}
 ```
 
-- S14c 결과를 보고서에 반영: FIX 블록의 변경 내용을 해당 섹션에 적용
-- `[수정 필요]` 태그가 붙은 finding은 보고서 최하단 `## 미검증 항목` 섹션에 별도 목록으로 모음
-- 수정 후에도 `[수정 필요]` 비율이 30% 초과 시 사용자에게 알림
+- **S14c 재검증 (필수)**: S14c 결과를 반영하기 전, Gemini가 제안한 새 URL을 S14b와 동일한 방식으로 liveness 재검증한다:
+
+```bash
+# S14c가 반환한 새 URL 추출 후 재검증
+for url in {S14c FIX 블록에서 추출한 새 URL들}; do
+  status=$(curl -o /dev/null -s -w "%{http_code}" --max-time 8 --head "$url" 2>/dev/null)
+  if [ "$status" = "200" ] || [ "$status" = "301" ] || [ "$status" = "302" ]; then
+    echo "✅ $status $url — 교체 확정"
+  else
+    echo "❌ $status $url — Gemini 제안 URL도 실패, [수정 불가: URL 미확인]으로 확정"
+  fi
+done
+```
+
+  - ✅ 재검증 통과 → 새 URL로 교체, confidence 유지
+  - ❌/⚠️ 재검증 실패 → "수정 완료" 무시, `[수정 불가: URL 미확인]` 태그로 확정, confidence 강등
+  - **이 단계를 건너뛰면 S14c hallucination이 보고서에 그대로 반영될 수 있음**
+
+- S14c + 재검증 결과를 보고서에 반영: 검증 통과한 URL만 교체 적용
+- `[수정 필요]` / `[수정 불가]` 태그가 붙은 finding은 보고서 최하단 `## 미검증 항목` 섹션에 별도 목록으로 모음
+- 수정 후에도 `[수정 불가]` + `[수정 필요]` 합산 비율이 30% 초과 시 사용자에게 알림
 
 4. `--paper` 옵션 시: 논문 초안 구조까지 생성 → S11 섹션 보완 (아래 §3 참조)
 5. `--vault` 옵션 시: 아래 규칙으로 vault `10-knowledge/{domain}/`에 저장
@@ -247,6 +265,61 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
 6. **자동 임시저장**: `--vault`나 `--paper` 옵션이 없어도, 리포트 완성 시 vault `00-inbox/{주제-slug}-{YYYY-MM-DD}.md` 에 자동 저장한다.
    - 저장 후: "→ vault/00-inbox/{파일명} 저장 완료" 한 줄 출력
    - 이미 존재하면 덮어쓰기
+
+7. **[S16 경량] PDF 생성** (`--vault` 또는 `--paper` 옵션 시):
+
+   **템플릿 선택** — vault 저장 직전, 사용자에게 반드시 물어봐라:
+
+   ```
+   PDF 템플릿을 선택해주세요:
+
+   A — Academic  (2단 컬럼, IEEE 스타일, 번호 있는 섹션)
+   B — Modern    (파란 배너 헤더, 사이드 액센트 라인)
+   C — Minimal   (넓은 여백, 명조체, 절제된 타이포그래피)
+   D — Tech Dark (다크 헤더 블록, 파란 액센트)
+
+   기본값: A
+   ```
+
+   - pandoc 설치 확인: `pandoc --version` — 미설치 시 "PDF 생략" 출력 후 건너뜀
+   - 선택된 템플릿(`A`~`D`)을 변수 `TEMPLATE`에 저장 후 아래 3단계로 PDF 생성:
+
+```bash
+OUT_DIR=~/projects/agent-orchestration/outputs
+mkdir -p "$OUT_DIR"
+
+# MD_FILE: 모드 2 → 리서치 노트, 모드 3 → draft.md 내용을 로컬 임시 파일로 저장한 경로
+
+# Step 1: H1 제목 제거 (템플릿이 title을 별도 렌더링하므로 본문에서 중복 방지)
+#         H2 → H1으로 올려 최상위 섹션(1, 2, 3...)으로 변환
+sed '/^# /d' "$MD_FILE" > /tmp/{slug}_body.md
+pandoc /tmp/{slug}_body.md \
+  -t typst \
+  --shift-heading-level-by=-1 \
+  -o "$OUT_DIR/{slug}_body.typ"
+
+# Step 2: 템플릿 헤더 + 본문 결합
+cat > "$OUT_DIR/{slug}_final.typ" << TYPST
+#import "/users/1/projects/agent-orchestration/templates/typst/paper_${TEMPLATE}.typ": conf
+#show: conf.with(
+  title: "{주제}",
+  abstract: [{Abstract 첫 문장 또는 요약 1-2줄}],
+)
+TYPST
+cat "$OUT_DIR/{slug}_body.typ" >> "$OUT_DIR/{slug}_final.typ"
+
+# Step 3: typst compile (--root C:/ 로 절대 경로 해결)
+typst compile --root "C:/" \
+  "$OUT_DIR/{slug}_final.typ" \
+  "$OUT_DIR/{slug}.pdf" 2>/dev/null \
+|| pandoc "$MD_FILE" -o "$OUT_DIR/{slug}.pdf" \
+     --pdf-engine=typst --toc 2>/dev/null \
+|| echo "PDF 생성 실패 — md 파일로 대체"
+```
+
+   - 생성 성공 시: "→ PDF 저장: ~/projects/agent-orchestration/outputs/{slug}.pdf (템플릿: {TEMPLATE})" 출력
+   - **폰트**: Mac(AppleMyungjo/Apple SD Gothic Neo) → Windows(Batang/Malgun Gothic) → 범용(Noto CJK) 순 자동 폴백. 경고는 발생하나 PDF 정상 생성
+   - **모드 4와의 차이**: 모드 4는 research-pipeline.sh가 동일 방식으로 직접 처리. 모드 2·3은 위 스크립트 직접 실행
 
 ## 2. 리서치 노트 템플릿
 
@@ -391,7 +464,7 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
 
 ### 5-1. 템플릿 선택
 
-파이프라인 실행 전, 사용자에게 반드시 템플릿을 물어봐라:
+> **모드 2·3과 동일한 템플릿 선택 UI** — 파이프라인 실행 전, 사용자에게 반드시 물어봐라:
 
 ```
 PDF 템플릿을 선택해주세요:

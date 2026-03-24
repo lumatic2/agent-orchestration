@@ -54,7 +54,7 @@ sedi() {
 # nvm PATH 보장 (비대화형 쉘에서 .zshrc 미로드 시 대비)
 # ============================================================
 if [[ -d "$HOME/.nvm" ]]; then
-  NVM_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
+  NVM_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V 2>/dev/null | tail -1 || ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | tail -1)"
   [[ -n "$NVM_BIN" && ":$PATH:" != *":$NVM_BIN:"* ]] && export PATH="$NVM_BIN:$PATH"
 fi
 

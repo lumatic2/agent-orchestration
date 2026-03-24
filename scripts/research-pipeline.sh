@@ -13,6 +13,8 @@ TOPIC=""
 SLUG=""
 VAULT="${HOME}/vault"
 [ -d "$VAULT" ] || VAULT="/tmp/pipeline-test"
+# Python-compatible temp directory (Windows Git Bash /tmp/ not recognized by Python)
+PYTMPDIR="$(python3 -c "import tempfile; print(tempfile.gettempdir())" 2>/dev/null || echo "/tmp")"
 SKIP_EXPERIMENT="false"
 PAPER_DIR=""
 STATE_DIR=""
@@ -201,7 +203,9 @@ handle_decision() {
 init_pipeline() {
   TOPIC="$1"
   SLUG="$(slugify "$TOPIC")"
-  [ -n "$SLUG" ] || SLUG="paper-research"
+  if [ -z "$SLUG" ]; then
+    SLUG="research-$(printf '%s' "$TOPIC" | python3 -c "import sys,hashlib; print(hashlib.md5(sys.stdin.buffer.read()).hexdigest()[:8])")"
+  fi
 
   PAPER_DIR="$VAULT/30-projects/papers/$SLUG"
   STATE_DIR="$PAPER_DIR/state"
@@ -252,15 +256,15 @@ run_stage_gemini() {
   rm -f "$tmp"
 
   if [ "$exit_code" -eq 124 ]; then
-    echo "[pipeline] ERROR: $stage Gemini 호출 타임아웃 (180s 초과)" >&2
-    save_checkpoint "$stage" "failed"
-    echo "# $stage 실패\nERROR: Gemini 호출 타임아웃 (180s)" > "$out_file"
-    return 1
+    echo "[pipeline] WARN: $stage Gemini 호출 타임아웃 (180s) — 계속 진행" >&2
+    printf '# %s (타임아웃)\nERROR: Gemini 타임아웃 (180s)\n' "$stage" > "$out_file"
+    save_checkpoint "$stage" "completed"
+    return 0
   elif [ "$exit_code" -ne 0 ]; then
-    echo "[pipeline] ERROR: $stage Gemini 호출 실패 (exit $exit_code)" >&2
-    save_checkpoint "$stage" "failed"
-    echo "# $stage 실패\nERROR: Gemini exit $exit_code\n\n$full_content" > "$out_file"
-    return 1
+    echo "[pipeline] WARN: $stage Gemini 호출 실패 (exit $exit_code) — 계속 진행" >&2
+    printf '# %s (실패)\nERROR: Gemini exit %s\n' "$stage" "$exit_code" > "$out_file"
+    save_checkpoint "$stage" "completed"
+    return 0
   fi
 
   # "--- Gemini Result ---" 이후 내용만 추출 (메타 로그 제거)
@@ -298,15 +302,15 @@ run_stage_codex() {
 
   local full_content; full_content="$(cat "$tmp")"; rm -f "$tmp"
   if [ "$exit_code" -eq 124 ]; then
-    echo "[pipeline] ERROR: $stage Codex 호출 타임아웃 (300s)" >&2
-    save_checkpoint "$stage" "failed"
-    printf '# %s 실패\nERROR: Codex 타임아웃\n' "$stage" > "$out_file"
-    return 1
+    echo "[pipeline] WARN: $stage Codex 호출 타임아웃 (300s) — 계속 진행" >&2
+    printf '# %s (타임아웃)\nERROR: Codex 타임아웃\n' "$stage" > "$out_file"
+    save_checkpoint "$stage" "completed"
+    return 0
   elif [ "$exit_code" -ne 0 ]; then
-    echo "[pipeline] ERROR: $stage Codex 호출 실패 (exit $exit_code)" >&2
-    save_checkpoint "$stage" "failed"
-    printf '# %s 실패\nERROR: Codex exit %d\n\n%s\n' "$stage" "$exit_code" "$full_content" > "$out_file"
-    return 1
+    echo "[pipeline] WARN: $stage Codex 호출 실패 (exit $exit_code) — 계속 진행" >&2
+    printf '# %s (실패)\nERROR: Codex exit %s\n' "$stage" "$exit_code" > "$out_file"
+    save_checkpoint "$stage" "completed"
+    return 0
   fi
 
   # '--- Codex Result ---' 이후 추출, 없으면 전체
@@ -452,19 +456,35 @@ run_pipeline_stages() {
         local skip_api_flow=0
 
         local arxiv_raw ss_raw arxiv_json ss_json merged_md
-        arxiv_raw="$(mktemp /tmp/arxiv_raw_XXXXXX.xml)"
-        ss_raw="$(mktemp /tmp/ss_raw_XXXXXX.json)"
-        arxiv_json="$(mktemp /tmp/arxiv_parsed_XXXXXX.json)"
-        ss_json="$(mktemp /tmp/ss_parsed_XXXXXX.json)"
-        merged_md="$(mktemp /tmp/s02_lit_XXXXXX.md)"
+        arxiv_raw="$(mktemp "${PYTMPDIR}/arxiv_raw_XXXXXX.xml" 2>/dev/null || mktemp /tmp/arxiv_raw_XXXXXX.xml)"
+        ss_raw="$(mktemp "${PYTMPDIR}/ss_raw_XXXXXX.json" 2>/dev/null || mktemp /tmp/ss_raw_XXXXXX.json)"
+        arxiv_json="$(mktemp "${PYTMPDIR}/arxiv_parsed_XXXXXX.json" 2>/dev/null || mktemp /tmp/arxiv_parsed_XXXXXX.json)"
+        ss_json="$(mktemp "${PYTMPDIR}/ss_parsed_XXXXXX.json" 2>/dev/null || mktemp /tmp/ss_parsed_XXXXXX.json)"
+        merged_md="$(mktemp "${PYTMPDIR}/s02_lit_XXXXXX.md" 2>/dev/null || mktemp /tmp/s02_lit_XXXXXX.md)"
 
-        local slug_query
-        slug_query="$(python3 - "$SLUG" << 'PYEOF' 2>/dev/null || true
-import sys, urllib.parse
-print(urllib.parse.quote(sys.argv[1]))
-PYEOF
-)"
-        [ -z "$slug_query" ] && slug_query="$SLUG"
+        local search_terms en_keywords slug_query
+        search_terms="$TOPIC"
+        en_keywords=""
+
+        # S01 scope 파일에서 영문 키워드 먼저 읽기
+        if [ -f "$STATE_DIR/s01_scope.md" ]; then
+          en_keywords="$(grep '^\- \*\*영문 검색 키워드\*\*:' "$STATE_DIR/s01_scope.md" | sed 's/.*: //' | head -1)"
+        fi
+
+        # S01에 없으면 TOPIC이 한글인 경우 Gemini로 생성
+        if [ -z "$en_keywords" ]; then
+          if echo "$TOPIC" | grep -qP '[\x{AC00}-\x{D7A3}]' 2>/dev/null || echo "$TOPIC" | python3 -c "import sys; s=sys.stdin.read(); exit(0 if any(ord(c)>127 for c in s) else 1)" 2>/dev/null; then
+            en_keywords="$(bash "$ORCH" gemini "다음 한국어 연구 주제를 arXiv 검색에 적합한 영문 키워드 3~5개로 변환해줘. 키워드만 공백으로 구분해서 한 줄로 출력. 다른 설명 없이 키워드만.\n주제: $TOPIC" s02-en-keywords 2>/dev/null | grep -v '^\[' | grep -v '^---' | grep -v '^$' | tail -1)"
+            if [ -n "$en_keywords" ] && [ -f "$STATE_DIR/s01_scope.md" ] && ! grep -q '^\- \*\*영문 검색 키워드\*\*:' "$STATE_DIR/s01_scope.md"; then
+              printf '\n- **영문 검색 키워드**: %s\n' "$en_keywords" >> "$STATE_DIR/s01_scope.md"
+            fi
+          fi
+        fi
+
+        [ -n "$en_keywords" ] && search_terms="$en_keywords"
+
+        slug_query="$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$search_terms" 2>/dev/null || true)"
+        [ -z "$slug_query" ] && slug_query="$search_terms"
 
         local arxiv_url
         arxiv_url="https://export.arxiv.org/api/query?search_query=all:${slug_query}&max_results=15&sortBy=relevance"
@@ -500,7 +520,7 @@ if root is not None:
             "doi": "",
             "abstract": abstract
         })
-with open(out_path, "w") as f:
+with open(out_path, "w", encoding="utf-8") as f:
     json.dump(papers, f, ensure_ascii=False)
 print(len(papers))
 PYEOF
@@ -512,7 +532,7 @@ PYEOF
 
         if [ "$skip_api_flow" -eq 0 ]; then
           local ss_query
-          ss_query="$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote(sys.argv[1]))" "$TOPIC" 2>/dev/null || true)"
+          ss_query="$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$search_terms" 2>/dev/null || true)"
           local ss_url
           ss_url="https://api.semanticscholar.org/graph/v1/paper/search?query=${ss_query}&limit=10&fields=title,authors,year,externalIds,abstract,url"
           curl -s --max-time 30 "$ss_url" -o "$ss_raw" 2>/dev/null || true
@@ -521,7 +541,7 @@ import json, re, sys
 raw_path, out_path = sys.argv[1], sys.argv[2]
 papers = []
 try:
-    data = json.load(open(raw_path))
+    data = json.load(open(raw_path, encoding="utf-8"))
 except Exception:
     data = {}
 for p in data.get("data", []) if isinstance(data, dict) else []:
@@ -551,7 +571,7 @@ for p in data.get("data", []) if isinstance(data, dict) else []:
         "doi": doi,
         "abstract": abstract
     })
-with open(out_path, "w") as f:
+with open(out_path, "w", encoding="utf-8") as f:
     json.dump(papers, f, ensure_ascii=False)
 PYEOF
 
@@ -561,7 +581,7 @@ import difflib, json, re, sys
 arxiv_path, ss_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
 def read(path):
     try:
-        return json.load(open(path))
+        return json.load(open(path, encoding="utf-8"))
     except Exception:
         return []
 items = list(read(arxiv_path)) + list(read(ss_path))
@@ -581,7 +601,7 @@ for p in items:
         continue
     seen.append(low)
     final.append(p)
-with open(out_path, "w") as f:
+with open(out_path, "w", encoding="utf-8") as f:
     f.write(f"<!-- VERIFIED_PAPERS: {len(final)} -->\n\n")
     for idx, p in enumerate(final, 1):
         f.write(f"## 논문 {idx}: {(p.get('title') or 'N/A').strip()}\n")
@@ -770,14 +790,14 @@ S12_EOF
         # S10 base + S11 additions 병합 (python3) → draft.md
         local base_file="$STATE_DIR/s10_draft.md"
         local additions_file="$STATE_DIR/s11_revised.md"
-        python3 - "$base_file" "$additions_file" > "$PAPER_DIR/draft.md" << 'PYEOF'
+        python3 - "$base_file" "$additions_file" "$PAPER_DIR/draft.md" << 'PYEOF'
 import sys, re
 
-base_path, add_path = sys.argv[1], sys.argv[2]
-with open(base_path) as f:
+base_path, add_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
+with open(base_path, encoding="utf-8") as f:
     base = f.read()
 try:
-    with open(add_path) as f:
+    with open(add_path, encoding="utf-8") as f:
         additions_raw = f.read()
 except Exception:
     additions_raw = ""
@@ -794,6 +814,10 @@ for heading, content in blocks:
     content = content.strip()
     if not content:
         continue
+    # Fix: content가 동일 헤딩으로 시작하면 제거 (중복 헤딩 방지)
+    content = re.sub(r'^##\s+' + re.escape(heading) + r'\s*\n?', '', content, count=1).strip()
+    if not content:
+        continue
     # 섹션 다음에 삽입 (## 로 시작하는 다음 헤더 바로 앞)
     pattern = r'(## ' + re.escape(heading) + r'(?:\n.+?)*?)(\n(?=## )|\Z)'
     replacement = r'\1\n\n' + content + r'\2'
@@ -806,7 +830,8 @@ for heading, content in blocks:
 
 # [LOG]/[QUEUE] 메타라인 제거
 lines = [l for l in result.splitlines() if not l.startswith('[LOG]') and not l.startswith('[QUEUE]')]
-print('\n'.join(lines))
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write('\n'.join(lines))
 PYEOF
 
         # notes.md — 합성 + 가설 요약
@@ -960,19 +985,143 @@ Based on the URL audit and DOI verification results above:
         fi
         ;;
       S15)
-        local final_draft
-        final_draft="$([ -f "$PAPER_DIR/draft.md" ] && cat "$PAPER_DIR/draft.md" || cat "$STATE_DIR/s11_revised.md" 2>/dev/null || echo '(draft 없음)')"
-        final_draft="$(truncate_payload "$final_draft" 20000)"
+        # 0) 구조 검사 (Python) — 중복 헤딩·필수 섹션 누락 탐지
+        local struct_warn=""
+        local draft_path
+        draft_path="$([ -f "$PAPER_DIR/draft.md" ] && echo "$PAPER_DIR/draft.md" || echo "$STATE_DIR/s11_revised.md")"
+        local struct_issues
+        struct_issues="$(python3 - "$draft_path" << 'PYEOF'
+import sys, re
+from collections import Counter
+try:
+    with open(sys.argv[1], encoding='utf-8') as f:
+        content = f.read()
+except Exception:
+    content = ''
+headings = re.findall(r'^## .+', content, re.MULTILINE)
+dup = [h for h, c in Counter(headings).items() if c > 1]
+issues = []
+if dup:
+    issues.append('중복 헤딩: ' + ', '.join(dup))
+for req in ['서론', '결론', '참고문헌']:
+    if not re.search(r'^## .*' + req, content, re.MULTILINE):
+        issues.append('필수 섹션 누락: ' + req)
+sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+print('\n'.join(issues))
+PYEOF
+)" || true
+        if [ -n "$struct_issues" ]; then
+          struct_warn="$(printf '[구조 검사 경고]\n%s\n\n' "$struct_issues")"
+          echo "[pipeline] WARN S15 구조 문제 발견: $struct_issues" >&2
+        fi
 
-        # 1) Gemini 독립 리뷰
-        local gemini_brief="## Multi-Agent Validation: Gemini Review\n\n주제: ${TOPIC}\n\n아래 논문 초안을 독립적으로 평가해라.\n평가 항목: 논리적 일관성, 근거 품질, 구조 완성도, 인용 신뢰도, 한계 명시 여부.\n각 항목을 Strong/Moderate/Weak로 평가하고 근거 1-2줄을 제시해라.\n마지막에 Overall verdict(Accept/Minor Revision/Major Revision)를 내려라.\n\n## Draft\n${final_draft}"
+        # 1) 전체 draft 로드 (truncation 없음 — 모든 리뷰어가 동일한 전체 문서를 검토)
+        local draft_content
+        draft_content="$(cat "$draft_path" 2>/dev/null || echo '(draft 없음)')"
+
+        # 2) 공통 리뷰 프롬프트 (섹션별 평가 형식)
+        local review_ko_header="## 논문 피어리뷰
+
+주제: ${TOPIC}
+
+논문 초안을 읽고 각 섹션(## 헤딩 기준)을 순서대로 독립적으로 평가해라.
+
+각 섹션에 대해:
+### [섹션 제목]: [Strong / Moderate / Weak]
+- 논리 일관성: ...
+- 근거 품질: ...
+- 문제점 (있다면): ...
+
+모든 섹션 평가 후 최종 판정:
+## 최종 판정
+- Overall verdict: Accept / Minor Revision / Major Revision
+- 핵심 수정 요청 (상위 3개):
+- 강점 (상위 2개):
+
+---
+
+## 논문 초안
+"
+        local full_prompt_ko="${review_ko_header}${draft_content}"
+
+        local full_prompt_en="## Paper Peer Review
+
+Topic: ${TOPIC}
+
+Read the paper draft and evaluate each section (## headings) in order, independently.
+
+For each section:
+### [Section Title]: [Strong / Moderate / Weak]
+- Logical consistency: ...
+- Evidence quality: ...
+- Issues (if any): ...
+
+After all sections, conclude:
+## Final Verdict
+- Overall verdict: Accept / Minor Revision / Major Revision
+- Top revision requests (top 3):
+- Strengths (top 2):
+
+---
+
+## Paper Draft
+${draft_content}"
+
+        # 3) 3 리뷰어 병렬 실행 — Gemini, Codex, Claude (모두 동일한 전체 문서)
         local gemini_out="${STATE_DIR}/s15_gemini_review.md"
-        local tmp_g; tmp_g="$(mktemp)"
-        local eg=0
-        NO_VAULT=true FORCE=true bash "$ORCH" gemini "$gemini_brief" "s15-gemini-${SLUG}" > "$tmp_g" 2>&1 &
-        local gp=$!; local ge=0
-        while kill -0 "$gp" 2>/dev/null && [ "$ge" -lt 180 ]; do sleep 5; ge=$((ge+5)); done
-        if kill -0 "$gp" 2>/dev/null; then kill "$gp"; wait "$gp" 2>/dev/null; eg=124; else wait "$gp" || eg=$?; fi
+        local codex_out="${STATE_DIR}/s15_codex_review.md"
+        local claude_out="${STATE_DIR}/s15_claude_review.md"
+        local tmp_g tmp_c tmp_cl
+        tmp_g="$(mktemp)"; tmp_c="$(mktemp)"; tmp_cl="$(mktemp)"
+
+        NO_VAULT=true FORCE=true bash "$ORCH" gemini "$full_prompt_ko" "s15-gemini-${SLUG}" > "$tmp_g" 2>&1 &
+        local gp=$!
+
+        NO_VAULT=true FORCE=true bash "$ORCH" codex "$full_prompt_en" "s15-codex-${SLUG}" > "$tmp_c" 2>&1 &
+        local cp2=$!
+
+        # Claude 리뷰: claude -p (Max plan 커버, 별도 API 과금 없음)
+        {
+          claude -p "$full_prompt_ko" --output-format text 2>/dev/null \
+            || claude --print "$full_prompt_ko" 2>/dev/null \
+            || echo "(Claude 리뷰 실패: claude CLI 호출 불가)"
+        } > "$tmp_cl" &
+        local clp=$!
+
+        # 타임아웃: Gemini 180s, Codex 300s, Claude 180s (각 독립 추적)
+        local g_elapsed=0 c_elapsed=0 cl_elapsed=0
+        local g_done=false c_done=false cl_done=false
+        local eg=0 eck=0 ecl=0
+        while true; do
+          sleep 5
+          if ! $g_done; then
+            g_elapsed=$((g_elapsed+5))
+            if ! kill -0 "$gp" 2>/dev/null; then
+              wait "$gp" || eg=$?; g_done=true
+            elif [ "$g_elapsed" -ge 180 ]; then
+              kill "$gp" 2>/dev/null; wait "$gp" 2>/dev/null; eg=124; g_done=true
+            fi
+          fi
+          if ! $c_done; then
+            c_elapsed=$((c_elapsed+5))
+            if ! kill -0 "$cp2" 2>/dev/null; then
+              wait "$cp2" || eck=$?; c_done=true
+            elif [ "$c_elapsed" -ge 300 ]; then
+              kill "$cp2" 2>/dev/null; wait "$cp2" 2>/dev/null; eck=124; c_done=true
+            fi
+          fi
+          if ! $cl_done; then
+            cl_elapsed=$((cl_elapsed+5))
+            if ! kill -0 "$clp" 2>/dev/null; then
+              wait "$clp" || ecl=$?; cl_done=true
+            elif [ "$cl_elapsed" -ge 180 ]; then
+              kill "$clp" 2>/dev/null; wait "$clp" 2>/dev/null; ecl=124; cl_done=true
+            fi
+          fi
+          $g_done && $c_done && $cl_done && break
+        done
+
+        # 결과 추출 + 정제
         local g_full; g_full="$(cat "$tmp_g")"; rm -f "$tmp_g"
         local gr; gr="$(printf '%s\n' "$g_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
         [ -z "$gr" ] && gr="$g_full"
@@ -980,36 +1129,73 @@ Based on the URL audit and DOI verification results above:
         [ -z "$gr" ] && gr="(Gemini 리뷰 실패 exit=$eg)"
         printf '%s\n' "$gr" > "$gemini_out"
 
-        # 2) Codex 독립 리뷰
-        local codex_brief="Multi-Agent Validation: Codex Review\n\nTopic: ${TOPIC}\n\nReview the paper draft below independently.\nEvaluate: logical consistency, evidence quality, structure, citation reliability, limitations.\nRate each Strong/Moderate/Weak with 1-2 sentence rationale.\nGive an Overall verdict: Accept / Minor Revision / Major Revision.\n\nDraft:\n${final_draft}"
-        local codex_out="${STATE_DIR}/s15_codex_review.md"
-        local tmp_c; tmp_c="$(mktemp)"
-        local eck=0
-        NO_VAULT=true FORCE=true bash "$ORCH" codex "$codex_brief" "s15-codex-${SLUG}" > "$tmp_c" 2>&1 &
-        local cp2=$!; local ce=0
-        while kill -0 "$cp2" 2>/dev/null && [ "$ce" -lt 300 ]; do sleep 5; ce=$((ce+5)); done
-        if kill -0 "$cp2" 2>/dev/null; then kill "$cp2"; wait "$cp2" 2>/dev/null; eck=124; else wait "$cp2" || eck=$?; fi
         local c_full; c_full="$(cat "$tmp_c")"; rm -f "$tmp_c"
         local cr; cr="$(printf '%s\n' "$c_full" | awk '/^--- Codex Summary ---/{found=1;next}found')"
-        [ -z "$cr" ] && cr="$c_full"   # fallback: 전체 출력 사용
-        # node.js 스택트레이스 및 메타라인 제거
+        [ -z "$cr" ] && cr="$c_full"
         cr="$(printf '%s\n' "$cr" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]')"
         [ -z "$cr" ] && cr="(Codex 리뷰 실패 exit=$eck)"
         printf '%s\n' "$cr" > "$codex_out"
 
-        # 3) Claude 합성 — 두 리뷰를 orchestrate.sh gemini로 합성 (Claude 오케스트레이터 역할)
-        local synth_brief="## Multi-Agent Review Synthesis\n\n주제: ${TOPIC}\n\n아래는 동일한 논문 초안에 대한 두 AI 에이전트의 독립 리뷰다. 두 리뷰를 비교·분석해서 합의된 사항, 의견 차이, 최종 권고를 한국어로 정리해라.\n\n### Gemini 리뷰\n${gr}\n\n---\n\n### Codex 리뷰\n${cr}\n\n---\n\n## 출력 형식\n\n### 합의된 사항 (두 에이전트가 공통으로 지적한 문제)\n- ...\n\n### 의견 차이 (에이전트 간 평가가 다른 영역)\n- ...\n\n### 최종 권고\n- Overall verdict 비교 결과: ...\n- 우선 수정 사항: ..."
+        local clr; clr="$(cat "$tmp_cl" 2>/dev/null || echo "(Claude 리뷰 실패 exit=$ecl)")"
+        rm -f "$tmp_cl"
+        [ -z "$clr" ] && clr="(Claude 리뷰 실패 exit=$ecl)"
+        printf '%s\n' "$clr" > "$claude_out"
+
+        # 4) 합성 — 3 리뷰어 섹션별 평가 + 최종 판정 비교
+        local synth_brief="## 3-Agent 피어리뷰 합성
+
+주제: ${TOPIC}
+
+${struct_warn}아래는 세 AI 리뷰어의 섹션별 독립 리뷰다 (모두 동일한 전체 논문 초안을 검토).
+각 리뷰어의 섹션별 평가와 최종 판정(## 최종 판정)을 비교·분석하고 합의 결과를 도출해라.
+
+### Gemini 리뷰
+${gr}
+
+---
+
+### Codex 리뷰
+${cr}
+
+---
+
+### Claude 리뷰
+${clr}
+
+---
+
+## 출력 형식
+
+### 섹션별 합의 요약
+(2개 이상 리뷰어가 공통으로 지적한 섹션별 문제 — 섹션명과 문제 서술)
+
+### 리뷰어 간 의견 차이
+(평가가 갈린 섹션 + 이유 분석)
+
+### 최종 판정 비교
+
+| 리뷰어 | Overall Verdict |
+|---|---|
+| Gemini | ... |
+| Codex | ... |
+| Claude | ... |
+| **합의** | ... |
+
+### 최우선 수정 권고
+(2개 이상 리뷰어가 공통 지적한 문제, 우선순위 순 — 최대 5개)"
+        # 합성: Claude (Max plan) — Gemini 호출 절감 (Gemini: 리뷰 1회로 축소)
         local synth_out="${STATE_DIR}/s15_synthesis.md"
         local tmp_s; tmp_s="$(mktemp)"
         local es=0
-        NO_VAULT=true FORCE=true bash "$ORCH" gemini "$synth_brief" "s15-synthesis-${SLUG}" > "$tmp_s" 2>&1 &
+        {
+          claude -p "$synth_brief" --output-format text 2>/dev/null \
+            || claude --print "$synth_brief" 2>/dev/null \
+            || echo "(합성 실패: claude CLI 호출 불가)"
+        } > "$tmp_s" &
         local sp=$!; local se=0
         while kill -0 "$sp" 2>/dev/null && [ "$se" -lt 180 ]; do sleep 5; se=$((se+5)); done
         if kill -0 "$sp" 2>/dev/null; then kill "$sp"; wait "$sp" 2>/dev/null; es=124; else wait "$sp" || es=$?; fi
-        local s_full; s_full="$(cat "$tmp_s")"; rm -f "$tmp_s"
-        local sr; sr="$(printf '%s\n' "$s_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
-        [ -z "$sr" ] && sr="$s_full"
-        sr="$(printf '%s\n' "$sr" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]')"
+        local sr; sr="$(cat "$tmp_s")"; rm -f "$tmp_s"
         [ -z "$sr" ] && sr="(합성 실패 exit=$es)"
         printf '%s\n' "$sr" > "$synth_out"
 
@@ -1018,23 +1204,29 @@ Based on the URL audit and DOI verification results above:
 
 - **주제**: ${TOPIC}
 - **생성**: $(timestamp)
-- **검증 에이전트**: Gemini CLI, Codex CLI, Gemini(합성)
+- **검증 에이전트**: Gemini CLI (섹션별 리뷰), Codex CLI (섹션별 리뷰), Claude CLI (섹션별 리뷰 + 합성)
 
 ---
 
-## Gemini 리뷰
+## Gemini 리뷰 (섹션별)
 
 $(cat "$gemini_out")
 
 ---
 
-## Codex 리뷰
+## Codex 리뷰 (섹션별)
 
 $(cat "$codex_out")
 
 ---
 
-## 합성 의견 (Gemini가 두 리뷰 비교)
+## Claude 리뷰 (섹션별)
+
+$(cat "$claude_out")
+
+---
+
+## 합성 의견 (Claude — 3-Agent 최종 판정 비교)
 
 $(cat "$synth_out")
 
@@ -1043,12 +1235,18 @@ $(cat "$synth_out")
 ## 검증 파일
 - Gemini 리뷰: state/s15_gemini_review.md
 - Codex 리뷰: state/s15_codex_review.md
+- Claude 리뷰: state/s15_claude_review.md
 - 합성: state/s15_synthesis.md
 S15_EOF
 
-        # S15 Auto-Revision: verdict가 Revision이면 Gemini로 자동 수정
+        # S15 Auto-Revision: 합성 테이블의 합의 verdict 추출
         local s15_verdict
-        s15_verdict="$(cat "$synth_out" | grep -iE 'Overall verdict|최종 권고|overall verdict' | grep -oiE 'Accept|Minor Revision|Major Revision' | head -1 || true)"
+        # 1차: 합의 테이블 행에서 추출 (| **합의** | Minor Revision |)
+        s15_verdict="$(grep -iE '^\|[[:space:]]*\*\*합의\*\*' "$synth_out" | grep -oiE 'Accept|Minor Revision|Major Revision' | head -1 || true)"
+        # 2차: 최종 판정 비교 섹션 범위 내에서 추출
+        [ -z "$s15_verdict" ] && s15_verdict="$(awk '/최종 판정 비교|Final Verdict Comparison/,/^###/' "$synth_out" | grep -oiE 'Accept|Minor Revision|Major Revision' | tail -1 || true)"
+        # 3차: 파일 전체에서 마지막 verdict (가장 늦게 등장 = 합성 결론)
+        [ -z "$s15_verdict" ] && s15_verdict="$(grep -oiE 'Accept|Minor Revision|Major Revision' "$synth_out" | tail -1 || true)"
         if [[ "$s15_verdict" == *"Revision"* ]]; then
           echo "[pipeline] S15 verdict: $s15_verdict — 자동 수정 시작..."
           local current_draft
@@ -1064,7 +1262,7 @@ S15_EOF
 보고서에서 지적된 문제들을 반영하여 논문 초안을 수정해라.
 
 **수정 규칙:**
-- 검증 보고서의 '합의된 사항(두 에이전트 공통 지적 문제)'을 우선 수정
+- 검증 보고서의 '섹션별 합의 요약(공통 지적 문제)'을 우선 수정
 - 논리적 일관성, 근거 품질, 구조 완성도 문제를 고쳐라
 - 원문의 핵심 주장과 인용은 유지하되, 약한 부분만 강화해라
 - 출력: 수정된 완전한 논문 마크다운 전체 (섹션 헤딩, 초록, 본문, 참고문헌 포함)
@@ -1097,14 +1295,14 @@ $(printf '%s' "$current_draft" | head -300)"
 
             # 경량 재검증: 수정 후 주요 문제가 해결됐는지 확인
             echo "[pipeline] S15 수정 후 경량 재검증 시작..."
-            local recheck_draft; recheck_draft="$(head -c 4000 "$PAPER_DIR/draft.md")"
+            local recheck_draft; recheck_draft="$(head -c 12000 "$PAPER_DIR/draft.md")"
             local recheck_brief
             recheck_brief="## S15 수정 후 경량 재검증
 
 이전 검토에서 지적된 핵심 문제가 수정된 논문 초안에서 해결되었는지만 확인하라.
 
 ### 이전 주요 지적사항 (합성 보고서 요약)
-$(printf '%s\n' "$sr" | head -30)
+$(printf '%s\n' "$sr" | head -60)
 
 ### 수정된 초안 (앞부분)
 ${recheck_draft}
@@ -1145,7 +1343,10 @@ ${recheck_draft}
         # markdown → Typst → PDF (typst compile)
         # 파일명: 논문 첫 줄 제목 기반 (한국어 포함, 파일명 불가 문자만 제거)
         local paper_title
-        paper_title="$(grep -m1 '^#' "$PAPER_DIR/draft.md" | sed 's/^#* *//')"
+        # H1만 제목으로 사용, H2(초록 등) 제외
+        paper_title="$(grep -m1 '^# [^#]' "$PAPER_DIR/draft.md" 2>/dev/null | sed 's/^#* *//' || true)"
+        # H1 없으면 SLUG 사용
+        [ -z "$paper_title" ] && paper_title="${SLUG}"
         # 파일명 불가 문자(/ \ : * ? " < > |)와 공백 → 언더스코어, 연속 언더스코어 정리
         paper_title="$(printf '%s' "$paper_title" | sed 's|[/\\:*?"<>|]|_|g; s/[[:space:]]/_/g; s/__*/_/g; s/^_//; s/_$//')"
         if [ "${#paper_title}" -lt 2 ]; then
@@ -1164,10 +1365,11 @@ ${recheck_draft}
         else
           # 0) 논문 제목 + 초록 추출
           local raw_title abstract_text
-          raw_title="$(head -1 "$PAPER_DIR/draft.md" | sed 's/^#* *//')"
+          raw_title="$(grep -m1 '^# [^#]' "$PAPER_DIR/draft.md" 2>/dev/null | sed 's/^#* *//' || true)"
+          [ -z "$raw_title" ] && raw_title="${TOPIC}"
           abstract_text="$(python3 - "$PAPER_DIR/draft.md" << 'PYEOF'
 import sys, re
-lines = open(sys.argv[1]).read().split('\n')
+lines = open(sys.argv[1], encoding="utf-8").read().split('\n')
 in_abstract = False
 buf = []
 for line in lines:
@@ -1178,6 +1380,7 @@ for line in lines:
         if re.match(r'^#{1,2}\s+', line):
             break
         buf.append(line)
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 print('\n'.join(buf).strip())
 PYEOF
 )"
@@ -1186,7 +1389,7 @@ PYEOF
           local body_md="$PAPER_DIR/draft_body.md"
           python3 - "$PAPER_DIR/draft.md" "$body_md" << 'PYEOF'
 import sys, re
-lines = open(sys.argv[1]).read().split('\n')
+lines = open(sys.argv[1], encoding="utf-8").read().split('\n')
 out = []
 skip_abstract = False
 i = 0
@@ -1217,7 +1420,7 @@ content = re.sub(r'([^\n])\n(#{1,6} )', r'\1\n\n\2', content)
 content = re.sub(r'(#{1,6} [^\n]+)\n([^\n#\s])', r'\1\n\n\2', content)
 # 3줄 이상 연속 빈 줄 → 2줄로
 content = re.sub(r'\n{3,}', '\n\n', content)
-open(sys.argv[2], 'w').write(content)
+open(sys.argv[2], 'w', encoding="utf-8").write(content)
 PYEOF
 
           # 2) pandoc: markdown body → typst

@@ -12,14 +12,14 @@
     numbering: "1",
     number-align: center,
   )
-  set text(font: ("AppleMyungjo", "Georgia"), size: 10pt, lang: "ko")
+  set text(font: ("AppleMyungjo", "Batang", "Noto Serif CJK KR", "Georgia"), size: 10pt, lang: "ko")
   set par(justify: true, leading: 0.65em, spacing: 0.9em)
   set heading(numbering: "1.1")
 
   // Title block
   align(center)[
     #block(width: 100%)[
-      #text(size: 18pt, weight: "bold", font: ("Apple SD Gothic Neo", "Helvetica"))[#title]
+      #text(size: 18pt, weight: "bold", font: ("Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans CJK KR"))[#title]
       #v(0.3cm)
       #text(size: 9pt, fill: rgb("#555555"))[자율 연구 파이프라인 · #datetime.today().display("[year]년 [month]월 [day]일")]
       #v(0.2cm)
@@ -48,7 +48,7 @@
 
 #show heading.where(level: 1): it => {
   v(0.5em)
-  text(size: 11pt, weight: "bold", font: ("Apple SD Gothic Neo", "Helvetica"))[
+  text(size: 11pt, weight: "bold", font: ("Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans CJK KR"))[
     #counter(heading).display("1.") #it.body
   ]
   v(0.2em)
