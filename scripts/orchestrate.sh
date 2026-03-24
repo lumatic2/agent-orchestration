@@ -1494,7 +1494,7 @@ run_openclaw() {
       2>&1 > "$log_file" || true
   else
     echo "[INFO] openclaw CLI not found locally — running via SSH on m4"
-    ssh m4 "export PATH=\"\$(ls -d ~/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1):\$PATH\" && openclaw agent --agent main --message $(printf '%q' "$TASK")" \
+    ssh m4 "export PATH=\"\$HOME/bin:\$HOME/.local/bin:\$(ls -d ~/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1):/opt/homebrew/bin:\$PATH\" && openclaw agent --agent main --message $(printf '%q' "$TASK")" \
       2>&1 > "$log_file" || true
   fi
 
