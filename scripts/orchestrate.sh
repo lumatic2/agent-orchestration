@@ -1234,7 +1234,7 @@ $(cat "$checklist_file")"
 
   # Inject subagent hint if applicable
   local subagent_hint
-  subagent_hint=$(resolve_subagent_hint "$task_with_checklist" "${SELECTED_TIER:-medium}")
+  subagent_hint=$(resolve_subagent_hint "$task_with_checklist" "${SELECTED_COMPLEXITY_TIER:-medium}")
   if [ -n "$subagent_hint" ]; then
     task_with_checklist="[Subagent: use the '${subagent_hint}' subagent for this task]
 
@@ -1372,10 +1372,19 @@ $(cat "$checklist_file")"
   fi
 
   # Validate result — detect meta-response (Gemini said "completed" but returned no content)
+  # Two patterns: (a) result too short, (b) result contains file-save or step-narration signals
   local clean_len
   clean_len=$(echo "$result" | grep -v "YOLO mode\|Loaded cached\|^$\|write_todos\|mark.*complete\|task.*complete\|completed.*task\|analysis.*done\|I have completed\|All tasks are complete" | wc -c)
-  if [ "$clean_len" -lt 300 ]; then
-    echo "[WARN] Gemini returned a meta-response (${clean_len} chars). Retrying once..."
+  local has_file_save=false
+  echo "$result" | grep -qiE "saved to|report is saved|file.*saved|저장했습니다|저장되었습니다" && has_file_save=true
+  local has_narration=false
+  # Narration-only response: many "I will/I have" lines but fewer than 3 markdown headers
+  local header_count narration_count
+  header_count=$(echo "$result" | grep -c "^##" || true)
+  narration_count=$(echo "$result" | grep -cE "^(I will|I have|Now I|Next,|Okay,|I've)" || true)
+  [ "$header_count" -lt 3 ] && [ "$narration_count" -gt 3 ] && has_narration=true
+  if [ "$clean_len" -lt 300 ] || [ "$has_file_save" = "true" ] || [ "$has_narration" = "true" ]; then
+    echo "[WARN] Gemini returned a meta-response (len=${clean_len}, file_save=${has_file_save}, narration=${has_narration}). Retrying once..."
     local retry_prompt
     retry_prompt="IMPORTANT: Output the full analysis content directly. Do NOT say 'I completed' or 'analysis is done'. Write everything inline now.
 

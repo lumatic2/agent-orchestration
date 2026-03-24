@@ -46,3 +46,4 @@
 - Do not use todo tools, file write tools, or any side-channel to store results — output everything inline
 - Minimum output: 500 characters of substantive findings; if under this threshold the response is considered invalid
 - Always respond in the same language as the task prompt (if the prompt is in Korean, respond in Korean)
+- Do NOT write results to any file — do not use file write tools or save to paths like C:\Users\... — output everything to stdout only

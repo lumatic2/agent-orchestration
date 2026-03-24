@@ -198,6 +198,46 @@ def query_database_paginated(database_id: str, page_size: int = 100):
     return items
 
 
+def query_database_filtered(
+    database_id: str,
+    filter_obj: dict | None = None,
+    sorts: list[dict] | None = None,
+    page_size: int = 100,
+    start_cursor: str | None = None,
+) -> dict:
+    body: dict = {"page_size": page_size}
+    if filter_obj is not None:
+        body["filter"] = filter_obj
+    if sorts is not None:
+        body["sorts"] = sorts
+    if start_cursor:
+        body["start_cursor"] = start_cursor
+    return _request("POST", f"/databases/{database_id}/query", body)
+
+
+def query_database_filtered_paginated(
+    database_id: str,
+    filter_obj: dict | None = None,
+    sorts: list[dict] | None = None,
+    page_size: int = 100,
+) -> list[dict]:
+    items = []
+    cursor = None
+    while True:
+        payload = query_database_filtered(
+            database_id=database_id,
+            filter_obj=filter_obj,
+            sorts=sorts,
+            page_size=page_size,
+            start_cursor=cursor,
+        )
+        items.extend(payload.get("results") or [])
+        if not payload.get("has_more"):
+            break
+        cursor = payload.get("next_cursor")
+    return items
+
+
 def _norm_key(key: str) -> str:
     return "".join(ch for ch in key.lower().strip() if ch.isalnum())
 
@@ -1211,6 +1251,54 @@ def _cmd_list(args):
     sys.exit(2)
 
 
+def _cmd_query_database(args):
+    dbid = _extract_notion_id(args.database_id)
+    if not dbid:
+        print("Invalid database id or URL.", file=sys.stderr)
+        sys.exit(2)
+
+    filter_obj = None
+    if args.filter:
+        try:
+            filter_obj = json.loads(args.filter)
+        except json.JSONDecodeError as e:
+            print(f"Invalid JSON for --filter: {e.msg}", file=sys.stderr)
+            sys.exit(2)
+        if not isinstance(filter_obj, dict):
+            print("--filter must be a JSON object.", file=sys.stderr)
+            sys.exit(2)
+
+    sorts = None
+    if args.sorts:
+        try:
+            sorts = json.loads(args.sorts)
+        except json.JSONDecodeError as e:
+            print(f"Invalid JSON for --sorts: {e.msg}", file=sys.stderr)
+            sys.exit(2)
+        if not isinstance(sorts, list):
+            print("--sorts must be a JSON array.", file=sys.stderr)
+            sys.exit(2)
+
+    db = get_database(dbid)
+    title_prop = _find_title_property_name(db)
+    results = query_database_filtered_paginated(
+        dbid,
+        filter_obj=filter_obj,
+        sorts=sorts,
+        page_size=args.limit,
+    )
+
+    if args.json:
+        print(json.dumps(results, ensure_ascii=False, indent=2))
+        return
+
+    for p in results:
+        pid = p.get("id")
+        edited = p.get("last_edited_time")
+        title = _page_title(p, title_prop)
+        print(f"{pid}\t{edited}\t{title}")
+
+
 def _cmd_create(args):
     if args.content and args.content_file:
         print("Provide only one of --content or --content-file.", file=sys.stderr)
@@ -1798,6 +1886,14 @@ def main(argv: list[str]) -> int:
     p_ls.add_argument("--parent-page-id", help="List child pages under this page")
     p_ls.add_argument("--limit", type=int, default=10)
     p_ls.set_defaults(func=_cmd_list)
+
+    p_qd = sub.add_parser("query-database", help="Query database pages with optional filter/sorts JSON")
+    p_qd.add_argument("database_id", help="Database URL or ID")
+    p_qd.add_argument("--filter", help="Notion filter JSON object")
+    p_qd.add_argument("--sorts", help="Notion sorts JSON array")
+    p_qd.add_argument("--limit", type=int, default=100)
+    p_qd.add_argument("--json", action="store_true")
+    p_qd.set_defaults(func=_cmd_query_database)
 
     p_cr = sub.add_parser("create", help="Create a new page (database or page child)")
     p_cr.add_argument("--database-id")
