@@ -1539,6 +1539,7 @@ screen_capture() {
 run_openclaw() {
   local thinking="${1:-medium}"
   local log_file="$LOG_DIR/openclaw_${TASK_NAME}_${TIMESTAMP}.txt"
+  local ssh_prefix="source ~/.zprofile 2>/dev/null; source ~/.zshrc 2>/dev/null;"
 
   if [ "${DRY_RUN:-false}" = "true" ]; then
     echo "[DRY-RUN] openclaw (thinking=$thinking) — task: $TASK_NAME"
@@ -1547,29 +1548,163 @@ run_openclaw() {
 
   echo "[DISPATCH] OpenClaw (thinking=$thinking) — task: $TASK_NAME"
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "dispatched"
+  : > "$log_file"
 
-  # openclaw CLI가 없으면 M4 SSH로 원격 실행 (Windows/MacAir → M4)
-  # nvm PATH를 원격 셸에 명시적으로 주입 (비대화형 SSH는 .zshrc 미로드)
-  local REMOTE_NVM_BIN='$(ls -d ~/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)'
-  if command -v openclaw &>/dev/null; then
-    openclaw agent --agent main \
-      --message "$TASK" \
-      2>&1 > "$log_file" || true
-  else
-    echo "[INFO] openclaw CLI not found locally — running via SSH on m4"
-    ssh m4 "source ~/.zprofile 2>/dev/null; source ~/.zshrc 2>/dev/null; openclaw agent --agent main --message $(printf '%q' "$TASK")" \
-      2>&1 > "$log_file" || true
-  fi
+  run_openclaw_ssh() {
+    local remote_cmd="$1"
+    ssh m4 "${ssh_prefix} ${remote_cmd}"
+  }
 
-  local result
-  result=$(cat "$log_file")
+  parse_openclaw_json() {
+    local parse_mode="$1"
+    python3 -c '
+import json
+import sys
 
-  if [ -z "$result" ]; then
-    echo "[ERROR] OpenClaw returned empty response"
+mode = sys.argv[1]
+raw = sys.stdin.read()
+
+def load_json(text):
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for line in reversed(lines):
+        try:
+            return json.loads(line)
+        except Exception:
+            continue
+    try:
+        return json.loads(text)
+    except Exception:
+        return None
+
+def find_value(node, keys):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key in keys and value not in (None, ""):
+                return value
+            found = find_value(value, keys)
+            if found not in (None, ""):
+                return found
+    elif isinstance(node, list):
+        for item in node:
+            found = find_value(item, keys)
+            if found not in (None, ""):
+                return found
+    return None
+
+obj = load_json(raw)
+if obj is None:
+    print("")
+    raise SystemExit(0)
+
+if mode == "tab":
+    value = find_value(obj, {"tabId", "tab_id", "tabID", "targetId", "target_id", "id"})
+    print("" if value is None else str(value))
+elif mode == "path":
+    value = find_value(
+        obj,
+        {"path", "filePath", "file_path", "screenshotPath", "screenshot_path", "output", "file", "filename"},
+    )
+    print("" if value is None else str(value))
+elif mode == "text":
+    value = find_value(
+        obj,
+        {"text", "content", "snapshot", "dom", "domText", "dom_text", "markdown", "value"},
+    )
+    if value is None:
+        print(json.dumps(obj, ensure_ascii=False))
+    elif isinstance(value, str):
+        print(value)
+    else:
+        print(json.dumps(value, ensure_ascii=False))
+else:
+    print("")
+' "$parse_mode"
+  }
+
+  close_openclaw_browser() {
+    run_openclaw_ssh "openclaw browser close --json" >> "$log_file" 2>&1 || true
+  }
+
+  local task_url
+  task_url=$(printf '%s\n' "$TASK" | grep -Eo "https?://[^[:space:]\"'<>)]+" | head -1 || true)
+  if [ -z "$task_url" ]; then
+    echo "[ERROR] OpenClaw task requires a URL in TASK"
     [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "failed"
-    write_shared_status "openclaw" "failed"
+    write_shared_status "openclaw" "failed" "missing_url"
     return 1
   fi
+
+  local open_output tab_id
+  open_output=$(run_openclaw_ssh "openclaw browser open $(printf '%q' "$task_url") --json" 2>&1) || true
+  echo "$open_output" >> "$log_file"
+  tab_id=$(printf '%s' "$open_output" | parse_openclaw_json "tab")
+  if [ -z "$tab_id" ]; then
+    close_openclaw_browser
+    echo "[ERROR] OpenClaw browser open failed or tabId missing"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "failed"
+    write_shared_status "openclaw" "failed" "open_failed"
+    return 1
+  fi
+
+  local wait_output
+  wait_output=$(run_openclaw_ssh "openclaw browser wait --load domcontentloaded --timeout-ms 30000 --json" 2>&1) || true
+  echo "$wait_output" >> "$log_file"
+  if [ -z "$wait_output" ]; then
+    close_openclaw_browser
+    echo "[ERROR] OpenClaw browser wait returned empty response"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "failed"
+    write_shared_status "openclaw" "failed" "wait_failed"
+    return 1
+  fi
+
+  local screenshot_output remote_screenshot_path
+  screenshot_output=$(run_openclaw_ssh "openclaw browser screenshot --json" 2>&1) || true
+  echo "$screenshot_output" >> "$log_file"
+  remote_screenshot_path=$(printf '%s' "$screenshot_output" | parse_openclaw_json "path")
+  if [ -z "$remote_screenshot_path" ]; then
+    close_openclaw_browser
+    echo "[ERROR] OpenClaw browser screenshot path missing"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "failed"
+    write_shared_status "openclaw" "failed" "screenshot_path_missing"
+    return 1
+  fi
+
+  local screenshot_dir screenshot_ext local_screenshot_path
+  screenshot_dir="${QUEUE_TASK_DIR:-$LOG_DIR}"
+  mkdir -p "$screenshot_dir"
+  screenshot_ext="${remote_screenshot_path##*.}"
+  if [ -z "$screenshot_ext" ] || [[ "$screenshot_ext" == */* ]]; then
+    screenshot_ext="png"
+  fi
+  local_screenshot_path="${screenshot_dir}/openclaw_${TASK_NAME}_${TIMESTAMP}.${screenshot_ext}"
+  if ! scp "m4:${remote_screenshot_path}" "$local_screenshot_path" >> "$log_file" 2>&1; then
+    close_openclaw_browser
+    echo "[ERROR] Failed to download screenshot via scp"
+    [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "failed"
+    write_shared_status "openclaw" "failed" "scp_failed"
+    return 1
+  fi
+
+  local snapshot_output snapshot_text
+  snapshot_output=$(run_openclaw_ssh "openclaw browser snapshot --json" 2>&1) || true
+  echo "$snapshot_output" >> "$log_file"
+  snapshot_text=$(printf '%s' "$snapshot_output" | parse_openclaw_json "text")
+  if [ -z "$snapshot_text" ]; then
+    snapshot_text="$snapshot_output"
+  fi
+
+  close_openclaw_browser
+
+  local result
+  result=$(cat << RESULTEOF
+URL: $task_url
+Tab ID: $tab_id
+Screenshot: $local_screenshot_path
+
+--- Snapshot ---
+$snapshot_text
+RESULTEOF
+)
 
   [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "completed"
   [ -d "${QUEUE_TASK_DIR:-}" ] && echo "$result" > "$QUEUE_TASK_DIR/result.md"
