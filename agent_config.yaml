@@ -134,6 +134,16 @@ limits:
     light_per_day: 1500
     note: "공식 CLI quota는 모델별이 아니라 shared quota다. 상세 active limits는 AI Studio에서 확인."
 
+# --- Understand-Anything Integration ---
+ua:
+  enabled: true
+  min_tier: medium          # low에서는 KG 컨텍스트 주입 안 함
+  max_tokens:
+    medium: 2000
+    high: 4000
+    ultra: 6000
+  stale_warn_days: 30       # 30일 지난 KG는 경고 출력
+
 # --- Fallback Chains ---
 fallback:
   code_generation:

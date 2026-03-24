@@ -439,6 +439,59 @@ resolve_subagent_hint() {
   echo ""
 }
 
+# inject_ua_context <task_text> <tier> <work_dir>
+# Extracts relevant codebase context from Understand-Anything knowledge graph.
+# Returns context markdown on stdout, or empty if KG not found / tier too low.
+inject_ua_context() {
+  local task="$1"
+  local tier="${2:-medium}"
+  local work_dir="${3:-}"
+
+  # Gate: skip for low tier
+  [[ "$tier" == "low" ]] && return
+
+  # Gate: need work_dir
+  [ -z "$work_dir" ] && return
+
+  # Gate: KG must exist
+  local kg_file="$work_dir/.understand-anything/knowledge-graph.json"
+  [ -f "$kg_file" ] || return
+
+  # Gate: check if UA is enabled in config
+  local ua_enabled
+  ua_enabled=$(python3 -c "
+import yaml, sys
+try:
+    c = yaml.safe_load(open('$AGENT_CONFIG_FILE'))
+    print(c.get('ua',{}).get('enabled', True))
+except: print(True)
+" 2>/dev/null || echo "True")
+  [[ "$ua_enabled" == "False" ]] && return
+
+  # Resolve max_tokens from config
+  local max_tokens=2000
+  if [[ "$tier" == "high" ]]; then max_tokens=4000
+  elif [[ "$tier" == "ultra" ]]; then max_tokens=6000
+  fi
+
+  # Stale KG warning (30+ days)
+  local kg_age_days
+  kg_age_days=$(python3 -c "
+import os, time
+mtime = os.path.getmtime('$kg_file')
+print(int((time.time() - mtime) / 86400))
+" 2>/dev/null || echo "0")
+  if [ "$kg_age_days" -gt 30 ] 2>/dev/null; then
+    echo "[UA] Warning: Knowledge graph is ${kg_age_days} days old" >&2
+  fi
+
+  # Extract context
+  local context
+  context=$(python3 "$SCRIPT_DIR/ua_context.py" "$work_dir" "$task" --tier "$tier" --max-tokens "$max_tokens" 2>/dev/null || true)
+
+  [ -n "$context" ] && echo "$context"
+}
+
 resolve_dispatch_profile() {
   local agent="$1"
   local task_text="$2"
@@ -1240,6 +1293,16 @@ $(cat "$checklist_file")"
 
 ${task_with_checklist}"
     echo "[SUBAGENT] Hint injected: $subagent_hint"
+  fi
+
+  # Inject UA codebase context if available
+  local ua_context
+  ua_context=$(inject_ua_context "$task_with_checklist" "${SELECTED_COMPLEXITY_TIER:-medium}" "${work_dir:-$(pwd)}")
+  if [ -n "$ua_context" ]; then
+    task_with_checklist="${ua_context}
+
+${task_with_checklist}"
+    echo "[UA] Codebase context injected (tier: ${SELECTED_COMPLEXITY_TIER:-medium})"
   fi
 
   # Build codex command args

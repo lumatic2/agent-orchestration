@@ -86,12 +86,21 @@ vault 30-projects/papers/{주제}/ 에 자동 저장:
 ## 1. 연구 프로세스 (3단계 자율 루프)
 
 ### Phase 1 — 스코핑 + 쿼리 분해 (Scoping & Query Decomposition)
-1. 주제에서 핵심 연구 질문(RQ) 1~3개 도출
-2. 각 RQ를 **3~5개의 하위 질문(Sub-Q)**으로 분해:
+1. **관점 발견 (Perspective Discovery)**: 주제에서 탐색 가능한 관점 3~5개 도출 후 사용자에게 제시:
+   - 관점 유형 예시: 기술적 원리 / 상업적 활용 / 역사적 맥락 / 비교·대안 / 한계·리스크 / 미래 전망
+   - 예: "양자 컴퓨팅" → [기술 원리], [산업 적용], [국가별 경쟁], [보안 위협], [미래 로드맵]
+   - 사용자가 관점을 선택하거나 "전부" / "기본"으로 수락 가능
+2. 선택된 관점 기반으로 **핵심 연구 질문(RQ) 1~3개 도출**
+3. 각 RQ를 **3~5개의 하위 질문(Sub-Q)**으로 분해:
    - Sub-Q 유형: 정의/개념, 핵심 메커니즘, 장점, 단점/한계, 비교/대안, 미래 전망
    - 예: "GPT-Researcher 아키텍처" → "Planner-Executor 구조란?", "병렬 크롤링 방식은?", "교차검증은 어떻게 하나?", "한계점은?" 등
-3. Sub-Q를 바탕으로 **최종 보고서 개요(Outline)** 먼저 생성 (섹션 제목 목록)
-4. 사용자에게 RQ + 개요 확인 요청 → 승인 후 Phase 2
+4. Sub-Q를 바탕으로 **Annotated Outline** 생성:
+   - 섹션 제목 + 해당 섹션에서 다룰 핵심 내용 1줄 요약
+   - 예: `## 3. RAG 기반 완화 기법` → `외부 지식 베이스 연동으로 사실 정확도를 높이는 방법과 Self-RAG 발전 방향`
+5. 사용자에게 관점 · RQ · Annotated Outline 확인 요청:
+   - "승인" → Phase 2 진행
+   - "수정" → Sub-Q 추가/제거, 섹션 변경, 관점 재선택 반영 후 재제시
+   - 수정 없이 바로 진행 원하면 "넘어가자" / "응" 등으로 수락 가능
 
 ### Phase 2 — 수집 + 교차검증 (Collection & Verification)
 Gemini에게 리서치 위임 (`orchestrate.sh gemini`):
@@ -106,7 +115,7 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
 {Sub-Q 목록 — RQ별로 그룹화}
 
 ### Report Outline (이 구조에 맞춰 결과 작성)
-{Phase 1에서 생성한 개요 섹션 목록}
+{Phase 1에서 생성한 Annotated Outline — 섹션 제목 + 각 섹션 내용 요약 1줄}
 
 ### Instructions
 1. 각 Sub-Q를 독립적으로 조사 — Sub-Q별로 2+ 독립 소스에서 evidence 수집
@@ -117,8 +126,9 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
    - **Strong**: 2+ primary sources, reproducible
    - **Moderate**: single reliable source, likely correct
    - **Speculative**: partial data, plausible but unverified
-5. 결과를 Report Outline의 섹션 구조에 맞춰 작성 (섹션별로 관련 Sub-Q 결과를 채워 넣기)
-6. gap 분석: 답 못 찾은 Sub-Q + 추가 조사 방향
+5. **불확실성 태그**: 동일 주제에 대해 상반된 주장을 하는 소스가 발견되면 해당 finding 옆에 `[불확실성: 상반된 관점 존재]` 태그를 명시하고, 양측 주장을 모두 기술
+6. 결과를 Report Outline의 섹션 구조에 맞춰 작성 (섹션별로 관련 Sub-Q 결과를 채워 넣기)
+7. gap 분석: 답 못 찾은 Sub-Q + 추가 조사 방향
 
 ### Stop Conditions
 - 모든 Sub-Q가 Moderate 이상으로 답변됨
@@ -174,9 +184,12 @@ confidence: {overall: strong/moderate/speculative}
 1. {RQ1}
 2. {RQ2}
 
+## Perspectives
+- 선택된 관점: {관점1}, {관점2}, ...
+
 ## Report Outline
-1. {섹션1}
-2. {섹션2}
+1. {섹션1} — {내용 요약 1줄}
+2. {섹션2} — {내용 요약 1줄}
 3. ...
 
 ## {섹션1 제목}
@@ -186,6 +199,7 @@ confidence: {overall: strong/moderate/speculative}
 - **Evidence**: {소스1}, {소스2}
 - **Summary**: ...
 - **Cross-check**: {소스 간 일치 여부 — 2+ 소스 일치 시 Strong 근거}
+- **Uncertainty**: {상반된 관점이 있으면 `[불확실성: 상반된 관점 존재]` + 양측 요약, 없으면 생략}
 
 ## {섹션2 제목}
 
