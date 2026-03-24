@@ -226,6 +226,8 @@ with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
         line = raw.rstrip()
         if re.match(r'^\s*(#{1,6}\s|---|===|```)', line):
             continue
+        if re.search(r'(Registering|notification handler|MCP context|Scheduling MCP|Executing MCP|listChanged|capability|Listening anyway|Server .* has tools|Capabilities:', line):
+            continue
         line = re.sub(r'^\s*(?:\d+[.)]\s*|[•\-\*]\s*)', '', line).strip()
         if len(line) > 15:
             lines.append(line)
