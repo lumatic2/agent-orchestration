@@ -2,8 +2,13 @@
 
 set -euo pipefail
 
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 # Load secrets: GCP Secret Manager → .env fallback
-_S="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/secrets_load.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+# shellcheck disable=SC1091
+[ -f "$SCRIPT_DIR/env.sh" ] && source "$SCRIPT_DIR/env.sh"
+_S="$SCRIPT_DIR/secrets_load.sh"
 # shellcheck disable=SC1090
 [ -f "$_S" ] && source "$_S" 2>/dev/null; unset _S
 
