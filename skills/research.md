@@ -119,16 +119,20 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
 
 ### Instructions
 1. 각 Sub-Q를 독립적으로 조사 — Sub-Q별로 2+ 독립 소스에서 evidence 수집
-2. 소스별 신뢰도 평가 (primary/secondary)
-3. 교차검증: 동일 주제를 다룬 Sub-Q 결과 간 일치/불일치 명시
+2. **URL 필수**: 모든 수치·사실 claim에 반드시 공식 문서 URL을 포함할 것
+   - 형식: `[출처명](URL)` — URL 없는 수치는 자동으로 **Speculative**로 강등
+   - 1차 소스 우선: 공식 API docs, 공식 changelog, 공식 블로그 직접 인용
+   - URL을 찾을 수 없으면 해당 항목에 `[URL 미확인]` 태그 명시
+3. 소스별 신뢰도 평가 (primary/secondary)
+4. 교차검증: 동일 주제를 다룬 Sub-Q 결과 간 일치/불일치 명시
    - 2+ 소스에서 일관되면 Strong, 단일 소스면 Moderate, 추론이면 Speculative
-4. 각 finding에 confidence tier 부여:
-   - **Strong**: 2+ primary sources, reproducible
-   - **Moderate**: single reliable source, likely correct
-   - **Speculative**: partial data, plausible but unverified
-5. **불확실성 태그**: 동일 주제에 대해 상반된 주장을 하는 소스가 발견되면 해당 finding 옆에 `[불확실성: 상반된 관점 존재]` 태그를 명시하고, 양측 주장을 모두 기술
-6. 결과를 Report Outline의 섹션 구조에 맞춰 작성 (섹션별로 관련 Sub-Q 결과를 채워 넣기)
-7. gap 분석: 답 못 찾은 Sub-Q + 추가 조사 방향
+5. 각 finding에 confidence tier 부여:
+   - **Strong**: 2+ primary sources + URL 모두 확인됨
+   - **Moderate**: single reliable source, URL 확인됨
+   - **Speculative**: URL 미확인이거나 partial data
+6. **불확실성 태그**: 동일 주제에 대해 상반된 주장을 하는 소스가 발견되면 해당 finding 옆에 `[불확실성: 상반된 관점 존재]` 태그를 명시하고, 양측 주장을 모두 기술
+7. 결과를 Report Outline의 섹션 구조에 맞춰 작성 (섹션별로 관련 Sub-Q 결과를 채워 넣기)
+8. gap 분석: 답 못 찾은 Sub-Q + 추가 조사 방향
 
 ### Stop Conditions
 - 모든 Sub-Q가 Moderate 이상으로 답변됨
