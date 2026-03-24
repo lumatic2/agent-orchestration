@@ -462,11 +462,11 @@ run_pipeline_stages() {
         local skip_api_flow=0
 
         local arxiv_raw ss_raw arxiv_json ss_json merged_md
-        arxiv_raw="$(mktemp "${PYTMPDIR}/arxiv_raw_XXXXXX.xml" 2>/dev/null || mktemp /tmp/arxiv_raw_XXXXXX.xml)"
-        ss_raw="$(mktemp "${PYTMPDIR}/ss_raw_XXXXXX.json" 2>/dev/null || mktemp /tmp/ss_raw_XXXXXX.json)"
-        arxiv_json="$(mktemp "${PYTMPDIR}/arxiv_parsed_XXXXXX.json" 2>/dev/null || mktemp /tmp/arxiv_parsed_XXXXXX.json)"
-        ss_json="$(mktemp "${PYTMPDIR}/ss_parsed_XXXXXX.json" 2>/dev/null || mktemp /tmp/ss_parsed_XXXXXX.json)"
-        merged_md="$(mktemp "${PYTMPDIR}/s02_lit_XXXXXX.md" 2>/dev/null || mktemp /tmp/s02_lit_XXXXXX.md)"
+        arxiv_raw="$(mktemp "${PYTMPDIR}/arxiv_raw_XXXXXX" 2>/dev/null || mktemp)"
+        ss_raw="$(mktemp "${PYTMPDIR}/ss_raw_XXXXXX" 2>/dev/null || mktemp)"
+        arxiv_json="$(mktemp "${PYTMPDIR}/arxiv_parsed_XXXXXX" 2>/dev/null || mktemp)"
+        ss_json="$(mktemp "${PYTMPDIR}/ss_parsed_XXXXXX" 2>/dev/null || mktemp)"
+        merged_md="$(mktemp "${PYTMPDIR}/s02_lit_XXXXXX" 2>/dev/null || mktemp)"
 
         local search_terms en_keywords slug_query
         search_terms="$TOPIC"
