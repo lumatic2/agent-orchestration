@@ -192,11 +192,40 @@ done
 
 판정 기준:
 - ✅ 200/301/302 — 접속 가능
-- ⚠️ 403/404/410 등 — 페이지 없거나 접근 불가 (할루시네이션 의심)
+- ⚠️ 403/404/410/500 등 — 페이지 없거나 접근 불가 (할루시네이션 의심)
 - ❌ UNREACHABLE — 도메인 자체 없음 (가짜 URL 가능성 높음)
+- 🏛️ 정부/공공기관 도메인(`.go.kr`, `.re.kr`, `.or.kr`, `.ac.kr`) — curl 차단 가능성 높음, UNREACHABLE이어도 할루시네이션으로 단정하지 말 것. "브라우저 직접 확인 권장" 메시지 출력.
 
 liveness 결과를 `## Citation Check` 섹션에 S14 결과와 함께 추가.
 ❌/⚠️ URL은 해당 finding의 confidence를 한 단계 강등 (Strong→Moderate, Moderate→Speculative).
+
+**[S14c] 포착된 이슈 수정 루프**: S14b에서 ❌/⚠️ 판정된 finding에 대해 아래 순서로 수정을 시도한다.
+
+```
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
+다음 finding들은 URL liveness 체크에서 실패했습니다 (404/500/UNREACHABLE).
+각 finding에 대해 아래 순서로 수정하라:
+
+1. **대체 URL 탐색**: 동일 내용을 다루는 공식 문서·원문 URL을 새로 탐색
+   - 성공 시: 새 URL과 함께 finding 재작성, confidence 유지 또는 상향
+2. **대체 소스 탐색**: 동일 수치/사실을 확인할 수 있는 다른 1차 소스 탐색
+   - 성공 시: 새 소스로 교체, confidence 유지
+3. **수정 불가 시**: 해당 finding에 `[수정 필요: URL 미확인]` 태그 추가, confidence 강등
+
+출력 형식:
+## FIX: {finding 제목}
+- 상태: 수정 완료 / 대체 소스 교체 / 수정 불가
+- 변경 내용: {새 URL 또는 새 소스 또는 태그 추가}
+- 수정 후 confidence: Strong / Moderate / Speculative
+
+## 실패한 finding 목록
+{S14b에서 ❌/⚠️ 판정된 finding과 해당 URL 목록}
+" s14c-fix-{주제요약}
+```
+
+- S14c 결과를 보고서에 반영: FIX 블록의 변경 내용을 해당 섹션에 적용
+- `[수정 필요]` 태그가 붙은 finding은 보고서 최하단 `## 미검증 항목` 섹션에 별도 목록으로 모음
+- 수정 후에도 `[수정 필요]` 비율이 30% 초과 시 사용자에게 알림
 
 4. `--paper` 옵션 시: 논문 초안 구조까지 생성 → S11 섹션 보완 (아래 §3 참조)
 5. `--vault` 옵션 시: 아래 규칙으로 vault `10-knowledge/{domain}/`에 저장
