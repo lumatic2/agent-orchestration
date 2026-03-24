@@ -167,6 +167,32 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
 - `[CITATION WARNING]` 발생 시: 사용자에게 알리고 계속 진행 여부 확인 후 진행
 - 경고 없으면: 검증 결과를 보고서 하단 `## Citation Check` 섹션에 요약 추가
 
+**[S14b] URL liveness 체크**: S14 이후, 보고서에서 URL을 추출해 실제 접속 가능 여부를 확인한다.
+
+```bash
+# 보고서에서 http/https URL 추출 후 HEAD 요청으로 liveness 확인
+grep -oP 'https?://[^\s\)\"]+' <<'REPORT'
+{보고서 전체 텍스트}
+REPORT | sort -u | while read url; do
+  status=$(curl -o /dev/null -s -w "%{http_code}" --max-time 8 --head "$url" 2>/dev/null)
+  if [ "$status" = "200" ] || [ "$status" = "301" ] || [ "$status" = "302" ]; then
+    echo "✅ $status $url"
+  elif [ "$status" = "000" ]; then
+    echo "❌ UNREACHABLE $url"
+  else
+    echo "⚠️ $status $url"
+  fi
+done
+```
+
+판정 기준:
+- ✅ 200/301/302 — 접속 가능
+- ⚠️ 403/404/410 등 — 페이지 없거나 접근 불가 (할루시네이션 의심)
+- ❌ UNREACHABLE — 도메인 자체 없음 (가짜 URL 가능성 높음)
+
+liveness 결과를 `## Citation Check` 섹션에 S14 결과와 함께 추가.
+❌/⚠️ URL은 해당 finding의 confidence를 한 단계 강등 (Strong→Moderate, Moderate→Speculative).
+
 4. `--paper` 옵션 시: 논문 초안 구조까지 생성 → S11 섹션 보완 (아래 §3 참조)
 5. `--vault` 옵션 시: 아래 규칙으로 vault `10-knowledge/{domain}/`에 저장
 
