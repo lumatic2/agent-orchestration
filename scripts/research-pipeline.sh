@@ -4,6 +4,12 @@
 
 set -euo pipefail
 
+# Mac Homebrew PATH 보장 (비대화형 SSH 세션에서 /opt/homebrew/bin 누락 방지)
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  [[ ":$PATH:" != *":/opt/homebrew/bin:"* ]] && export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
+  [[ ":$PATH:" != *":/usr/local/bin:"* ]]    && export PATH="/usr/local/bin:$PATH"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
