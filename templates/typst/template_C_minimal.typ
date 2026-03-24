@@ -18,7 +18,7 @@
       ]
     ),
   )
-  set text(font: ("AppleMyungjo", "Palatino", "AppleMyungjo"), size: 11pt, lang: "ko")
+  set text(font: ("NanumMyeongjo", "Noto Serif", "Georgia"), size: 11pt, lang: "ko")
   set par(justify: true, leading: 0.9em, spacing: 1.4em, first-line-indent: 1.5em)
   set heading(numbering: none)
 
