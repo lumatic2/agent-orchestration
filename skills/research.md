@@ -119,11 +119,16 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "
 
 ### Instructions
 1. 각 Sub-Q를 독립적으로 조사 — Sub-Q별로 2+ 독립 소스에서 evidence 수집
-2. **URL 필수**: 모든 수치·사실 claim에 반드시 공식 문서 URL을 포함할 것
+2. **URL 필수**: 모든 수치·사실 claim에 반드시 URL을 포함할 것
    - 형식: `[출처명](URL)` — URL 없는 수치는 자동으로 **Speculative**로 강등
-   - 1차 소스 우선: 공식 API docs, 공식 changelog, 공식 블로그 직접 인용
    - URL을 찾을 수 없으면 해당 항목에 `[URL 미확인]` 태그 명시
-3. 소스별 신뢰도 평가 (primary/secondary)
+3. **소스 우선순위 (엄격 적용)**:
+   - **1차 소스 (Primary)**: 공식 API docs, 공식 changelog, 공식 블로그 — 반드시 먼저 탐색
+     - Anthropic: `docs.anthropic.com`, `anthropic.com/news`
+     - OpenAI: `platform.openai.com/docs`, `openai.com/blog`
+     - Google: `ai.google.dev`, `cloud.google.com/vertex-ai/docs`
+   - **2차 소스 (Secondary)**: 제3자 블로그, 뉴스, 정보 사이트 — 1차 소스 URL이 없을 때만 사용, 반드시 `[Secondary]` 태그 명시
+   - 2차 소스만 있는 finding은 confidence 최대 **Moderate**로 제한
 4. 교차검증: 동일 주제를 다룬 Sub-Q 결과 간 일치/불일치 명시
    - 2+ 소스에서 일관되면 Strong, 단일 소스면 Moderate, 추론이면 Speculative
 5. 각 finding에 confidence tier 부여:
