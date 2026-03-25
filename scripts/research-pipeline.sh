@@ -292,16 +292,37 @@ run_stage_gemini() {
   full_content="$(cat "$tmp")"
   rm -f "$tmp"
 
-  if [ "$exit_code" -eq 124 ]; then
-    echo "[pipeline] WARN: $stage Gemini 호출 타임아웃 (180s) — 계속 진행" >&2
-    printf '# %s (타임아웃)\nERROR: Gemini 타임아웃 (180s)\n' "$stage" > "$out_file"
-    save_checkpoint "$stage" "completed"
-    return 0
-  elif [ "$exit_code" -ne 0 ]; then
-    echo "[pipeline] WARN: $stage Gemini 호출 실패 (exit $exit_code) — 계속 진행" >&2
-    printf '# %s (실패)\nERROR: Gemini exit %s\n' "$stage" "$exit_code" > "$out_file"
-    save_checkpoint "$stage" "completed"
-    return 0
+  # Gemini 실패/타임아웃 시 ChatGPT fallback 시도
+  if [ "$exit_code" -eq 124 ] || [ "$exit_code" -ne 0 ]; then
+    local fail_reason="exit $exit_code"
+    [ "$exit_code" -eq 124 ] && fail_reason="timeout 180s"
+    echo "[pipeline] WARN: $stage Gemini 실패 ($fail_reason) — ChatGPT fallback 시도" >&2
+
+    local fb_tmp fb_exit=0
+    fb_tmp="$(mktemp)"
+    NO_VAULT=true FORCE=true bash "$ORCH" chatgpt "$brief" "${name}-fallback" > "$fb_tmp" 2>&1 &
+    local fb_pid=$!
+    local fb_elapsed=0
+    while kill -0 "$fb_pid" 2>/dev/null && [ "$fb_elapsed" -lt 300 ]; do
+      sleep 5; fb_elapsed=$((fb_elapsed + 5))
+    done
+    if kill -0 "$fb_pid" 2>/dev/null; then
+      kill "$fb_pid" 2>/dev/null; wait "$fb_pid" 2>/dev/null; fb_exit=124
+    else
+      wait "$fb_pid" || fb_exit=$?
+    fi
+
+    if [ "$fb_exit" -eq 0 ]; then
+      full_content="$(cat "$fb_tmp")"
+      echo "[pipeline] $stage ChatGPT fallback 성공" >&2
+    else
+      echo "[pipeline] WARN: $stage ChatGPT fallback도 실패 (exit $fb_exit) — 빈 결과로 진행" >&2
+      printf '# %s (실패)\nGemini: %s / ChatGPT fallback: exit %s\n' "$stage" "$fail_reason" "$fb_exit" > "$out_file"
+      rm -f "$fb_tmp"
+      save_checkpoint "$stage" "completed"
+      return 0
+    fi
+    rm -f "$fb_tmp"
   fi
 
   # "--- Gemini Result ---" 이후 내용만 추출 (메타 로그 제거)
@@ -508,10 +529,38 @@ run_pipeline_stages() {
           en_keywords="$(grep '^\- \*\*영문 검색 키워드\*\*:' "$STATE_DIR/s01_scope.md" | sed 's/.*: //' | head -1)"
         fi
 
-        # S01에 없으면 TOPIC이 한글인 경우 Gemini로 생성
+        # S01에 없으면 TOPIC이 한글인 경우 Gemini→ChatGPT fallback으로 영문 키워드 생성
         if [ -z "$en_keywords" ]; then
           if echo "$TOPIC" | grep -qP '[\x{AC00}-\x{D7A3}]' 2>/dev/null || echo "$TOPIC" | python3 -c "import sys; s=sys.stdin.read(); exit(0 if any(ord(c)>127 for c in s) else 1)" 2>/dev/null; then
-            en_keywords="$(bash "$ORCH" gemini "다음 한국어 연구 주제를 arXiv 검색에 적합한 영문 키워드 3~5개로 변환해줘. 키워드만 공백으로 구분해서 한 줄로 출력. 다른 설명 없이 키워드만.\n주제: $TOPIC" s02-en-keywords 2>/dev/null | grep -v '^\[' | grep -v '^---' | grep -v '^$' | tail -1 || true)"
+            local _kw_prompt="다음 한국어 연구 주제를 arXiv 검색에 적합한 영문 키워드 3~5개로 변환해줘. 키워드만 공백으로 구분해서 한 줄로 출력. 다른 설명 없이 키워드만.\n주제: $TOPIC"
+            local _kw_tmp; _kw_tmp="$(mktemp)"
+            local _kw_exit=0
+            bash "$ORCH" gemini "$_kw_prompt" s02-en-keywords > "$_kw_tmp" 2>/dev/null &
+            local _kw_pid=$!
+            local _kw_elapsed=0
+            while kill -0 "$_kw_pid" 2>/dev/null && [ "$_kw_elapsed" -lt 60 ]; do
+              sleep 3; _kw_elapsed=$((_kw_elapsed + 3))
+            done
+            if kill -0 "$_kw_pid" 2>/dev/null; then
+              kill "$_kw_pid" 2>/dev/null; wait "$_kw_pid" 2>/dev/null; _kw_exit=124
+            else
+              wait "$_kw_pid" || _kw_exit=$?
+            fi
+            if [ "$_kw_exit" -ne 0 ]; then
+              echo "[pipeline] S02: Gemini 키워드 변환 실패 — ChatGPT fallback" >&2
+              bash "$ORCH" chatgpt "$_kw_prompt" s02-en-keywords-fb > "$_kw_tmp" 2>/dev/null &
+              _kw_pid=$!; _kw_elapsed=0
+              while kill -0 "$_kw_pid" 2>/dev/null && [ "$_kw_elapsed" -lt 60 ]; do
+                sleep 3; _kw_elapsed=$((_kw_elapsed + 3))
+              done
+              if kill -0 "$_kw_pid" 2>/dev/null; then
+                kill "$_kw_pid" 2>/dev/null; wait "$_kw_pid" 2>/dev/null
+              else
+                wait "$_kw_pid" 2>/dev/null || true
+              fi
+            fi
+            en_keywords="$(cat "$_kw_tmp" 2>/dev/null | grep -v '^\[' | grep -v '^---' | grep -v '^$' | tail -1 || true)"
+            rm -f "$_kw_tmp"
             if [ -n "$en_keywords" ] && [ -f "$STATE_DIR/s01_scope.md" ] && ! grep -q '^\- \*\*영문 검색 키워드\*\*:' "$STATE_DIR/s01_scope.md"; then
               printf '\n- **영문 검색 키워드**: %s\n' "$en_keywords" >> "$STATE_DIR/s01_scope.md"
             fi
