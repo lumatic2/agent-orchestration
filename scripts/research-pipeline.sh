@@ -37,17 +37,39 @@ GATE_ARG=""
 DECISION_ARG=""
 TEMPLATE="A"   # Typst 템플릿: A(학술) B(모던) C(미니멀) D(테크다크)
 
-# ── 프로세스 트리 kill (크로스 플랫폼) ──────────────────────────────────
-_kill_tree() {
-  local pid="$1"
-  if [[ "$(uname -s)" == MINGW* ]] || [[ "$(uname -s)" == MSYS* ]]; then
-    # Windows: taskkill /T 로 프로세스 트리 전체 종료
-    taskkill //F //T //PID "$pid" >/dev/null 2>&1 || kill "$pid" 2>/dev/null || true
-  else
-    # Linux/Mac: pkill -P → kill
-    pkill -P "$pid" 2>/dev/null || true
-    kill "$pid" 2>/dev/null || true
-  fi
+# ── 크로스 플랫폼 timeout 실행 (Python subprocess) ─────────────────────
+# 사용: _run_with_timeout 60 bash "$ORCH" gemini "prompt" "name"
+# 반환: 성공 시 0, timeout 시 124, 기타 실패 시 해당 exit code
+# stdout → 그대로 전달, stderr → /dev/null (호출자가 리다이렉트)
+_run_with_timeout() {
+  local timeout_sec="$1"; shift
+  python3 - "$timeout_sec" "$@" << 'PYEOF'
+import subprocess, sys, os, signal
+timeout = int(sys.argv[1])
+cmd = sys.argv[2:]
+try:
+    # start_new_session=True → 프로세스 그룹 분리 (timeout 시 전체 트리 kill)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                         start_new_session=True)
+    stdout, _ = p.communicate(timeout=timeout)
+    sys.stdout.buffer.write(stdout)
+    sys.exit(p.returncode)
+except subprocess.TimeoutExpired:
+    # 프로세스 그룹 전체 kill
+    try:
+        if os.name == 'nt':
+            subprocess.run(['taskkill', '/F', '/T', '/PID', str(p.pid)],
+                           capture_output=True)
+        else:
+            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+    except Exception:
+        p.kill()
+    p.wait()
+    sys.exit(124)
+except Exception as e:
+    print(f"_run_with_timeout error: {e}", file=sys.stderr)
+    sys.exit(1)
+PYEOF
 }
 
 # ── 유틸 ───────────────────────────────────────────────────────────────
@@ -284,46 +306,22 @@ run_stage_gemini() {
   local tmp
   tmp="$(mktemp)"
 
-  # 타임아웃 180초 — 초과 시 실패로 처리 (macOS timeout 없으므로 bash 구현)
+  # Gemini 180초 timeout → 실패 시 ChatGPT 300초 fallback
   local exit_code=0
-  NO_VAULT=true FORCE=true bash "$ORCH" gemini "$brief" "$name" > "$tmp" 2>&1 &
-  local bg_pid=$!
-  local elapsed=0
-  local timeout_sec=180
-  while kill -0 "$bg_pid" 2>/dev/null && [ "$elapsed" -lt "$timeout_sec" ]; do
-    sleep 5
-    elapsed=$((elapsed + 5))
-  done
-  if kill -0 "$bg_pid" 2>/dev/null; then
-    _kill_tree "$bg_pid"; wait "$bg_pid" 2>/dev/null || true
-    exit_code=124
-  else
-    wait "$bg_pid" || exit_code=$?
-  fi
+  NO_VAULT=true FORCE=true _run_with_timeout 180 bash "$ORCH" gemini "$brief" "$name" > "$tmp" 2>&1 || exit_code=$?
 
   local result full_content
   full_content="$(cat "$tmp")"
   rm -f "$tmp"
 
-  # Gemini 실패/타임아웃 시 ChatGPT fallback 시도
-  if [ "$exit_code" -eq 124 ] || [ "$exit_code" -ne 0 ]; then
+  if [ "$exit_code" -ne 0 ]; then
     local fail_reason="exit $exit_code"
     [ "$exit_code" -eq 124 ] && fail_reason="timeout 180s"
     echo "[pipeline] WARN: $stage Gemini 실패 ($fail_reason) — ChatGPT fallback 시도" >&2
 
     local fb_tmp fb_exit=0
     fb_tmp="$(mktemp)"
-    NO_VAULT=true FORCE=true bash "$ORCH" chatgpt "$brief" "${name}-fallback" > "$fb_tmp" 2>&1 &
-    local fb_pid=$!
-    local fb_elapsed=0
-    while kill -0 "$fb_pid" 2>/dev/null && [ "$fb_elapsed" -lt 300 ]; do
-      sleep 5; fb_elapsed=$((fb_elapsed + 5))
-    done
-    if kill -0 "$fb_pid" 2>/dev/null; then
-      _kill_tree "$fb_pid"; wait "$fb_pid" 2>/dev/null || true; fb_exit=124
-    else
-      wait "$fb_pid" || fb_exit=$?
-    fi
+    NO_VAULT=true FORCE=true _run_with_timeout 300 bash "$ORCH" chatgpt "$brief" "${name}-fallback" > "$fb_tmp" 2>&1 || fb_exit=$?
 
     if [ "$fb_exit" -eq 0 ]; then
       full_content="$(cat "$fb_tmp")"
@@ -359,17 +357,7 @@ run_stage_codex() {
   local tmp; tmp="$(mktemp)"
   local exit_code=0
 
-  NO_VAULT=true FORCE=true bash "$ORCH" codex "$brief" "$name" > "$tmp" 2>&1 &
-  local bg_pid=$!
-  local elapsed=0; local timeout_sec=300
-  while kill -0 "$bg_pid" 2>/dev/null && [ "$elapsed" -lt "$timeout_sec" ]; do
-    sleep 5; elapsed=$((elapsed + 5))
-  done
-  if kill -0 "$bg_pid" 2>/dev/null; then
-    _kill_tree "$bg_pid"; wait "$bg_pid" 2>/dev/null || true; exit_code=124
-  else
-    wait "$bg_pid" || exit_code=$?
-  fi
+  NO_VAULT=true FORCE=true _run_with_timeout 300 bash "$ORCH" codex "$brief" "$name" > "$tmp" 2>&1 || exit_code=$?
 
   local full_content; full_content="$(cat "$tmp")"; rm -f "$tmp"
   if [ "$exit_code" -eq 124 ]; then
@@ -548,30 +536,10 @@ run_pipeline_stages() {
             local _kw_prompt="다음 한국어 연구 주제를 arXiv 검색에 적합한 영문 키워드 3~5개로 변환해줘. 키워드만 공백으로 구분해서 한 줄로 출력. 다른 설명 없이 키워드만.\n주제: $TOPIC"
             local _kw_tmp; _kw_tmp="$(mktemp)"
             local _kw_exit=0
-            bash "$ORCH" gemini "$_kw_prompt" s02-en-keywords > "$_kw_tmp" 2>/dev/null &
-            local _kw_pid=$!
-            local _kw_elapsed=0
-            while kill -0 "$_kw_pid" 2>/dev/null && [ "$_kw_elapsed" -lt 60 ]; do
-              sleep 3; _kw_elapsed=$((_kw_elapsed + 3))
-            done
-            if kill -0 "$_kw_pid" 2>/dev/null; then
-              _kill_tree "$_kw_pid"; wait "$_kw_pid" 2>/dev/null || true; _kw_exit=124
-            else
-              wait "$_kw_pid" || _kw_exit=$?
-            fi
+            _run_with_timeout 60 bash "$ORCH" gemini "$_kw_prompt" s02-en-keywords > "$_kw_tmp" 2>/dev/null || _kw_exit=$?
             if [ "$_kw_exit" -ne 0 ]; then
               echo "[pipeline] S02: Gemini 키워드 변환 실패 (${_kw_exit}) — ChatGPT fallback" >&2
-              bash "$ORCH" chatgpt "$_kw_prompt" s02-en-keywords-fb > "$_kw_tmp" 2>/dev/null &
-              _kw_pid=$!; _kw_elapsed=0
-              while kill -0 "$_kw_pid" 2>/dev/null && [ "$_kw_elapsed" -lt 60 ]; do
-                sleep 3; _kw_elapsed=$((_kw_elapsed + 3))
-              done
-              if kill -0 "$_kw_pid" 2>/dev/null; then
-                kill -- -"$_kw_pid" 2>/dev/null || kill "$_kw_pid" 2>/dev/null || true
-                wait "$_kw_pid" 2>/dev/null || true
-              else
-                wait "$_kw_pid" 2>/dev/null || true
-              fi
+              _run_with_timeout 60 bash "$ORCH" chatgpt "$_kw_prompt" s02-en-keywords-fb > "$_kw_tmp" 2>/dev/null || true
             fi
             en_keywords="$(cat "$_kw_tmp" 2>/dev/null | grep -v '^\[' | grep -v '^---' | grep -v '^$' | tail -1 || true)"
             rm -f "$_kw_tmp"
@@ -853,19 +821,7 @@ ${collected}"
             local tmp_g
             tmp_g="$(mktemp)"
             local eg=0
-            NO_VAULT=true FORCE=true bash "$ORCH" gemini "$analyze_brief" "s02-literature-analysis-${SLUG}" > "$tmp_g" 2>&1 &
-            local bg_pid=$!
-            local elapsed=0
-            while kill -0 "$bg_pid" 2>/dev/null && [ "$elapsed" -lt 180 ]; do
-              sleep 5
-              elapsed=$((elapsed + 5))
-            done
-            if kill -0 "$bg_pid" 2>/dev/null; then
-              _kill_tree "$bg_pid"; wait "$bg_pid" 2>/dev/null || true
-              eg=124
-            else
-              wait "$bg_pid" || eg=$?
-            fi
+            NO_VAULT=true FORCE=true _run_with_timeout 180 bash "$ORCH" gemini "$analyze_brief" "s02-literature-analysis-${SLUG}" > "$tmp_g" 2>&1 || eg=$?
             local g_full gr
             g_full="$(cat "$tmp_g" 2>/dev/null || true)"
             rm -f "$tmp_g" || true
