@@ -1056,6 +1056,20 @@ Based on the URL audit and DOI verification results above:
 
         run_stage_gemini "$stage" "$brief14" "s14-citation-verify-${SLUG}"
 
+        # Layer 4: VerifiedRegistry 수치 검증 (registry가 있는 경우만)
+        if type registry_verify_draft &>/dev/null && [ -f "$STATE_DIR/verified_registry.json" ]; then
+          echo "[pipeline] S14 Layer 4: VerifiedRegistry 수치 검증" >&2
+          local reg_report
+          reg_report="$(registry_verify_draft "$PAPER_DIR/draft.md" 2>/dev/null || true)"
+          if [ -n "$reg_report" ]; then
+            {
+              printf '\n\n---\n\n## Layer 4: 수치 검증 (VerifiedRegistry)\n\n'
+              printf '%s\n' "$reg_report"
+            } >> "$out_file"
+            echo "[pipeline] S14 Layer 4 완료 — 수치 검증 보고서 추가" >&2
+          fi
+        fi
+
         # S14 하드 스톱: 미검증 비율 50% 초과 시 게이트 진입
         # grep 대신 python3 사용 (grep→rg alias 충돌 방지)
         local s14_total s14_verified s14_unverified s14_unverified_rate
@@ -1704,6 +1718,12 @@ else: print(text)
 
           if [[ $s08_success -eq 1 ]]; then
             printf '# S08 실험 결과 (자동 실행)\n\n%s\n' "$exp_out" > "$out_file"
+            # VerifiedRegistry: 실험 결과에서 수치 자동 추출
+            if type registry_init &>/dev/null; then
+              registry_init 2>/dev/null || true
+              registry_extract_from_experiment "$out_file" 2>/dev/null || true
+              echo "[pipeline] S08: VerifiedRegistry에 실험 수치 등록 완료" >&2
+            fi
           else
             printf '# S08 실험 결과\n\n실행 실패 (%s회 시도). 수동 개입 필요.\n\n## 마지막 에러\n%s\n' "$s08_max" "$exp_out" > "$out_file"
             echo "[pipeline] WARN: S08 자동 실행 실패, 수동 개입 필요" >&2
