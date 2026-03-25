@@ -511,7 +511,7 @@ run_pipeline_stages() {
         # S01에 없으면 TOPIC이 한글인 경우 Gemini로 생성
         if [ -z "$en_keywords" ]; then
           if echo "$TOPIC" | grep -qP '[\x{AC00}-\x{D7A3}]' 2>/dev/null || echo "$TOPIC" | python3 -c "import sys; s=sys.stdin.read(); exit(0 if any(ord(c)>127 for c in s) else 1)" 2>/dev/null; then
-            en_keywords="$(bash "$ORCH" gemini "다음 한국어 연구 주제를 arXiv 검색에 적합한 영문 키워드 3~5개로 변환해줘. 키워드만 공백으로 구분해서 한 줄로 출력. 다른 설명 없이 키워드만.\n주제: $TOPIC" s02-en-keywords 2>/dev/null | grep -v '^\[' | grep -v '^---' | grep -v '^$' | tail -1)"
+            en_keywords="$(bash "$ORCH" gemini "다음 한국어 연구 주제를 arXiv 검색에 적합한 영문 키워드 3~5개로 변환해줘. 키워드만 공백으로 구분해서 한 줄로 출력. 다른 설명 없이 키워드만.\n주제: $TOPIC" s02-en-keywords 2>/dev/null | grep -v '^\[' | grep -v '^---' | grep -v '^$' | tail -1 || true)"
             if [ -n "$en_keywords" ] && [ -f "$STATE_DIR/s01_scope.md" ] && ! grep -q '^\- \*\*영문 검색 키워드\*\*:' "$STATE_DIR/s01_scope.md"; then
               printf '\n- **영문 검색 키워드**: %s\n' "$en_keywords" >> "$STATE_DIR/s01_scope.md"
             fi
