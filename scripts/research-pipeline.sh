@@ -37,6 +37,21 @@ GATE_ARG=""
 DECISION_ARG=""
 TEMPLATE="A"   # Typst 템플릿: A(학술) B(모던) C(미니멀) D(테크다크)
 
+# ── 프로세스 트리 kill (크로스 플랫폼) ──────────────────────────────────
+_kill_tree() {
+  local pid="$1"
+  # 방법 1: pkill -P (Linux/Mac)
+  pkill -P "$pid" 2>/dev/null || true
+  # 방법 2: ps --ppid (GNU)
+  local children
+  children="$(ps -o pid= --ppid "$pid" 2>/dev/null || true)"
+  for child in $children; do
+    kill "$child" 2>/dev/null || true
+  done
+  # 마지막: 부모 kill
+  kill "$pid" 2>/dev/null || true
+}
+
 # ── 유틸 ───────────────────────────────────────────────────────────────
 
 slugify() {
@@ -273,7 +288,7 @@ run_stage_gemini() {
 
   # 타임아웃 180초 — 초과 시 실패로 처리 (macOS timeout 없으므로 bash 구현)
   local exit_code=0
-  NO_VAULT=true FORCE=true setsid bash "$ORCH" gemini "$brief" "$name" > "$tmp" 2>&1 &
+  NO_VAULT=true FORCE=true bash "$ORCH" gemini "$brief" "$name" > "$tmp" 2>&1 &
   local bg_pid=$!
   local elapsed=0
   local timeout_sec=180
@@ -282,8 +297,7 @@ run_stage_gemini() {
     elapsed=$((elapsed + 5))
   done
   if kill -0 "$bg_pid" 2>/dev/null; then
-    kill -- -"$bg_pid" 2>/dev/null || kill "$bg_pid" 2>/dev/null || true
-    wait "$bg_pid" 2>/dev/null || true
+    _kill_tree "$bg_pid"; wait "$bg_pid" 2>/dev/null || true
     exit_code=124
   else
     wait "$bg_pid" || exit_code=$?
@@ -301,15 +315,14 @@ run_stage_gemini() {
 
     local fb_tmp fb_exit=0
     fb_tmp="$(mktemp)"
-    NO_VAULT=true FORCE=true setsid bash "$ORCH" chatgpt "$brief" "${name}-fallback" > "$fb_tmp" 2>&1 &
+    NO_VAULT=true FORCE=true bash "$ORCH" chatgpt "$brief" "${name}-fallback" > "$fb_tmp" 2>&1 &
     local fb_pid=$!
     local fb_elapsed=0
     while kill -0 "$fb_pid" 2>/dev/null && [ "$fb_elapsed" -lt 300 ]; do
       sleep 5; fb_elapsed=$((fb_elapsed + 5))
     done
     if kill -0 "$fb_pid" 2>/dev/null; then
-      kill -- -"$fb_pid" 2>/dev/null || kill "$fb_pid" 2>/dev/null || true
-      wait "$fb_pid" 2>/dev/null || true; fb_exit=124
+      _kill_tree "$fb_pid"; wait "$fb_pid" 2>/dev/null || true; fb_exit=124
     else
       wait "$fb_pid" || fb_exit=$?
     fi
@@ -355,7 +368,7 @@ run_stage_codex() {
     sleep 5; elapsed=$((elapsed + 5))
   done
   if kill -0 "$bg_pid" 2>/dev/null; then
-    kill "$bg_pid" 2>/dev/null; wait "$bg_pid" 2>/dev/null; exit_code=124
+    _kill_tree "$bg_pid"; wait "$bg_pid" 2>/dev/null || true; exit_code=124
   else
     wait "$bg_pid" || exit_code=$?
   fi
@@ -537,22 +550,20 @@ run_pipeline_stages() {
             local _kw_prompt="다음 한국어 연구 주제를 arXiv 검색에 적합한 영문 키워드 3~5개로 변환해줘. 키워드만 공백으로 구분해서 한 줄로 출력. 다른 설명 없이 키워드만.\n주제: $TOPIC"
             local _kw_tmp; _kw_tmp="$(mktemp)"
             local _kw_exit=0
-            # setsid로 프로세스 그룹 분리 → timeout 시 전체 트리 kill 가능
-            setsid bash "$ORCH" gemini "$_kw_prompt" s02-en-keywords > "$_kw_tmp" 2>/dev/null &
+            bash "$ORCH" gemini "$_kw_prompt" s02-en-keywords > "$_kw_tmp" 2>/dev/null &
             local _kw_pid=$!
             local _kw_elapsed=0
             while kill -0 "$_kw_pid" 2>/dev/null && [ "$_kw_elapsed" -lt 60 ]; do
               sleep 3; _kw_elapsed=$((_kw_elapsed + 3))
             done
             if kill -0 "$_kw_pid" 2>/dev/null; then
-              kill -- -"$_kw_pid" 2>/dev/null || kill "$_kw_pid" 2>/dev/null || true
-              wait "$_kw_pid" 2>/dev/null || true; _kw_exit=124
+              _kill_tree "$_kw_pid"; wait "$_kw_pid" 2>/dev/null || true; _kw_exit=124
             else
               wait "$_kw_pid" || _kw_exit=$?
             fi
             if [ "$_kw_exit" -ne 0 ]; then
               echo "[pipeline] S02: Gemini 키워드 변환 실패 (${_kw_exit}) — ChatGPT fallback" >&2
-              setsid bash "$ORCH" chatgpt "$_kw_prompt" s02-en-keywords-fb > "$_kw_tmp" 2>/dev/null &
+              bash "$ORCH" chatgpt "$_kw_prompt" s02-en-keywords-fb > "$_kw_tmp" 2>/dev/null &
               _kw_pid=$!; _kw_elapsed=0
               while kill -0 "$_kw_pid" 2>/dev/null && [ "$_kw_elapsed" -lt 60 ]; do
                 sleep 3; _kw_elapsed=$((_kw_elapsed + 3))
@@ -852,8 +863,7 @@ ${collected}"
               elapsed=$((elapsed + 5))
             done
             if kill -0 "$bg_pid" 2>/dev/null; then
-              kill "$bg_pid" 2>/dev/null || true
-              wait "$bg_pid" 2>/dev/null || true
+              _kill_tree "$bg_pid"; wait "$bg_pid" 2>/dev/null || true
               eg=124
             else
               wait "$bg_pid" || eg=$?
