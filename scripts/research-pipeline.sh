@@ -155,6 +155,23 @@ watchdog_check() {
 
 wait_gate() {
   local stage="$1"
+  local check_result="${2:-fail}"  # pass/fail/warn (기본: fail → 기존 동작 유지)
+
+  # gate.sh가 로드되어 있으면 향상된 게이트 사용
+  if type gate_check &>/dev/null; then
+    gate_init 2>/dev/null || true
+    local gate_rc=0
+    gate_check "$stage" "$check_result" || gate_rc=$?
+    if [[ $gate_rc -eq 0 ]]; then
+      return 0  # auto-approve 또는 pass → 계속 진행
+    fi
+    # rollback 대상이 설정되었으면 로그
+    if [[ -n "${GATE_ROLLBACK_TARGET:-}" ]]; then
+      echo "[pipeline] GATE: $stage → rollback to $GATE_ROLLBACK_TARGET" >&2
+    fi
+  fi
+
+  # 기존 동작: pipeline.json에 기록 + exit 42
   local tmp
   tmp="$(mktemp)"
   jq --arg s "$stage" '.gate_pending_stage = $s' "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
@@ -233,6 +250,13 @@ init_pipeline() {
     echo "[pipeline] 새 파이프라인 시작: $TOPIC"
     CURRENT_STAGE=1
     save_checkpoint "S01" "pending"
+  fi
+
+  # MetaClaw: 이전 실행 교훈 주입
+  if type metaclaw_init &>/dev/null; then
+    metaclaw_init 2>/dev/null || true
+    metaclaw_inject 2>/dev/null || true
+    [ -f "$STATE_DIR/metaclaw_skills.md" ] && echo "[pipeline] MetaClaw: 이전 실행 교훈 로드 완료" >&2
   fi
 }
 
@@ -1831,6 +1855,12 @@ main() {
 
   init_pipeline "$topic"
   run_pipeline_stages
+
+  # MetaClaw: 실행 이력 수집 (정상 종료 시)
+  if type metaclaw_collect &>/dev/null; then
+    metaclaw_collect 2>/dev/null || true
+    echo "[pipeline] MetaClaw: 실행 이력 수집 완료" >&2
+  fi
 }
 
 main "$@"
