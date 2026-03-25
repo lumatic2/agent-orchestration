@@ -312,16 +312,17 @@ deploy_claude() {
   # Deploy global CLAUDE.md with active mode guard table injection
   local active_mode
   active_mode="$(resolve_active_mode)"
-  local guard_meta
-  mapfile -t guard_meta < <(read_mode_guard "$active_mode")
-  local mode_name
-  mode_name="$(printf '%s' "${guard_meta[0]:-full}" | tr -d '\r\n[:space:]')"
-  local max_lines
-  max_lines="$(printf '%s' "${guard_meta[1]:-50}" | tr -d '\r\n[:space:]')"
-  local max_files
-  max_files="$(printf '%s' "${guard_meta[2]:-3}" | tr -d '\r\n[:space:]')"
-  local research_delegate
-  research_delegate="$(printf '%s' "${guard_meta[3]:-true}" | tr -d '\r\n[:space:]' | tr '[:upper:]' '[:lower:]')"
+  local guard_output
+  guard_output="$(read_mode_guard "$active_mode")"
+  local mode_name max_lines max_files research_delegate
+  mode_name="$(echo "$guard_output" | sed -n '1p' | tr -d '\r\n[:space:]')"
+  max_lines="$(echo "$guard_output" | sed -n '2p' | tr -d '\r\n[:space:]')"
+  max_files="$(echo "$guard_output" | sed -n '3p' | tr -d '\r\n[:space:]')"
+  research_delegate="$(echo "$guard_output" | sed -n '4p' | tr -d '\r\n[:space:]' | tr '[:upper:]' '[:lower:]')"
+  mode_name="${mode_name:-full}"
+  max_lines="${max_lines:-50}"
+  max_files="${max_files:-3}"
+  research_delegate="${research_delegate:-true}"
   render_claude_global "$claude_md_path" "$mode_name" "$max_lines" "$max_files" "$research_delegate"
   echo "[OK] Global CLAUDE.md → $claude_md_path (mode: $mode_name)"
 
