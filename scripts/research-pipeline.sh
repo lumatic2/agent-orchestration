@@ -532,10 +532,11 @@ run_pipeline_stages() {
           if [[ "$_arxiv_open" == "1" ]]; then
             echo "[pipeline] S02: arXiv circuit OPEN — skip" >&2
           else
-            curl -s --max-time 30 "$arxiv_url" -o "$arxiv_raw" 2>/dev/null
-            if [[ $? -ne 0 ]] || [[ ! -s "$arxiv_raw" ]]; then
+            local _arxiv_rc=0
+            curl -s --max-time 30 "$arxiv_url" -o "$arxiv_raw" 2>/dev/null || _arxiv_rc=$?
+            if [[ $_arxiv_rc -ne 0 ]] || [[ ! -s "$arxiv_raw" ]]; then
               _circuit_update_source "arxiv" "failure" 2>/dev/null || true
-              echo "[pipeline] S02: arXiv fetch 실패 — circuit 기록" >&2
+              echo "[pipeline] S02: arXiv fetch 실패 (rc=$_arxiv_rc) — circuit 기록" >&2
             else
               _circuit_update_source "arxiv" "success" 2>/dev/null || true
             fi
@@ -596,10 +597,11 @@ PYEOF
             if [[ "$_ss_open" == "1" ]]; then
               echo "[pipeline] S02: Semantic Scholar circuit OPEN — skip" >&2
             else
-              curl -s --max-time 30 "$ss_url" -o "$ss_raw" 2>/dev/null
-              if [[ $? -ne 0 ]] || [[ ! -s "$ss_raw" ]]; then
+              local _ss_rc=0
+              curl -s --max-time 30 "$ss_url" -o "$ss_raw" 2>/dev/null || _ss_rc=$?
+              if [[ $_ss_rc -ne 0 ]] || [[ ! -s "$ss_raw" ]]; then
                 _circuit_update_source "semantic_scholar" "failure" 2>/dev/null || true
-                echo "[pipeline] S02: SS fetch 실패 — circuit 기록" >&2
+                echo "[pipeline] S02: SS fetch 실패 (rc=$_ss_rc) — circuit 기록" >&2
               else
                 _circuit_update_source "semantic_scholar" "success" 2>/dev/null || true
               fi
@@ -661,8 +663,9 @@ PYEOF
             [[ "$_oa_open" == "1" ]] && _do_oa=0 && echo "[pipeline] S02: OpenAlex circuit OPEN — skip" >&2
           fi
           if [[ $_do_oa -eq 1 ]]; then
-            curl -s --max-time 20 "$oa_url" -o "$oa_raw" 2>/dev/null
-            if [[ $? -ne 0 ]] || [[ ! -s "$oa_raw" ]]; then
+            local _oa_rc=0
+            curl -s --max-time 20 "$oa_url" -o "$oa_raw" 2>/dev/null || _oa_rc=$?
+            if [[ $_oa_rc -ne 0 ]] || [[ ! -s "$oa_raw" ]]; then
               type _circuit_update_source &>/dev/null && _circuit_update_source "openalex" "failure" 2>/dev/null || true
               echo "[pipeline] S02: OpenAlex fetch 실패" >&2
             else
