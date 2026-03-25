@@ -968,10 +968,19 @@ Based on the URL audit and DOI verification results above:
         run_stage_gemini "$stage" "$brief14" "s14-citation-verify-${SLUG}"
 
         # S14 하드 스톱: 미검증 비율 50% 초과 시 게이트 진입
+        # grep 대신 python3 사용 (grep→rg alias 충돌 방지)
         local s14_total s14_verified s14_unverified s14_unverified_rate
-        s14_total="$(grep -oE 'Total citations: [0-9]+' "$out_file" | grep -oE '[0-9]+' | head -1 || true)"
-        s14_verified="$(grep -oE 'Verified: [0-9]+' "$out_file" | grep -oE '[0-9]+' | head -1 || true)"
-        s14_unverified="$(grep -oE 'Unverified: [0-9]+' "$out_file" | grep -oE '[0-9]+' | head -1 || true)"
+        read -r s14_total s14_verified s14_unverified < <(python3 - "$out_file" <<'PYPARSE'
+import re, sys
+text = open(sys.argv[1]).read()
+def extract(pattern):
+    m = re.search(pattern, text)
+    return m.group(1) if m else "0"
+print(extract(r'Total citations:\s*(\d+)'),
+      extract(r'(?<![Un])Verified:\s*(\d+)'),
+      extract(r'Unverified:\s*(\d+)'))
+PYPARSE
+) 2>/dev/null || { s14_total=0; s14_verified=0; s14_unverified=0; }
         s14_total="${s14_total:-0}"; s14_verified="${s14_verified:-0}"; s14_unverified="${s14_unverified:-0}"
         if [ "$s14_total" -gt 0 ] 2>/dev/null; then
           s14_unverified_rate=$(( s14_unverified * 100 / s14_total ))
