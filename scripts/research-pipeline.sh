@@ -499,9 +499,26 @@ run_pipeline_stages() {
         slug_query="$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$search_terms" 2>/dev/null || true)"
         [ -z "$slug_query" ] && slug_query="$search_terms"
 
+        # ── arXiv API (circuit breaker 적용) ──
         local arxiv_url
         arxiv_url="https://export.arxiv.org/api/query?search_query=all:${slug_query}&max_results=15&sortBy=relevance"
-        curl -s --max-time 30 "$arxiv_url" -o "$arxiv_raw" 2>/dev/null || true
+        if type _circuit_update_source &>/dev/null; then
+          local _arxiv_open
+          _arxiv_open="$(_circuit_is_open_and_recent "arxiv" 2>/dev/null || echo 0)"
+          if [[ "$_arxiv_open" == "1" ]]; then
+            echo "[pipeline] S02: arXiv circuit OPEN — skip" >&2
+          else
+            curl -s --max-time 30 "$arxiv_url" -o "$arxiv_raw" 2>/dev/null
+            if [[ $? -ne 0 ]] || [[ ! -s "$arxiv_raw" ]]; then
+              _circuit_update_source "arxiv" "failure" 2>/dev/null || true
+              echo "[pipeline] S02: arXiv fetch 실패 — circuit 기록" >&2
+            else
+              _circuit_update_source "arxiv" "success" 2>/dev/null || true
+            fi
+          fi
+        else
+          curl -s --max-time 30 "$arxiv_url" -o "$arxiv_raw" 2>/dev/null || true
+        fi
 
         local arxiv_count
         arxiv_count="$(python3 - "$arxiv_raw" "$arxiv_json" << 'PYEOF' 2>/dev/null || true
@@ -548,7 +565,24 @@ PYEOF
           ss_query="$(python3 -c "import urllib.parse, sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$search_terms" 2>/dev/null || true)"
           local ss_url
           ss_url="https://api.semanticscholar.org/graph/v1/paper/search?query=${ss_query}&limit=10&fields=title,authors,year,externalIds,abstract,url"
-          curl -s --max-time 30 "$ss_url" -o "$ss_raw" 2>/dev/null || true
+          # SS API (circuit breaker 적용)
+          if type _circuit_update_source &>/dev/null; then
+            local _ss_open
+            _ss_open="$(_circuit_is_open_and_recent "semantic_scholar" 2>/dev/null || echo 0)"
+            if [[ "$_ss_open" == "1" ]]; then
+              echo "[pipeline] S02: Semantic Scholar circuit OPEN — skip" >&2
+            else
+              curl -s --max-time 30 "$ss_url" -o "$ss_raw" 2>/dev/null
+              if [[ $? -ne 0 ]] || [[ ! -s "$ss_raw" ]]; then
+                _circuit_update_source "semantic_scholar" "failure" 2>/dev/null || true
+                echo "[pipeline] S02: SS fetch 실패 — circuit 기록" >&2
+              else
+                _circuit_update_source "semantic_scholar" "success" 2>/dev/null || true
+              fi
+            fi
+          else
+            curl -s --max-time 30 "$ss_url" -o "$ss_raw" 2>/dev/null || true
+          fi
           python3 - "$ss_raw" "$ss_json" << 'PYEOF' 2>/dev/null || true
 import json, re, sys
 raw_path, out_path = sys.argv[1], sys.argv[2]
@@ -588,16 +622,64 @@ with open(out_path, "w", encoding="utf-8") as f:
     json.dump(papers, f, ensure_ascii=False)
 PYEOF
 
+          # ── OpenAlex API (3번째 소스, circuit breaker 적용) ──
+          local oa_json
+          oa_json="$(mktemp "${PYTMPDIR}/oa_parsed_XXXXXX" 2>/dev/null || mktemp)"
+          local oa_raw
+          oa_raw="$(mktemp "${PYTMPDIR}/oa_raw_XXXXXX" 2>/dev/null || mktemp)"
+          local oa_url
+          oa_url="https://api.openalex.org/works?search=${slug_query}&per_page=10&select=id,title,authorships,publication_year,doi,primary_location"
+
+          local _do_oa=1
+          if type _circuit_update_source &>/dev/null; then
+            local _oa_open
+            _oa_open="$(_circuit_is_open_and_recent "openalex" 2>/dev/null || echo 0)"
+            [[ "$_oa_open" == "1" ]] && _do_oa=0 && echo "[pipeline] S02: OpenAlex circuit OPEN — skip" >&2
+          fi
+          if [[ $_do_oa -eq 1 ]]; then
+            curl -s --max-time 20 "$oa_url" -o "$oa_raw" 2>/dev/null
+            if [[ $? -ne 0 ]] || [[ ! -s "$oa_raw" ]]; then
+              type _circuit_update_source &>/dev/null && _circuit_update_source "openalex" "failure" 2>/dev/null || true
+              echo "[pipeline] S02: OpenAlex fetch 실패" >&2
+            else
+              type _circuit_update_source &>/dev/null && _circuit_update_source "openalex" "success" 2>/dev/null || true
+            fi
+          fi
+          python3 - "$oa_raw" "$oa_json" << 'PYEOF' 2>/dev/null || true
+import json, re, sys
+raw_path, out_path = sys.argv[1], sys.argv[2]
+papers = []
+try:
+    data = json.load(open(raw_path, encoding="utf-8"))
+except Exception:
+    data = {}
+for w in data.get("results", []) if isinstance(data, dict) else []:
+    title = re.sub(r"\s+", " ", (w.get("title") or "")).strip()
+    if not title:
+        continue
+    auths = w.get("authorships") or []
+    author = "N/A"
+    if auths and isinstance(auths, list):
+        author = ((auths[0].get("author") or {}).get("display_name") or "N/A").strip()
+    year = str(w.get("publication_year") or "N/A")
+    doi = (w.get("doi") or "").replace("https://doi.org/", "").strip()
+    loc = w.get("primary_location") or {}
+    url = (loc.get("landing_page_url") or w.get("id") or "N/A").strip()
+    papers.append({"title": title, "author": author, "year": year, "url": url, "doi": doi, "abstract": "N/A"})
+with open(out_path, "w", encoding="utf-8") as f:
+    json.dump(papers, f, ensure_ascii=False)
+PYEOF
+
           local total_api
-          total_api="$(python3 - "$arxiv_json" "$ss_json" "$merged_md" << 'PYEOF' 2>/dev/null || true
+          total_api="$(python3 - "$arxiv_json" "$ss_json" "$oa_json" "$merged_md" << 'PYEOF' 2>/dev/null || true
 import difflib, json, re, sys
-arxiv_path, ss_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3]
+arxiv_path, ss_path, oa_path, out_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 def read(path):
     try:
         return json.load(open(path, encoding="utf-8"))
     except Exception:
         return []
-items = list(read(arxiv_path)) + list(read(ss_path))
+items = list(read(arxiv_path)) + list(read(ss_path)) + list(read(oa_path))
 final = []
 seen = []
 for p in items:
@@ -631,7 +713,7 @@ PYEOF
 
           if [ "$total_api" -eq 0 ] 2>/dev/null; then
             # API에서 논문 0편: Gemini 논문 생성(할루시네이션) 대신 게이트로 차단
-            rm -f "$arxiv_raw" "$ss_raw" "$arxiv_json" "$ss_json" "$merged_md" || true
+            rm -f "$arxiv_raw" "$ss_raw" "$oa_raw" "$arxiv_json" "$ss_json" "$oa_json" "$merged_md" || true
             cat > "$out_file" << S02_WARN_EOF
 <!-- VERIFIED_PAPERS: 0 -->
 <!-- WARNING: API_NO_RESULTS -->
@@ -711,7 +793,7 @@ ${collected}"
                 printf '(Gemini 분석 실패 exit=%d)\n' "$eg"
               fi
             } >> "$out_file"
-            rm -f "$arxiv_raw" "$ss_raw" "$arxiv_json" "$ss_json" "$merged_md" || true
+            rm -f "$arxiv_raw" "$ss_raw" "$oa_raw" "$arxiv_json" "$ss_json" "$oa_json" "$merged_md" || true
           fi
         fi
         ;;
