@@ -48,6 +48,7 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
 
 Then apply the Self-Execution Guard before writing a single line of code:
 
+<!-- BEGIN GUARD_TABLE -->
 | Condition | Action |
 |---|---|
 | 50+ lines of code to write | STOP → `orchestrate.sh codex "task" name` |
@@ -55,6 +56,7 @@ Then apply the Self-Execution Guard before writing a single line of code:
 | Any research needed | STOP → `orchestrate.sh gemini "task" name` |
 | Browser/GUI/canvas/JS SPA needed | STOP → `orchestrate.sh openclaw "task" name` |
 | Simple edit (1-3 files, <50 lines) | Proceed directly |
+<!-- END GUARD_TABLE -->
 
 > ⚠️ **리서치 위임 방법**: 반드시 `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"task\" name")` 직접 호출.
 > `Agent(subagent_type="gemini-researcher")` 사용 **금지** — 위임 루프 버그로 실제 리서치를 수행하지 않음.

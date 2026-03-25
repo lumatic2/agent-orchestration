@@ -113,18 +113,217 @@ inject_shared() {
   echo "[OK] Injected shared content into $(basename "$adapter_file")"
 }
 
+resolve_active_mode() {
+  local active_mode_src="$REPO_DIR/queue/.active_mode"
+  local active_mode_dst="$HOME/.config/agent-orchestration/.active_mode"
+  local active_mode=""
+
+  if [ -f "$active_mode_src" ]; then
+    active_mode="$(head -n 1 "$active_mode_src" | tr -d '[:space:]')"
+  fi
+
+  if [ -z "$active_mode" ] && [ -f "$active_mode_dst" ]; then
+    active_mode="$(head -n 1 "$active_mode_dst" | tr -d '[:space:]')"
+  fi
+
+  if [ -z "$active_mode" ]; then
+    active_mode="$(python3 - "$REPO_DIR/agent_config.yaml" <<'PY'
+import sys
+try:
+  import yaml
+except Exception:
+  yaml = None
+
+if yaml is None:
+  print("full")
+  raise SystemExit
+
+try:
+  with open(sys.argv[1], "r", encoding="utf-8") as f:
+    cfg = yaml.safe_load(f) or {}
+except Exception:
+  cfg = {}
+
+default_mode = cfg.get("default_mode", "full")
+print(default_mode if isinstance(default_mode, str) and default_mode else "full")
+PY
+)"
+  fi
+
+  echo "${active_mode:-full}"
+}
+
+read_mode_guard() {
+  local requested_mode="$1"
+  python3 - "$REPO_DIR/agent_config.yaml" "$requested_mode" <<'PY'
+import sys
+try:
+  import yaml
+except Exception:
+  yaml = None
+
+cfg = {}
+if yaml is not None:
+  try:
+    with open(sys.argv[1], "r", encoding="utf-8") as f:
+      cfg = yaml.safe_load(f) or {}
+  except Exception:
+    cfg = {}
+
+requested_mode = sys.argv[2].strip()
+modes = cfg.get("modes", {}) if isinstance(cfg, dict) else {}
+default_mode = cfg.get("default_mode", "full") if isinstance(cfg, dict) else "full"
+mode = requested_mode if requested_mode in modes else default_mode
+if mode not in modes:
+  mode = "full"
+
+mode_cfg = modes.get(mode, {})
+guard = mode_cfg.get("guard", {}) if isinstance(mode_cfg, dict) else {}
+if not isinstance(guard, dict):
+  guard = {}
+
+max_lines = guard.get("max_lines_claude", 50)
+max_files = guard.get("max_files_claude", 3)
+research_delegate = bool(guard.get("research_delegate", True))
+
+print(mode)
+print(max_lines)
+print(max_files)
+print("true" if research_delegate else "false")
+PY
+}
+
+build_guard_table() {
+  local mode_name="$1"
+  local max_lines="$2"
+  local max_files="$3"
+  local research_delegate="$4"
+
+  local codex_cmd='`orchestrate.sh codex "task" name`'
+  local gemini_cmd='`orchestrate.sh gemini "task" name`'
+  local chatgpt_cmd='`orchestrate.sh chatgpt "task" name`'
+  local openclaw_cmd='`orchestrate.sh openclaw "task" name`'
+
+  local cond_lines="${max_lines}+ lines of code to write"
+  local cond_files="${max_files}+ files to create/modify"
+  local action_lines="STOP → ${codex_cmd}"
+  local action_files="STOP → ${codex_cmd}"
+  local action_research="STOP → ${gemini_cmd}"
+  local action_browser="STOP → ${openclaw_cmd}"
+  local action_simple="Proceed directly"
+
+  case "$mode_name" in
+    solo)
+      cond_lines="No code-size limit"
+      cond_files="No file-count limit"
+      action_lines="Proceed directly (solo mode)"
+      action_files="Proceed directly (solo mode)"
+      action_research="Proceed directly (solo mode)"
+      action_browser="Proceed directly (solo mode)"
+      ;;
+    research)
+      action_lines="STOP → ${codex_cmd} (ultra only)"
+      action_files="STOP → ${codex_cmd} (ultra only)"
+      ;;
+    code)
+      action_research="Light/default: Proceed directly; Heavy: STOP → ${gemini_cmd}"
+      ;;
+    conserve-gemini)
+      action_research="Light/default: STOP → ${chatgpt_cmd}; Heavy: STOP → ${gemini_cmd}"
+      ;;
+    conserve-codex)
+      action_lines="STOP → ${codex_cmd} (high/ultra only)"
+      action_files="STOP → ${codex_cmd} (high/ultra only)"
+      ;;
+    *)
+      if [ "$research_delegate" != "true" ]; then
+        action_research="Proceed directly"
+      fi
+      ;;
+  esac
+
+  if [ "$research_delegate" != "true" ] && [ "$mode_name" != "solo" ]; then
+    action_research="Proceed directly"
+  fi
+
+  cat <<EOF
+> 현재 모드: ${mode_name}
+
+| Condition | Action |
+|---|---|
+| ${cond_lines} | ${action_lines} |
+| ${cond_files} | ${action_files} |
+| Any research needed | ${action_research} |
+| Browser/GUI/canvas/JS SPA needed | ${action_browser} |
+| Simple edit (1-${max_files} files, <${max_lines} lines) | ${action_simple} |
+EOF
+}
+
+render_claude_global() {
+  local output_path="$1"
+  local mode_name="$2"
+  local max_lines="$3"
+  local max_files="$4"
+  local research_delegate="$5"
+  local template_path="$REPO_DIR/adapters/claude_global.md"
+  local guard_table_file
+  guard_table_file="$(mktemp)"
+
+  build_guard_table "$mode_name" "$max_lines" "$max_files" "$research_delegate" > "$guard_table_file"
+
+  if ! grep -q "<!-- BEGIN GUARD_TABLE -->" "$template_path"; then
+    cp "$template_path" "$output_path"
+    rm -f "$guard_table_file"
+    return 0
+  fi
+
+  awk -v guard_file="$guard_table_file" '
+    function print_file(f, line) {
+      while ((getline line < f) > 0) print line
+      close(f)
+    }
+    /<!-- BEGIN GUARD_TABLE -->/{
+      print
+      print_file(guard_file)
+      in_block=1
+      next
+    }
+    /<!-- END GUARD_TABLE -->/{
+      in_block=0
+      print
+      next
+    }
+    !in_block { print }
+  ' "$template_path" > "$output_path"
+
+  rm -f "$guard_table_file"
+}
+
 # --- Deploy to agent config location ---
 deploy_claude() {
   local target_dir="$BASE_DIR/.claude"
+  local claude_md_path="$BASE_DIR/CLAUDE.md"
   mkdir -p "$target_dir"
 
   # Deploy orchestrator rules to .claude directory
   cp "$REPO_DIR/adapters/claude.md" "$target_dir/orchestrator_rules.md"
   echo "[OK] Claude adapter → $target_dir/orchestrator_rules.md"
 
-  # Deploy global CLAUDE.md — 경로 치환 없이 단순 복사 (~/는 모든 플랫폼에서 동작)
-  cp "$REPO_DIR/adapters/claude_global.md" "$BASE_DIR/CLAUDE.md"
-  echo "[OK] Global CLAUDE.md → $BASE_DIR/CLAUDE.md"
+  # Deploy global CLAUDE.md with active mode guard table injection
+  local active_mode
+  active_mode="$(resolve_active_mode)"
+  local guard_meta
+  mapfile -t guard_meta < <(read_mode_guard "$active_mode")
+  local mode_name
+  mode_name="$(printf '%s' "${guard_meta[0]:-full}" | tr -d '\r\n[:space:]')"
+  local max_lines
+  max_lines="$(printf '%s' "${guard_meta[1]:-50}" | tr -d '\r\n[:space:]')"
+  local max_files
+  max_files="$(printf '%s' "${guard_meta[2]:-3}" | tr -d '\r\n[:space:]')"
+  local research_delegate
+  research_delegate="$(printf '%s' "${guard_meta[3]:-true}" | tr -d '\r\n[:space:]' | tr '[:upper:]' '[:lower:]')"
+  render_claude_global "$claude_md_path" "$mode_name" "$max_lines" "$max_files" "$research_delegate"
+  echo "[OK] Global CLAUDE.md → $claude_md_path (mode: $mode_name)"
 
   # Deploy settings.json
   # - 없을 때: settings_common.json (크로스플랫폼) 으로 초기화
