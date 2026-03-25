@@ -1566,3 +1566,38 @@
 {"ts":"2026-03-26T01:34:30+0900","id":"T224","event":"created","detail":"agent=gemini"}
 {"ts":"2026-03-26T01:34:31+0900","id":"T224","event":"dispatched","detail":""}
 {"ts":"2026-03-26T01:39:39+0900","id":"T224","event":"completed","detail":""}
+{"ts":"2026-03-26T01:49:36+0900","id":"MODE","event":"mode_change","detail":"from=conserve-gemini to=full reason=boot_reset"}
+{"ts":"2026-03-26T01:56:54+0900","id":"T225","event":"created","detail":"agent=codex"}
+{"ts":"2026-03-26T01:56:59+0900","id":"T225","event":"dispatched","detail":""}
+{"ts":"2026-03-26T01:57:51+0900","id":"T226","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T01:57:56+0900","id":"T226","event":"dispatched","detail":""}
+{"ts":"2026-03-26T01:58:24+0900","id":"MODE","event":"mode_change","detail":"from=full to=conserve-gemini reason=rate_limit_gemini"}
+{"ts":"2026-03-26T01:58:25+0900","id":"T215","event":"queued","detail":""}
+{"ts":"2026-03-26T01:58:28+0900","id":"T215","event":"dispatched","detail":""}
+{"ts":"2026-03-26T02:02:25+0900","id":"T215","event":"queued","detail":""}
+{"ts":"2026-03-26T02:02:26+0900","id":"T215","event":"queued","detail":""}
+{"ts":"2026-03-26T02:17:35+0900","id":"T227","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T02:18:01+0900","id":"T228","event":"created","detail":"agent=chatgpt"}
+{"ts":"2026-03-26T02:18:05+0900","id":"T228","event":"dispatched","detail":""}
+{"ts":"2026-03-26T02:21:20+0900","id":"T228","event":"queued","detail":""}
+{"ts":"2026-03-26T02:21:23+0900","id":"T226","event":"completed","detail":""}
+{"ts":"2026-03-26T02:21:23+0900","id":"T228","event":"dispatched","detail":""}
+{"ts":"2026-03-26T02:27:28+0900","id":"T225","event":"completed","detail":""}
+{"ts":"2026-03-26T02:27:56+0900","id":"T228","event":"completed","detail":""}
+{"ts":"2026-03-26T02:30:47+0900","id":"T220","event":"completed","detail":""}
+{"ts":"2026-03-26T02:30:50+0900","id":"T229","event":"created","detail":"agent=codex"}
+{"ts":"2026-03-26T02:30:54+0900","id":"T229","event":"dispatched","detail":""}
+{"ts":"2026-03-26T02:44:51+0900","id":"T229","event":"completed","detail":""}
+{"ts":"2026-03-26T02:46:12+0900","id":"T230","event":"created","detail":"agent=codex"}
+{"ts":"2026-03-26T02:46:12+0900","id":"T230","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T02:46:17+0900","id":"T230","event":"dispatched","detail":""}
+{"ts":"2026-03-26T02:46:40+0900","id":"T230","event":"completed","detail":""}
+{"ts":"2026-03-26T02:48:33+0900","id":"MODE","event":"mode_change","detail":"from=conserve-gemini to=full reason=boot_reset"}
+{"ts":"2026-03-26T02:49:39+0900","id":"T231","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T02:49:43+0900","id":"T231","event":"dispatched","detail":""}
+{"ts":"2026-03-26T02:53:23+0900","id":"T231","event":"completed","detail":""}
+{"ts":"2026-03-26T02:53:39+0900","id":"T232","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T02:53:44+0900","id":"T232","event":"dispatched","detail":""}
+{"ts":"2026-03-26T02:54:57+0900","id":"T232","event":"completed","detail":""}
+{"ts":"2026-03-26T02:55:49+0900","id":"T233","event":"created","detail":"agent=codex"}
+{"ts":"2026-03-26T02:55:54+0900","id":"T233","event":"dispatched","detail":""}
