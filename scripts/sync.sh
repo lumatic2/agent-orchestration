@@ -198,6 +198,20 @@ deploy_claude() {
     cp "$notion_conf_dst" "$notion_conf_src"
     echo "[OK] notion_pages.conf ← $notion_conf_dst (restored from repo)"
   fi
+
+  # Sync active mode across devices
+  local active_mode_src="$REPO_DIR/queue/.active_mode"
+  local active_mode_dst="$HOME/.config/agent-orchestration/.active_mode"
+  if [ -f "$active_mode_src" ]; then
+    mkdir -p "$(dirname "$active_mode_dst")"
+    cp "$active_mode_src" "$active_mode_dst"
+    echo "[OK] .active_mode → $active_mode_dst (for cross-device sync)"
+  fi
+  if [ ! -f "$active_mode_src" ] && [ -f "$active_mode_dst" ]; then
+    mkdir -p "$(dirname "$active_mode_src")"
+    cp "$active_mode_dst" "$active_mode_src"
+    echo "[OK] .active_mode ← $active_mode_dst (restored to queue)"
+  fi
 }
 
 deploy_codex() {

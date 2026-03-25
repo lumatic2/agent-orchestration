@@ -35,6 +35,8 @@ QUEUE_DIR="$REPO_DIR/queue"
 TEMPLATE_DIR="$REPO_DIR/templates"
 AGENT_CONFIG_FILE="$REPO_DIR/agent_config.yaml"
 ACTIVITY_LOG="$QUEUE_DIR/activity.jsonl"
+ACTIVE_MODE_FILE="$QUEUE_DIR/.active_mode"
+PERSIST_MODE_FILE="$QUEUE_DIR/.persist_mode"
 mkdir -p "$LOG_DIR" "$QUEUE_DIR"
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -184,6 +186,323 @@ read_meta_field_raw() {
   grep -o "\"$field\": *[^,}]*" "$meta" 2>/dev/null | sed 's/.*: *//' | tr -d '"' || echo ""
 }
 
+get_default_mode() {
+  python3 - "$AGENT_CONFIG_FILE" << 'PYEOF'
+import sys
+from pathlib import Path
+try:
+    import yaml  # type: ignore
+except ImportError:
+    print("full")
+    raise SystemExit(0)
+
+config_path = Path(sys.argv[1])
+try:
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+except Exception:
+    config = {}
+
+default_mode = str(config.get("default_mode") or "full").strip() or "full"
+print(default_mode)
+PYEOF
+}
+
+mode_exists() {
+  local mode_name="$1"
+  python3 - "$AGENT_CONFIG_FILE" "$mode_name" << 'PYEOF'
+import sys
+from pathlib import Path
+try:
+    import yaml  # type: ignore
+except ImportError:
+    raise SystemExit(1)
+
+config = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+mode_name = (sys.argv[2] or "").strip()
+modes = config.get("modes") or {}
+raise SystemExit(0 if mode_name in modes else 1)
+PYEOF
+}
+
+get_active_mode() {
+  local candidate=""
+  if [ -f "$ACTIVE_MODE_FILE" ]; then
+    candidate="$(tr -d '[:space:]' < "$ACTIVE_MODE_FILE" 2>/dev/null || true)"
+  fi
+  if [ -n "$candidate" ] && mode_exists "$candidate" >/dev/null 2>&1; then
+    echo "$candidate"
+    return
+  fi
+  get_default_mode
+}
+
+set_active_mode() {
+  local mode_name="$1"
+  local reason="${2:-manual}"
+  if ! mode_exists "$mode_name" >/dev/null 2>&1; then
+    return 1
+  fi
+  local prev_mode
+  prev_mode="$(get_active_mode)"
+  echo "$mode_name" > "$ACTIVE_MODE_FILE"
+  log_activity "MODE" "mode_change" "from=$prev_mode to=$mode_name reason=$reason"
+}
+
+check_auto_trigger() {
+  local current_mode
+  current_mode="$(get_active_mode)"
+  if [[ "$current_mode" == conserve-* ]]; then
+    return 0
+  fi
+
+  python3 - "$AGENT_CONFIG_FILE" "$ACTIVITY_LOG" "$(date +%Y-%m-%d)" "$QUEUE_DIR" << 'PYEOF'
+import json
+import re
+import sys
+from pathlib import Path
+
+try:
+    import yaml  # type: ignore
+except ImportError:
+    raise SystemExit(0)
+
+config_path = Path(sys.argv[1])
+activity_path = Path(sys.argv[2])
+today = str(sys.argv[3] or "").strip()
+queue_dir = Path(sys.argv[4])
+
+try:
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+except Exception:
+    config = {}
+
+def normalize_family(agent: str) -> str:
+    key = str(agent or "").strip().lower()
+    if key.startswith("gemini"):
+        return "gemini"
+    if key.startswith("codex"):
+        return "codex"
+    return ""
+
+dispatch_ids = []
+id_to_agent = {}
+
+if activity_path.exists():
+    for raw in activity_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except Exception:
+            continue
+        ts = str(row.get("ts") or "")
+        if not ts.startswith(today):
+            continue
+        event = str(row.get("event") or "").strip()
+        task_id = str(row.get("id") or "").strip()
+        detail = str(row.get("detail") or "")
+
+        if event == "created" and task_id:
+            match = re.search(r"agent=([A-Za-z0-9._-]+)", detail)
+            if match:
+                id_to_agent.setdefault(task_id, match.group(1))
+
+        if event == "dispatched" and task_id:
+            dispatch_ids.append(task_id)
+
+for task_id in dispatch_ids:
+    if task_id in id_to_agent:
+        continue
+    for meta_path in queue_dir.glob(f"{task_id}_*/meta.json"):
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        agent = str(meta.get("agent") or "").strip()
+        if agent:
+            id_to_agent[task_id] = agent
+            break
+
+counts = {"gemini": 0, "codex": 0}
+for task_id in dispatch_ids:
+    family = normalize_family(id_to_agent.get(task_id, ""))
+    if family in counts:
+        counts[family] += 1
+
+modes = config.get("modes") or {}
+gemini_limit = (((config.get("limits") or {}).get("gemini_pro") or {}).get("shared_requests_per_day") or 0)
+try:
+    gemini_limit = float(gemini_limit)
+except Exception:
+    gemini_limit = 0.0
+
+for mode_name, mode_cfg in modes.items():
+    if not isinstance(mode_cfg, dict):
+        continue
+    auto = mode_cfg.get("auto_trigger")
+    if not isinstance(auto, dict):
+        continue
+
+    metric = str(auto.get("metric") or "").strip()
+    try:
+        threshold = float(auto.get("threshold"))
+    except Exception:
+        continue
+
+    if metric == "gemini_daily_pct":
+        if gemini_limit <= 0:
+            continue
+        if (counts["gemini"] / gemini_limit) >= threshold:
+            print(mode_name)
+            raise SystemExit(0)
+    elif metric == "codex_daily_count":
+        if counts["codex"] >= threshold:
+            print(mode_name)
+            raise SystemExit(0)
+PYEOF
+}
+
+list_modes() {
+  python3 - "$AGENT_CONFIG_FILE" << 'PYEOF'
+import sys
+from pathlib import Path
+try:
+    import yaml  # type: ignore
+except ImportError:
+    raise SystemExit(0)
+
+config = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+modes = config.get("modes") or {}
+for name, payload in modes.items():
+    desc = ""
+    if isinstance(payload, dict):
+        desc = str(payload.get("description") or "").strip()
+    print(f"{name}\t{desc}")
+PYEOF
+}
+
+describe_mode() {
+  local mode_name="$1"
+  python3 - "$AGENT_CONFIG_FILE" "$mode_name" << 'PYEOF'
+import sys
+from pathlib import Path
+try:
+    import yaml  # type: ignore
+except ImportError:
+    raise SystemExit(0)
+
+config = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+mode_name = (sys.argv[2] or "").strip()
+mode_cfg = (config.get("modes") or {}).get(mode_name) or {}
+if isinstance(mode_cfg, dict):
+    print(str(mode_cfg.get("description") or "").strip())
+PYEOF
+}
+
+evaluate_mode_gate() {
+  local active_mode="$1"
+  local family="$2"
+  local complexity="$3"
+  local model_name="$4"
+  python3 - "$AGENT_CONFIG_FILE" "$active_mode" "$family" "$complexity" "$model_name" << 'PYEOF'
+import sys
+from pathlib import Path
+try:
+    import yaml  # type: ignore
+except ImportError:
+    print("allow\tactive\t")
+    raise SystemExit(0)
+
+config = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8")) or {}
+active_mode = (sys.argv[2] or "").strip()
+family = (sys.argv[3] or "").strip()
+complexity = (sys.argv[4] or "").strip()
+model_name = (sys.argv[5] or "").strip()
+
+mode_cfg = (config.get("modes") or {}).get(active_mode) or {}
+agents_cfg = mode_cfg.get("agents") if isinstance(mode_cfg, dict) else {}
+entry = (agents_cfg or {}).get(family)
+status = "active"
+min_complexity = ""
+min_tier = ""
+if isinstance(entry, str):
+    status = entry.strip() or "active"
+elif isinstance(entry, dict):
+    status = str(entry.get("status") or "active").strip() or "active"
+    min_complexity = str(entry.get("min_complexity") or "").strip()
+    min_tier = str(entry.get("min_tier") or "").strip()
+
+def suggest_agent() -> str:
+    order = ["codex", "gemini", "chatgpt", "openclaw", "claude"]
+    for key in order:
+        if key == family:
+            continue
+        candidate = (agents_cfg or {}).get(key)
+        candidate_status = "active"
+        if isinstance(candidate, str):
+            candidate_status = candidate.strip() or "active"
+        elif isinstance(candidate, dict):
+            candidate_status = str(candidate.get("status") or "active").strip() or "active"
+        if candidate_status == "active":
+            return key
+    return ""
+
+if status == "inactive":
+    print(f"deny\tinactive\tagent={family} inactive in mode={active_mode}\t{suggest_agent()}")
+    raise SystemExit(0)
+
+complexity_order = {"low": 0, "medium": 1, "high": 2, "ultra": 3}
+if status == "restricted" and min_complexity:
+    cur = complexity_order.get(complexity, -1)
+    req = complexity_order.get(min_complexity, -1)
+    if cur < req:
+        print(f"deny\trestricted\tmode={active_mode} requires complexity>={min_complexity} for {family} (current={complexity})\t{suggest_agent()}")
+        raise SystemExit(0)
+
+if status == "restricted" and min_tier:
+    models = ((config.get("models") or {}).get(family) or {})
+    tier_for_model = ""
+    for tier_key, configured_model in models.items():
+        if str(configured_model).strip() == model_name:
+            tier_for_model = str(tier_key).strip()
+            break
+    tier_orders = {
+        "gemini": {"light": 0, "default": 1, "heavy": 2},
+        "chatgpt": {"light": 0, "default": 1, "heavy": 2, "ultra": 3},
+        "codex": {"mini": 0, "light": 1, "heavy": 2, "ultra": 3},
+        "claude": {"light": 0, "mid": 1, "heavy": 2},
+    }
+    order = tier_orders.get(family, {})
+    cur = order.get(tier_for_model, -1)
+    req = order.get(min_tier, -1)
+    if cur < req:
+        shown = tier_for_model or "unknown"
+        print(f"deny\trestricted\tmode={active_mode} requires tier>={min_tier} for {family} (current={shown})\t{suggest_agent()}")
+        raise SystemExit(0)
+
+print(f"allow\t{status}\t\t")
+PYEOF
+}
+
+enforce_mode_gate() {
+  local family="$1"
+  local complexity="${2:-medium}"
+  local model_name="${3:-}"
+  local active_mode gate_result gate_decision gate_reason gate_message gate_suggestion
+  active_mode="$(get_active_mode)"
+  gate_result="$(evaluate_mode_gate "$active_mode" "$family" "$complexity" "$model_name" 2>/dev/null || true)"
+  IFS=$'\t' read -r gate_decision gate_reason gate_message gate_suggestion <<< "$gate_result"
+  if [ "${gate_decision:-allow}" != "allow" ]; then
+    echo "[MODE] Blocked: ${gate_message:-agent blocked by mode=$active_mode}"
+    if [ -n "${gate_suggestion:-}" ]; then
+      echo "[MODE] Suggestion: use agent=$gate_suggestion"
+    fi
+    return 1
+  fi
+  return 0
+}
+
 # ============================================================
 # Agent Functions (defined before subcommands so --resume can use them)
 # ============================================================
@@ -196,6 +515,32 @@ is_rate_limited() {
     return 0
   fi
   return 1
+}
+
+apply_rate_limit_auto_mode() {
+  local family="${1:-}"
+  local target_mode=""
+  local current_mode
+  current_mode="$(get_active_mode)"
+
+  if [[ "$current_mode" == conserve-* ]]; then
+    return 0
+  fi
+
+  case "$family" in
+    gemini) target_mode="conserve-gemini" ;;
+    codex) target_mode="conserve-codex" ;;
+    *) return 0 ;;
+  esac
+
+  if ! mode_exists "$target_mode" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if set_active_mode "$target_mode" "rate_limit_${family}"; then
+    export ACTIVE_MODE="$target_mode"
+    echo "[AUTO-MODE] Rate limit detected ($family) -> $target_mode"
+  fi
 }
 
 # --- Parse Codex JSON result → extract final message ---
@@ -297,8 +642,10 @@ describe_fallback_chain() {
   local chain_key="$1"
   local chain_tier="${2:-}"
   [ -n "$chain_key" ] || return 0
+  local active_mode
+  active_mode="$(get_active_mode)"
 
-  python3 - "$AGENT_CONFIG_FILE" "$chain_key" "$chain_tier" << 'PYEOF'
+  python3 - "$AGENT_CONFIG_FILE" "$chain_key" "$chain_tier" "$active_mode" << 'PYEOF'
 import sys
 from pathlib import Path
 
@@ -311,10 +658,14 @@ except ImportError:
 config_path = Path(sys.argv[1])
 chain_key = sys.argv[2]
 chain_tier = str(sys.argv[3]).strip()
+active_mode = str(sys.argv[4]).strip()
 config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
 models = config.get("models") or {}
 reasoning = config.get("reasoning") or {}
 chain_root = (config.get("fallback") or {}).get(chain_key)
+mode_cfg = ((config.get("modes") or {}).get(active_mode) or {}) if active_mode else {}
+overrides_root = mode_cfg.get("fallback_overrides") if isinstance(mode_cfg, dict) else {}
+chain_override = (overrides_root or {}).get(chain_key)
 
 def agent_family(agent_name: str) -> str:
     if agent_name.startswith("codex"):
@@ -354,9 +705,29 @@ def format_chain(chain):
         parts.append(label)
     return " -> ".join(parts)
 
-if isinstance(chain_root, list):
-    print(format_chain(chain_root))
+if isinstance(chain_override, list):
+    print(format_chain(chain_override))
     raise SystemExit(0)
+
+if isinstance(chain_override, dict):
+    if chain_tier:
+        if chain_tier in chain_override:
+            print(format_chain(chain_override.get(chain_tier) or []))
+            raise SystemExit(0)
+    else:
+        ordered_tiers = ["light", "default", "heavy"]
+        seen = set()
+        parts = []
+        for tier_name in ordered_tiers + [k for k in chain_override.keys() if k not in ordered_tiers]:
+            if tier_name in seen:
+                continue
+            seen.add(tier_name)
+            chain_desc = format_chain(chain_override.get(tier_name) or [])
+            if chain_desc:
+                parts.append(f"{tier_name}: {chain_desc}")
+        if parts:
+            print(" || ".join(parts))
+            raise SystemExit(0)
 
 if not isinstance(chain_root, dict):
     print("")
@@ -386,8 +757,10 @@ get_fallback_chain_steps() {
   local chain_key="$1"
   local chain_tier="${2:-}"
   [ -n "$chain_key" ] || return 0
+  local active_mode
+  active_mode="$(get_active_mode)"
 
-  python3 - "$AGENT_CONFIG_FILE" "$chain_key" "$chain_tier" << 'PYEOF'
+  python3 - "$AGENT_CONFIG_FILE" "$chain_key" "$chain_tier" "$active_mode" << 'PYEOF'
 import sys
 from pathlib import Path
 
@@ -399,10 +772,14 @@ except ImportError:
 config_path = Path(sys.argv[1])
 chain_key = sys.argv[2]
 chain_tier = str(sys.argv[3]).strip()
+active_mode = str(sys.argv[4]).strip()
 config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
 models = config.get("models") or {}
 reasoning = config.get("reasoning") or {}
 chain_root = (config.get("fallback") or {}).get(chain_key)
+mode_cfg = ((config.get("modes") or {}).get(active_mode) or {}) if active_mode else {}
+overrides_root = mode_cfg.get("fallback_overrides") if isinstance(mode_cfg, dict) else {}
+chain_override = (overrides_root or {}).get(chain_key)
 
 def agent_family(agent_name: str) -> str:
     if agent_name.startswith("codex"):
@@ -415,7 +792,11 @@ def agent_family(agent_name: str) -> str:
         return "claude"
     return agent_name
 
-if isinstance(chain_root, list):
+if isinstance(chain_override, list):
+    chain = chain_override
+elif isinstance(chain_override, dict) and chain_tier and chain_tier in chain_override:
+    chain = chain_override.get(chain_tier) or []
+elif isinstance(chain_root, list):
     chain = chain_root
 elif isinstance(chain_root, dict):
     chosen_tier = chain_tier if chain_tier in chain_root else "default"
@@ -1013,7 +1394,13 @@ select_dispatch_profile() {
     return 1
   fi
 
-  echo "[ROUTER] tier=${SELECTED_COMPLEXITY_TIER:-unknown} agent=$agent family=${SELECTED_FAMILY:-unknown} model=${SELECTED_MODEL:-unknown} reasoning=${SELECTED_REASONING:-auto} role=${SELECTED_ROLE:-none}"
+  if ! enforce_mode_gate "${SELECTED_FAMILY:-}" "${SELECTED_COMPLEXITY_TIER:-}" "${SELECTED_MODEL:-}"; then
+    return 1
+  fi
+
+  local active_mode
+  active_mode="$(get_active_mode)"
+  echo "[ROUTER] mode=${active_mode:-unknown} tier=${SELECTED_COMPLEXITY_TIER:-unknown} agent=$agent family=${SELECTED_FAMILY:-unknown} model=${SELECTED_MODEL:-unknown} reasoning=${SELECTED_REASONING:-auto} role=${SELECTED_ROLE:-none}"
   if [ -n "${SELECTED_PROFILE_SOURCE:-}" ] && [ "$SELECTED_PROFILE_SOURCE" != "complexity" ]; then
     echo "[ROUTER] profile_source=${SELECTED_PROFILE_SOURCE}"
   fi
@@ -1390,6 +1777,7 @@ ${task_with_checklist}"
 
   if is_rate_limited "$result"; then
     echo "[RATE_LIMIT] Codex hit rate limit"
+    apply_rate_limit_auto_mode "codex"
     [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
     [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
     return 1
@@ -1495,6 +1883,7 @@ $(cat "$checklist_file")"
 
   if is_rate_limited "$result"; then
     echo "[RATE_LIMIT] Gemini hit rate limit"
+    apply_rate_limit_auto_mode "gemini"
     [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
     [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
     return 1
@@ -1863,6 +2252,47 @@ run_with_fallback_research() {
 # Subcommands: --boot, --status, --resume, --complete, --cost, --clean
 # ============================================================
 
+do_mode() {
+  local requested="${1:-}"
+  local current_mode
+  current_mode="$(get_active_mode)"
+
+  if [ -z "$requested" ]; then
+    echo "[MODE] Active: $current_mode"
+    echo ""
+    echo "Available modes:"
+    while IFS=$'\t' read -r name desc; do
+      [ -n "$name" ] || continue
+      if [ "$name" = "$current_mode" ]; then
+        echo "  - $name (active) ${desc:+: $desc}"
+      else
+        echo "  - $name${desc:+: $desc}"
+      fi
+    done < <(list_modes)
+    exit 0
+  fi
+
+  if ! mode_exists "$requested" >/dev/null 2>&1; then
+    echo "[ERROR] Invalid mode: $requested"
+    echo "Valid modes:"
+    while IFS=$'\t' read -r name _; do
+      [ -n "$name" ] && echo "  - $name"
+    done < <(list_modes)
+    exit 1
+  fi
+
+  if ! set_active_mode "$requested" "manual"; then
+    echo "[ERROR] Failed to set mode: $requested"
+    exit 1
+  fi
+
+  local desc
+  desc="$(describe_mode "$requested")"
+  echo "[MODE] Switched: $current_mode -> $requested"
+  [ -n "$desc" ] && echo "[MODE] $desc"
+  exit 0
+}
+
 do_boot() {
   # ── Self-update: pull repo first, reexec if orchestrate.sh changed ──
   if [ "${_BOOT_SELF_UPDATED:-0}" != "1" ]; then
@@ -2006,6 +2436,14 @@ do_boot() {
       echo "Knowledge files up-to-date (갱신 후 24h 미경과)."
     fi
   fi
+
+  local default_mode active_mode
+  default_mode="$(get_default_mode)"
+  if [ ! -f "$PERSIST_MODE_FILE" ]; then
+    set_active_mode "$default_mode" "boot_reset" || true
+  fi
+  active_mode="$(get_active_mode)"
+  echo "[MODE] Active: $active_mode"
 
   exit 0
 }
@@ -2471,6 +2909,7 @@ case "${1:-}" in
   run)        shift; python "$SCRIPT_DIR/run_blueprint.py" "$@"; exit $? ;;
   schema)     shift; do_schema "$@" ;;
   --boot)     do_boot ;;
+  --mode)     shift; do_mode "${1:-}" ;;
   --status)   shift; do_status "${1:-}" ;;
   --resume)   do_resume ;;
   --complete) shift; do_complete "$@" ;;
@@ -2580,6 +3019,16 @@ if [ "$DRY_RUN" != "true" ]; then
 fi
 
 # --- Main dispatch ---
+auto_mode="$(check_auto_trigger 2>/dev/null || true)"
+if [ -n "${auto_mode:-}" ]; then
+  prev_mode="$(get_active_mode)"
+  if [ "$auto_mode" != "$prev_mode" ] && set_active_mode "$auto_mode" "auto_trigger"; then
+    echo "[AUTO-MODE] Auto-switched: $prev_mode -> $auto_mode (activity)"
+  fi
+fi
+ACTIVE_MODE="$(get_active_mode)"
+export ACTIVE_MODE
+echo "[ROUTER] mode=$ACTIVE_MODE"
 case "$AGENT" in
   codex)
     select_dispatch_profile "$AGENT"
@@ -2610,9 +3059,11 @@ case "$AGENT" in
     run_codex "$SELECTED_MODEL" "$SELECTED_REASONING" || run_with_fallback_chain "general" "$SELECTED_FAMILY" "$SELECTED_MODEL"
     ;;
   openclaw)
+    enforce_mode_gate "openclaw" "medium" "" || exit 1
     run_openclaw "medium"
     ;;
   openclaw-high)
+    enforce_mode_gate "openclaw" "high" "" || exit 1
     run_openclaw "high"
     ;;
   codex-fallback)
@@ -2625,7 +3076,7 @@ case "$AGENT" in
     echo "[ERROR] Unknown agent: $AGENT"
     echo "Available: codex, codex-spark, chatgpt, chatgpt-mini, chatgpt-light, gemini, gemini-pro, openclaw, openclaw-high"
     echo "Options:   run <blueprint_file> [--var key=value ...]"
-    echo "           --boot, --status, --resume, --complete <ID> <summary>, schema [agent] [--json]"
+    echo "           --boot, --mode [name], --status, --resume, --complete <ID> <summary>, schema [agent] [--json]"
     echo "           --brief <goal> <scope> <constraints>"
     echo "           --dry-run, --json '{\"goal\":\"...\"}'"
     exit 1
