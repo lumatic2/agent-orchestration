@@ -15,6 +15,13 @@ source "$SCRIPT_DIR/env.sh"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 ORCH="$SCRIPT_DIR/orchestrate.sh"
 
+# ── lib 모듈 로드 (없으면 건너뜀) ─────────────────────────────────────
+[ -f "$SCRIPT_DIR/lib/self_heal.sh" ]      && source "$SCRIPT_DIR/lib/self_heal.sh"
+[ -f "$SCRIPT_DIR/lib/circuit_breaker.sh" ] && source "$SCRIPT_DIR/lib/circuit_breaker.sh"
+[ -f "$SCRIPT_DIR/lib/gate.sh" ]            && source "$SCRIPT_DIR/lib/gate.sh"
+[ -f "$SCRIPT_DIR/lib/verified_registry.sh" ] && source "$SCRIPT_DIR/lib/verified_registry.sh"
+[ -f "$SCRIPT_DIR/lib/metaclaw.sh" ]        && source "$SCRIPT_DIR/lib/metaclaw.sh"
+
 TOPIC=""
 SLUG=""
 VAULT="${HOME}/vault"
@@ -1568,7 +1575,61 @@ S16_EOF
           exit 1
         fi
 
-        printf '실행 결과: [수동 입력 필요]\n' > "$out_file"
+        # S08 자동 실행 + self-healing retry
+        if type run_with_retry &>/dev/null; then
+          echo "[pipeline] S08: 실험 자동 실행 (self-heal max 3회)" >&2
+          local exp_dir="$STATE_DIR/s07_code"
+          local exp_out exp_exit
+          local s08_attempt=0 s08_max=3 s08_success=0
+
+          while (( s08_attempt < s08_max )); do
+            s08_attempt=$((s08_attempt + 1))
+            echo "[pipeline] S08: 시도 ${s08_attempt}/${s08_max}" >&2
+
+            set +e
+            exp_out="$(cd "$exp_dir" && python3 experiment.py 2>&1)"
+            exp_exit=$?
+            set -e
+
+            if [[ $exp_exit -eq 0 && "$exp_out" =~ [^[:space:]] ]]; then
+              s08_success=1
+              break
+            fi
+
+            local err_cat
+            err_cat="$(classify_error "$exp_exit" "$exp_out")"
+            log_retry "$s08_attempt" "$err_cat"
+            echo "[pipeline] S08: 에러 분류=$err_cat, 자동 수정 시도" >&2
+
+            if (( s08_attempt >= s08_max )); then break; fi
+
+            # Codex에게 코드 수정 요청
+            local fix_prompt
+            fix_prompt="$(generate_fix_prompt "$err_cat" "$(cat "$exp_dir/experiment.py")" "$exp_out")"
+            local fixed_code
+            fixed_code="$(bash "$ORCH" codex "$fix_prompt" s08-fix-${s08_attempt} 2>/dev/null || true)"
+            if [[ -n "$fixed_code" ]]; then
+              # 코드 블록 추출 후 덮어쓰기
+              printf '%s\n' "$fixed_code" | python3 -c "
+import sys, re
+text = sys.stdin.read()
+m = re.search(r'\`\`\`python\n(.*?)\`\`\`', text, re.DOTALL)
+if m: print(m.group(1))
+else: print(text)
+" > "$exp_dir/experiment.py"
+            fi
+          done
+
+          if [[ $s08_success -eq 1 ]]; then
+            printf '# S08 실험 결과 (자동 실행)\n\n%s\n' "$exp_out" > "$out_file"
+          else
+            printf '# S08 실험 결과\n\n실행 실패 (%s회 시도). 수동 개입 필요.\n\n## 마지막 에러\n%s\n' "$s08_max" "$exp_out" > "$out_file"
+            echo "[pipeline] WARN: S08 자동 실행 실패, 수동 개입 필요" >&2
+          fi
+        else
+          # self_heal.sh 미로드 시 기존 동작
+          printf '실행 결과: [수동 입력 필요]\n' > "$out_file"
+        fi
         ;;
       S09)
         if [ "$SKIP_EXPERIMENT" = "true" ]; then
