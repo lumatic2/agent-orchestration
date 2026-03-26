@@ -25,7 +25,15 @@ ORCH="$SCRIPT_DIR/orchestrate.sh"
 TOPIC=""
 SLUG=""
 VAULT="${HOME}/vault"
-[ -d "$VAULT" ] || VAULT="/tmp/pipeline-test"
+if [ ! -d "$VAULT" ]; then
+  # Windows fallback: ~/Desktop/research, 기타: /tmp
+  if [[ "$PLATFORM" == "windows" ]]; then
+    VAULT="${HOME}/Desktop/research"
+  else
+    VAULT="/tmp/pipeline-test"
+  fi
+fi
+mkdir -p "$VAULT/30-projects/papers" 2>/dev/null || true
 # Python-compatible temp directory (Windows Git Bash /tmp/ not recognized by Python)
 PYTMPDIR="$(python3 -c "import tempfile; print(tempfile.gettempdir())" 2>/dev/null || echo "/tmp")"
 SKIP_EXPERIMENT="false"
@@ -218,6 +226,14 @@ wait_gate() {
   tmp="$(mktemp)"
   jq --arg s "$stage" '.gate_pending_stage = $s' "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
   echo "[pipeline] GATE: $stage — 검토 후 --approve-gate $stage 로 재실행"
+
+  # Windows: vault가 Desktop 외부일 때 중간 결과 복사
+  if [[ "$PLATFORM" == "windows" && "$VAULT" != *"Desktop/research"* ]]; then
+    local desktop_dest="${HOME}/Desktop/research/$(basename "$PAPER_DIR")"
+    mkdir -p "$desktop_dest"
+    cp -r "$STATE_DIR"/* "$desktop_dest/" 2>/dev/null || true
+    echo "[pipeline] Windows 중간 결과 복사: $desktop_dest"
+  fi
   exit 42
 }
 
@@ -1888,6 +1904,16 @@ main() {
   if type metaclaw_collect &>/dev/null; then
     metaclaw_collect 2>/dev/null || true
     echo "[pipeline] MetaClaw: 실행 이력 수집 완료" >&2
+  fi
+
+  # Windows: vault가 Desktop 외부일 때 결과물 복사
+  if [[ "$PLATFORM" == "windows" && "$VAULT" != *"Desktop/research"* ]]; then
+    local desktop_dest="${HOME}/Desktop/research/$(basename "$PAPER_DIR")"
+    mkdir -p "$desktop_dest"
+    cp -r "$STATE_DIR"/* "$desktop_dest/" 2>/dev/null || true
+    [ -f "$PAPER_DIR/draft.md" ] && cp "$PAPER_DIR/draft.md" "$desktop_dest/" 2>/dev/null
+    [ -f "$PAPER_DIR/draft.pdf" ] && cp "$PAPER_DIR/draft.pdf" "$desktop_dest/" 2>/dev/null
+    echo "[pipeline] Windows 결과 복사: $desktop_dest"
   fi
 }
 
