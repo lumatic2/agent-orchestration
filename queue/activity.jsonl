@@ -1840,3 +1840,5 @@
 {"ts":"2026-03-26T20:59:38+0900","id":"T322","event":"dispatched","detail":""}
 {"ts":"2026-03-26T21:00:06+0900","id":"T323","event":"created","detail":"agent=codex"}
 {"ts":"2026-03-26T21:00:08+0900","id":"T323","event":"dispatched","detail":""}
+{"ts":"2026-03-26T21:06:13+0900","id":"T323","event":"completed","detail":""}
+{"ts":"2026-03-26T21:14:33+0900","id":"MODE","event":"mode_change","detail":"from=full to=full reason=boot_reset"}
