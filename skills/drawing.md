@@ -38,6 +38,7 @@ $ARGUMENTS가 비어 있으면 아래 메시지 출력 후 대화 시작:
 📖 스토리 — 스토리보드, 웹툰, 만화 컷
 
 ── 직접 생성 (바로 파일/화면 출력) ──
+🤖 로컬 AI 생성 — ComfyUI (RTX 4070 Ti, 무료) → Desktop/Drawing/comfy/ 저장
 🔷 로고/아이콘 — SVG로 직접 생성 → Desktop/Drawing/ 저장
 📊 다이어그램 — Mermaid 플로우차트, ER, 시퀀스 등
 📱 UI 화면 — Stitch MCP로 실제 UI 생성 (모바일/웹/태블릿)
@@ -52,6 +53,11 @@ $ARGUMENTS가 비어 있으면 아래 메시지 출력 후 대화 시작:
 **UI 화면 경로** (Stitch MCP로 실제 화면 생성):
 - 앱 화면, 대시보드, 랜딩페이지, 로그인, 피드 등 UI/UX 결과물
 - `--mobile`, `--desktop`, `--tablet`, `--variants N` 옵션 시 강제 분기
+
+**ComfyUI 로컬 생성 경로** (로컬 AI로 직접 이미지 생성):
+- 치비·캐릭터·스티커·일러스트 등 AI 이미지 로컬 생성
+- `--comfy` 옵션 또는 "로컬로", "ComfyUI로" 언급 시 강제 분기
+- 자세한 설정 → Section 5 참조
 
 **직접 생성 경로** (SVG/Mermaid로 즉시 출력):
 - 로고, 아이콘, SVG 그래픽, 심볼, 다이어그램, 플로우차트, ER 다이어그램 등
@@ -213,7 +219,71 @@ mcp__stitch-mcp__generate_screen_from_text(
 
 ---
 
-## 5. SVG 파일 저장 파이프라인
+## 5. 대화 흐름 — ComfyUI 로컬 생성 경로
+
+> 🖥️ RTX 4070 Ti 로컬 실행. 무료. MCP로 Claude Code에서 직접 제어.
+> 출력 폴더: `C:\Users\1\Desktop\Drawing\comfy\`
+> ComfyUI 포트: `127.0.0.1:8000` (Windows Electron 앱)
+
+### 설치된 체크포인트
+
+| 모델 파일 | 특징 | 최적 스타일 |
+|---|---|---|
+| `illustriousXL_v01.safetensors` | 클린 애니 라인아트 | 치비·스티커·캐릭터 **추천** |
+| `ponyDiffusionV6XL_v6StartWithThisOne.safetensors` | 애니/furry 특화 | 붓터치 질감 |
+| `noobaiXLNAIXL_vPred10Version.safetensors` | V-Pred, 단일 캐릭터 제어 약함 | 실험용 |
+
+### 설치된 LoRA
+
+| LoRA 파일 | 용도 | 권장 weight |
+|---|---|---|
+| `minimalist_flat_2d.safetensors` | 플랫 채색 강제 (Illustrious) | 0.6~0.8 |
+| `dual_vector_flat_2d.safetensors` | 벡터 2D 스타일 (SDXL) | 0.5~0.7 |
+| `cartoon_style_illustrious.safetensors` | 카툰 스타일 (Illustrious) | 0.6~0.8 |
+| `sdxl_sticker_sheet_norod78.safetensors` | 스티커 질감 (Pony 전용) | 0.5 |
+
+### 프롬프트 구조 (Illustrious XL 기준)
+
+```
+긍정: solo, 1{동물}, chibi, front view, facing viewer, looking at viewer,
+      big round eyes, {복장}, thick bold black outline, flat color fill,
+      no shading, no gradient, clean lineart, white background, kawaii, cute
+
+부정: multiple characters, back view, shading, gradient, texture,
+      3D, realistic, complex background, repeated pattern, collage
+```
+
+**Pony 전용 필수 태그 (앞에 붙일 것):** `score_9, score_8_up, score_7_up, source_anime`
+
+### 워크플로우 핵심 설정
+
+| 파라미터 | Illustrious XL | Pony |
+|---|---|---|
+| Steps | 28~30 | 30 |
+| CFG | 7 | 9 |
+| Sampler | dpmpp_2m | dpmpp_2m |
+| Scheduler | karras | karras |
+| batch_size | **반드시 1** | 1 |
+
+### LoRA 2개 사용 시
+
+```
+CheckpointLoaderSimple → LoraLoader(LoRA_A) → LoraLoader(LoRA_B) → KSampler
+```
+각 LoRA weight 합이 1.4 이하가 되도록 조정.
+
+### 알려진 문제 & 해결
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| 뒷모습만 나옴 | 색상 조합이 특정 뒷면 캐릭터와 연결 | 색상 변경 또는 시드 교체 |
+| 여러 캐릭터 콜라주 | `solo` 태그 누락 또는 batch_size > 1 | `solo` 필수, batch_size=1 |
+| 회색 배경 | 모델 기본 배경 | Flat Color LoRA 추가, `white background` 강조 |
+| NoobAI 흰 화면 | V-Pred 미설정 | `ModelSamplingDiscrete(v_prediction)` 노드 추가 |
+
+---
+
+## 5-B. SVG 파일 저장 파이프라인
 
 SVG 결과물은 **항상** 파일로 저장하고 VSCode에서 자동 오픈한다.
 

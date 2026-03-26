@@ -1,3 +1,12 @@
+<!--
+music.md — Suno Music Prompt Design Skill for Claude Code
+Author: luma (https://github.com/Mod41529)
+License: MIT
+Vault dependency: None (standalone version)
+Install: cp music.md ~/.claude/commands/music.md
+Repo: https://github.com/Mod41529/music-skill-ko
+-->
+
 # /music — Suno 음악 프롬프트 설계 세션
 
 대화를 통해 원하는 음악을 구체화하고, Suno에서 바로 사용할 수 있는 프롬프트와 설정을 생성한다.
@@ -76,7 +85,7 @@ $ARGUMENTS가 비어 있으면 인터랙티브 모드:
 ```
 
 **① 바로 만들기** 선택 시:
-- 템플릿 라이브러리(Ref D)에서 가장 유사한 장르 템플릿 로드
+- Ref D 템플릿 중 가장 유사한 장르 기준점 참고
 - 빠진 요소(악기·BPM·보컬·프로덕션)를 장르 관습에 맞게 자동 결정
 - 결정 근거를 간단히 표시 후 Step 2로 바로 출력
 
@@ -99,9 +108,7 @@ $ARGUMENTS가 비어 있으면 인터랙티브 모드:
 - 감각적 표현("비 오는 날 카페")을 음악 요소로 변환
 - 장르 조합 적극 제안 ("재즈 + 힙합 + lo-fi = jazz hop")
 - 레퍼런스 아티스트 → 음악적 특징 분석 후 반영
-- **장르 결정 후 필수**: vault `10-knowledge/music/prompt-templates.md`에서 해당 장르 템플릿 읽기 → 기준점으로 활용
-- 가사 있으면 → Ref B 아티스트 프로필 + Ref C 가사 원칙 참고
-- **가사 작성 전 필수**: vault `10-knowledge/music/lyrics-reference-db.md`를 읽어서 해당 분위기의 레퍼런스 라인 참고
+- 가사 있으면 → Ref B 아티스트 프로필 + Ref C 가사 원칙 + Ref F 레퍼런스 참고
 
 ### 1-A. 앨범/EP 모드 (`--album`)
 
@@ -157,8 +164,6 @@ $ARGUMENTS가 비어 있으면 인터랙티브 모드:
 - "BPM 올려줘" → 템포 변경
 - "보컬 빼줘" → instrumental 전환
 - "가사 써줘" / "가사 다시" → 가사 추가/재작성
-- "이 라인 저장해줘" → vault 가사 레퍼런스 DB에 추가
-- "이 프롬프트 저장해줘" / "템플릿으로 저장해줘" → vault 프롬프트 템플릿 라이브러리에 추가
 
 세션은 사용자가 만족할 때까지 유지. 확정 시:
 ```
@@ -237,89 +242,75 @@ $ARGUMENTS가 비어 있으면 인터랙티브 모드:
 5. **한 구절에 아이디어 하나** — Verse 1=상황 설정, Verse 2=심화, Bridge=클라이맥스 전 여백.
 6. **후렴은 단순 반복** — 바로 따라 부를 수 있는 한 문장. 한영 혼합 시 영어는 punch word로.
 
-## Ref D. 프롬프트 템플릿 라이브러리
+## Ref D. 프롬프트 템플릿
 
-- **위치**: vault `10-knowledge/music/prompt-templates.md`
-- 장르별 검증된 Style of Music 프롬프트 + Weirdness/Style Influence 값 수록
-- 같은 장르 요청 시 먼저 읽어서 기준점으로 활용 → 설계 대화 시 참고
-- 확정된 프롬프트는 "템플릿으로 저장해줘" 요청 시 해당 장르 섹션에 추가
-- 저장 형식: 프롬프트 + 슬라이더 값 + 비고(레퍼런스·용도)
+장르별 기준점. "바로 만들기" 선택 시 가장 유사한 템플릿을 기준으로 빈 요소를 채운다.
 
-## Ref F. 가사 레퍼런스 DB
-
-- **위치**: vault `10-knowledge/music/lyrics-reference-db.md`
-- 장르·분위기별 좋은 가사 라인, 펀치라인, 후렴 패턴 수록
-- 가사 작성 시 해당 분위기 레퍼런스 읽어서 톤·이미지 참고
-- "이 라인 저장해줘" → DB에 추가 (장면·감각 묘사만, 직접 감정 표현 제외)
-
-## Ref G. Vault 참조
-
-- `mcp__obsidian-vault__read_note` → 음악 허브 장르 페이지의 Suno 실험 템플릿
-- 장르별 세부 특징은 Vault 10-knowledge 또는 음악 허브에서 조회
-
----
-
-
----
-
-## --update 모드 (스킬 자동 패치)
-
-`/music --update` 호출 시 실행. 음악 생성 없이 스킬 자체를 업데이트한다.
-
-### Step 1 — 최신 리서치 파일 읽기
-
+### 힙합 — 레이지 트랩 (감성)
 ```
-mcp__obsidian-vault__search_notes(query="music-skill-update", limit=5)
+melodic rage hip-hop, dark atmospheric trap, emotional, introspective,
+distorted synth leads, heavy 808 bass, trap hi-hats, autotuned male rap,
+reverb-drenched vocals, 140 BPM, cinematic, brooding
 ```
+Weirdness: 50 / Style Influence: 65
 
-날짜 기준 가장 최신 파일 선택 후 전체 내용 읽기.
-
-### Step 2 — 자동 패치 (즉시 적용)
-
-| 자동 패치 대상 | 예시 |
-|---|---|
-| 모델 버전 | `v4` → `v5`, `Chirp 3` 신규 추가 |
-| 파라미터/슬라이더 변경 | Ruggedness, Variance 범위 변경 |
-| 새 탭/기능 추가 | Persona, Inspo, Audio 탭 변경사항 |
-| 장르 키워드 추가 | 새로 유효한 태그 테이블에 삽입 |
-| 날짜 표기 갱신 | `(2026-03)` → 최신 날짜 |
-
-### Step 3 — 검토 제안
-
+### 힙합 — 재즈힙합 (그루비)
 ```
-## --update 완료
-
-### 자동 패치됨
-- {변경 항목 목록}
-
-### 검토 필요
-{구조 변경 필요한 항목 → "반영해줘" 하면 즉시 적용}
-
-리서치 원본: vault/10-knowledge/research/music-skill-update_YYYY-MM-DD.md
+jazz hop, groovy, upbeat, live jazz instruments, upright bass, jazz piano,
+brushed drums, swing rhythm, male rap with jazz vocal hooks,
+smooth lo-fi texture, 90 BPM, laid-back
 ```
+Weirdness: 45 / Style Influence: 70
 
-### 리서치 파일 없을 때
+### K-POP — 감성 발라드
+```
+Korean ballad, slow emotional piano ballad, sorrowful, heartfelt male vocal
+with breathy tone, piano-driven, string arrangement, melancholic,
+bittersweet love, 65 BPM
+```
+Weirdness: 35 / Style Influence: 75
 
+### 월드뮤직 — 레게 팝 (축제 앤썸)
 ```
-아직 리서치 파일이 없어요. 크론은 매월 1일 09:45에 실행돼요.
-지금 바로: bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "Suno 최신 업데이트 조사" "music-skill-update-manual"
+reggae pop, world music, festive anthem, tropical groove, upbeat, euphoric,
+male vocal, punchy brass horns, ska rhythm guitar, bouncy bass, steel drums,
+handclaps, 100 BPM, stadium energy, catchy hook, sunny
 ```
+Weirdness: 40 / Style Influence: 70
+
+## Ref E. 가사 레퍼런스
+
+분위기별 좋은 라인 패턴. 가사 작성 시 톤·이미지 참고.
+
+**감성 / 그리움**
+- 시각적 장면으로 감정 표현: "새벽 세 시, 꺼지지 않는 네 방의 불빛"
+- 단순 질문이 깊이를 만듦: "넌 아직 거기 있을까, 같은 자리에"
+
+**자기 확신 / 스웨거**
+- 짧고 리듬감 있는 선언: "내 길을 가 — 빛이 나"
+- 한영 대비로 아이러니: "They don't know me, 근데 다 알아보더라"
+
+**일상 / 여유**
+- 일상어가 가장 깊은 위로: "오늘도 별일 없이 괜찮았어"
+- 감각적 미니멀리즘: "커피 한 잔에 노을 하나면 충분해"
+
+**후렴 패턴**
+- 반복형: 같은 문장 2회 + 변주 1회
+- 콜앤리스폰스: 질문 → 대답 ("어디로 가?" / "어디든")
+- 한영 스위치: 한국어 감정 → 영어 punch word ("괜찮아 I'm fine")
 
 ---
 
 ## 세션 종료 & 연계 제안
 
-프롬프트 완성 후 아래 형식으로 연계 제안을 반드시 표시한다.
+프롬프트 완성 후 아래 형식으로 연계 제안 표시:
 
 ```
 이어서 진행할까요?
 ```
 
-**곡 성격별 연계 제안:**
-
 | 곡 성격 | 🎨 /drawing | ✏️ /writing |
 |---|---|---|
-| 가사 있는 곡 | 앨범 커버 or 뮤직비디오 컨셉아트 만들기 | 가사를 에세이·시로 확장하기 |
-| 인스트루멘탈 | 이 분위기의 시네마틱 이미지 만들기 | 이 곡에 어울리는 짧은 산문 써보기 |
-| 시네마틱 / OST | 이 장면의 컨셉아트 만들기 | 이 장면을 소설 도입부로 써보기 |
-| 앨범 컨셉 | 앨범 커버 or 브랜드 비주얼 만들기 | 앨범 소개글 / 아티스트 노트 써보기 |
+| 가사 있는 곡 | 앨범 커버 or 뮤직비디오 컨셉아트 | 가사를 에세이·시로 확장 |
+| 인스트루멘탈 | 이 분위기의 시네마틱 이미지 | 이 곡에 어울리는 짧은 산문 |
+| 앨범 컨셉 | 앨범 커버 or 브랜드 비주얼 | 앨범 소개글 / 아티스트 노트 |

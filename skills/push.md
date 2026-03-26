@@ -3,6 +3,7 @@
 1. **skills/ → commands/ 동기화**
    ```bash
    for f in ~/projects/agent-orchestration/skills/*.md; do
+     [[ "$(basename "$f")" == *-public.md ]] && continue
      cp "$f" ~/.claude/commands/"$(basename "$f")"
    done
    ```

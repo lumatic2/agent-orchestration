@@ -189,7 +189,7 @@ def atom_link(entry):
 
 req = urllib.request.Request(
     feed_url,
-    headers={"User-Agent": "Mozilla/5.0 (it-contents-bot)"},
+    headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"},
 )
 try:
     with urllib.request.urlopen(req, timeout=20) as resp:
@@ -514,7 +514,7 @@ collect_rss_sources() {
     "bongman|https://bongman.tistory.com/rss"
     "조대협|https://bcho.tistory.com/rss"
     # 뉴스/큐레이션
-    "긱뉴스|https://news.hada.io/rss"
+    # "긱뉴스|https://news.hada.io/rss"  # 2026-03-26: RSS 403 차단됨
     "요즘IT|https://yozm.wishket.com/magazine/feed/"
     "pytorch.kr|https://discuss.pytorch.kr/latest.rss"
     "aisparkup|https://aisparkup.com/feed"
