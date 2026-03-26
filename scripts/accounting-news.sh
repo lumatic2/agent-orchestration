@@ -360,7 +360,7 @@ with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
         if len(parts) < 5:
             continue
 
-        cat = re.sub(r"^\[(.*)\]$", r"\1", parts[0]).strip()
+        cat = re.sub(r"^[`\s]*\[?(.*?)\]?[`\s]*$", r"\1", parts[0]).strip()
         if cat not in allowed:
             continue
 
