@@ -262,6 +262,7 @@ collect_web_sources() {
 - bkamp_ai 유튜브: https://www.youtube.com/@bkamp_ai
 - maker-evan 유튜브: https://www.youtube.com/@maker-evan
 - ddokham 유튜브: https://www.youtube.com/@ddokham
+- 긱뉴스: https://news.hada.io/
 
 없으면 최근 1주일 이내로 확장. 형식: 소스명 | 제목 | URL
 PROMPT
