@@ -1010,10 +1010,11 @@ PYEOF
 
         # vault에 저장 (draft + notes + references)
         local vault_ok=0
-        if ssh -o ConnectTimeout=10 m4 "mkdir -p ~/vault/30-projects/papers/$SLUG" 2>/dev/null; then
-          ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/draft.md" < "$PAPER_DIR/draft.md" 2>/dev/null && \
-          ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/notes.md" < "$PAPER_DIR/notes.md" 2>/dev/null && \
-          ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/references.md" < "$PAPER_DIR/references.md" 2>/dev/null && \
+        local _ssh="ssh -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3"
+        if $_ssh m4 "mkdir -p ~/vault/30-projects/papers/$SLUG" 2>/dev/null; then
+          $_ssh m4 "cat > ~/vault/30-projects/papers/$SLUG/draft.md" < "$PAPER_DIR/draft.md" 2>/dev/null && \
+          $_ssh m4 "cat > ~/vault/30-projects/papers/$SLUG/notes.md" < "$PAPER_DIR/notes.md" 2>/dev/null && \
+          $_ssh m4 "cat > ~/vault/30-projects/papers/$SLUG/references.md" < "$PAPER_DIR/references.md" 2>/dev/null && \
           vault_ok=1
         fi
 
@@ -1304,14 +1305,14 @@ ${draft_content}"
         local g_full; g_full="$(cat "$tmp_g")"; rm -f "$tmp_g"
         local gr; gr="$(printf '%s\n' "$g_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
         [ -z "$gr" ] && gr="$g_full"
-        gr="$(printf '%s\n' "$gr" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]')"
+        gr="$(printf '%s\n' "$gr" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]' || true)"
         [ -z "$gr" ] && gr="(Gemini 리뷰 실패 exit=$eg)"
         printf '%s\n' "$gr" > "$gemini_out"
 
         local c_full; c_full="$(cat "$tmp_c")"; rm -f "$tmp_c"
         local cr; cr="$(printf '%s\n' "$c_full" | awk '/^--- Codex Summary ---/{found=1;next}found')"
         [ -z "$cr" ] && cr="$c_full"
-        cr="$(printf '%s\n' "$cr" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]')"
+        cr="$(printf '%s\n' "$cr" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]' || true)"
         [ -z "$cr" ] && cr="(Codex 리뷰 실패 exit=$eck)"
         printf '%s\n' "$cr" > "$codex_out"
 
@@ -1461,7 +1462,7 @@ $(printf '%s' "$current_draft" | head -300)"
           local r_full; r_full="$(cat "$rev_tmp")"; rm -f "$rev_tmp"
           local revised; revised="$(printf '%s\n' "$r_full" | awk '/^--- Gemini Result ---/{found=1;next}found')"
           [ -z "$revised" ] && revised="$r_full"
-          revised="$(printf '%s\n' "$revised" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]')"
+          revised="$(printf '%s\n' "$revised" | grep -v '^\s*at async\|^\s*at Object\|node:internal\|node_modules\|^\[LOG\]\|^\[QUEUE\]' || true)"
           # Gemini 서두 제거: 첫 번째 마크다운 헤딩(#) 이전 줄 제거 (heading 없으면 원본 유지)
           local revised_stripped; revised_stripped="$(printf '%s\n' "$revised" | awk '/^#/{found=1} found')"
           [ -n "$revised_stripped" ] && revised="$revised_stripped"
@@ -1663,7 +1664,7 @@ PYEOF
           local desktop_pdf_status="❌ 바탕화면 복사 실패"
           if [ -f "$pdf_path" ] && [ -s "$pdf_path" ]; then
             pdf_status="✅ $pdf_path (템플릿: ${TEMPLATE})"
-            if ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf" < "$pdf_path" 2>/dev/null; then
+            if ssh -o ConnectTimeout=10 -o ServerAliveInterval=5 -o ServerAliveCountMax=3 m4 "cat > ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf" < "$pdf_path" 2>/dev/null; then
               vault_pdf_status="✅ ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf"
             fi
             local desktop_dir
@@ -1698,15 +1699,6 @@ S16_EOF
           continue
         fi
 
-        local synth
-        synth="$([ -f "$STATE_DIR/s05_synthesis.md" ] && cat "$STATE_DIR/s05_synthesis.md" || echo "(S05 결과 없음)")"
-        local exp
-        exp="$([ -f "$STATE_DIR/s06_experiment.md" ] && cat "$STATE_DIR/s06_experiment.md" || echo "(S06 실험 설계 없음)")"
-        local prompt
-        prompt="$(cat "$REPO_DIR/templates/prompts/s07_code_gen.md")"
-        prompt="${prompt//__TOPIC__/$TOPIC}"
-        prompt="${prompt//__SYNTHESIS__/$synth}"
-        prompt="${prompt//__EXPERIMENT__/$exp}"
         write_direct_stage "$stage" "$out_file"
 
         local gate_arg_upper
@@ -1740,7 +1732,22 @@ S16_EOF
         brief="${brief//__SYNTHESIS__/$s05}"
         brief="${brief//__EXPERIMENT__/$s06}"
         NO_VAULT=true FORCE=true bash "$ORCH" codex-spark "$brief" "s07-code-${SLUG}" > "$code_tmp" 2>&1
-        cp "$code_tmp" "$STATE_DIR/s07_code/experiment.py"
+        # raw output에서 Python 코드 블록만 추출 (메타 로그 제거)
+        python3 -c "
+import re, sys
+text = open(sys.argv[1], encoding='utf-8', errors='replace').read()
+idx = text.find('--- Codex Result ---')
+if idx >= 0: text = text[idx:]
+m = re.search(r'\`\`\`python\n(.*?)\`\`\`', text, re.DOTALL)
+if m:
+    print(m.group(1))
+else:
+    lines = [l for l in text.splitlines()
+             if not l.startswith('[LOG]') and not l.startswith('[QUEUE]')
+             and 'node:internal' not in l and 'node_modules' not in l
+             and not l.startswith('--- Codex')]
+    print('\n'.join(lines))
+" "$code_tmp" > "$STATE_DIR/s07_code/experiment.py"
         rm -f "$code_tmp"
         ;;
       S08)
@@ -1859,17 +1866,17 @@ S09_EOF
       exit 1
     fi
 
+    save_checkpoint "$stage" "completed"
+    echo "[pipeline] $stage 완료 → $(stage_file "$stage")"
     if [ "$CURRENT_STAGE" -lt 17 ]; then
       CURRENT_STAGE=$((CURRENT_STAGE + 1))
     fi
-    save_checkpoint "$stage" "completed"
-    echo "[pipeline] $stage 완료 → $(stage_file "$stage")"
   done
 
   echo ""
   echo "[pipeline] 파이프라인 완료!"
   echo "  논문(MD): $PAPER_DIR/draft.md"
-  echo "  논문(PDF): $PAPER_DIR/draft.pdf"
+  echo "  논문(PDF): $(ls -t "$PAPER_DIR"/*.pdf 2>/dev/null | head -1 || echo '(PDF 없음)')"
   echo "  검증: $STATE_DIR/s15_validation.md"
   echo "  상태: $PIPELINE_FILE"
 }
@@ -1927,8 +1934,10 @@ main() {
   if [[ "$PLATFORM" == "windows" ]]; then
     local desktop_dir="${HOME}/Desktop/research"
     mkdir -p "$desktop_dir"
-    if [ -f "$PAPER_DIR/draft.pdf" ]; then
-      cp "$PAPER_DIR/draft.pdf" "$desktop_dir/${SLUG}.pdf" 2>/dev/null
+    local _final_pdf
+    _final_pdf="$(ls -t "$PAPER_DIR"/*.pdf 2>/dev/null | head -1)"
+    if [ -n "$_final_pdf" ] && [ -f "$_final_pdf" ]; then
+      cp "$_final_pdf" "$desktop_dir/${SLUG}.pdf" 2>/dev/null
       echo "[pipeline] PDF 복사: $desktop_dir/${SLUG}.pdf"
     fi
     if [ -f "$PAPER_DIR/draft.md" ]; then
