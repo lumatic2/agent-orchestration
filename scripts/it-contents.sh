@@ -690,7 +690,7 @@ fi
   if [[ "$REEXPOSED_COUNT" -gt 0 ]]; then
     while IFS=$'\t' read -r source title url date_text; do
       [[ -z "${source:-}" ]] && continue
-      echo "- **$source** | [$title]($url) *()*"
+      echo "- **$source** | [$title]($url)${date_text:+ *($date_text)*}"
     done < "$REEXPOSED_ITEMS"
   else
     echo "- 없음"
