@@ -1512,94 +1512,30 @@
 {"ts":"2026-03-24T08:37:16+0900","id":"T115","event":"created","detail":"agent=gemini"}
 {"ts":"2026-03-24T08:37:17+0900","id":"T115","event":"dispatched","detail":""}
 {"ts":"2026-03-24T08:40:19+0900","id":"T115","event":"completed","detail":""}
-{"ts":"2026-03-26T00:30:05+0900","id":"MODE","event":"mode_change","detail":"from=full to=full reason=manual"}
-{"ts":"2026-03-26T00:31:13+0900","id":"T210","event":"completed","detail":""}
-{"ts":"2026-03-26T00:31:44+0900","id":"MODE","event":"mode_change","detail":"from=full to=full reason=boot_reset"}
-{"ts":"2026-03-26T00:31:46+0900","id":"MODE","event":"mode_change","detail":"from=full to=code reason=manual"}
-{"ts":"2026-03-26T00:31:53+0900","id":"MODE","event":"mode_change","detail":"from=code to=solo reason=manual"}
-{"ts":"2026-03-26T00:31:57+0900","id":"MODE","event":"mode_change","detail":"from=solo to=full reason=manual"}
-{"ts":"2026-03-26T00:33:55+0900","id":"MODE","event":"mode_change","detail":"from=full to=solo reason=manual"}
-{"ts":"2026-03-26T00:33:59+0900","id":"MODE","event":"mode_change","detail":"from=solo to=full reason=manual"}
-{"ts":"2026-03-26T00:34:16+0900","id":"MODE","event":"mode_change","detail":"from=full to=code reason=manual"}
-{"ts":"2026-03-26T00:34:23+0900","id":"MODE","event":"mode_change","detail":"from=code to=full reason=manual"}
-{"ts":"2026-03-26T00:35:03+0900","id":"T208","event":"completed","detail":""}
-{"ts":"2026-03-26T00:35:54+0900","id":"MODE","event":"mode_change","detail":"from=full to=solo reason=manual"}
-{"ts":"2026-03-26T00:35:57+0900","id":"MODE","event":"mode_change","detail":"from=solo to=full reason=manual"}
-{"ts":"2026-03-26T00:36:32+0900","id":"T211","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T00:36:35+0900","id":"T211","event":"dispatched","detail":""}
-{"ts":"2026-03-26T00:36:50+0900","id":"T212","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T00:36:53+0900","id":"T212","event":"dispatched","detail":""}
-{"ts":"2026-03-26T00:37:02+0900","id":"T213","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T00:37:09+0900","id":"T213","event":"dispatched","detail":""}
-{"ts":"2026-03-26T00:46:05+0900","id":"T215","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T00:46:09+0900","id":"T215","event":"dispatched","detail":""}
-{"ts":"2026-03-26T00:46:50+0900","id":"T216","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T00:46:54+0900","id":"T216","event":"dispatched","detail":""}
-{"ts":"2026-03-26T00:47:06+0900","id":"T213","event":"completed","detail":""}
-{"ts":"2026-03-26T00:48:41+0900","id":"T214","event":"completed","detail":""}
-{"ts":"2026-03-26T00:50:48+0900","id":"MODE","event":"mode_change","detail":"from=full to=full reason=boot_reset"}
-{"ts":"2026-03-26T00:50:53+0900","id":"MODE","event":"mode_change","detail":"from=full to=solo reason=manual"}
-{"ts":"2026-03-26T00:51:09+0900","id":"T217","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T00:51:16+0900","id":"T216","event":"completed","detail":""}
-{"ts":"2026-03-26T00:51:30+0900","id":"MODE","event":"mode_change","detail":"from=solo to=conserve-gemini reason=manual"}
-{"ts":"2026-03-26T00:51:44+0900","id":"T218","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T00:52:02+0900","id":"MODE","event":"mode_change","detail":"from=conserve-gemini to=full reason=manual"}
-{"ts":"2026-03-26T00:52:02+0900","id":"MODE","event":"mode_change","detail":"from=conserve-gemini to=full reason=boot_reset"}
-{"ts":"2026-03-26T00:55:17+0900","id":"T219","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T00:55:21+0900","id":"T219","event":"dispatched","detail":""}
-{"ts":"2026-03-26T00:55:42+0900","id":"T220","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T00:55:46+0900","id":"T220","event":"dispatched","detail":""}
-{"ts":"2026-03-26T01:03:42+0900","id":"T221","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T01:03:46+0900","id":"T221","event":"dispatched","detail":""}
-{"ts":"2026-03-26T01:05:03+0900","id":"T219","event":"completed","detail":""}
-{"ts":"2026-03-26T01:12:02+0900","id":"T222","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T01:12:06+0900","id":"T222","event":"dispatched","detail":""}
-{"ts":"2026-03-26T01:12:31+0900","id":"MODE","event":"mode_change","detail":"from=full to=conserve-gemini reason=rate_limit_gemini"}
-{"ts":"2026-03-26T01:12:32+0900","id":"T221","event":"queued","detail":""}
-{"ts":"2026-03-26T01:12:34+0900","id":"T221","event":"dispatched","detail":""}
-{"ts":"2026-03-26T01:16:18+0900","id":"T221","event":"completed","detail":""}
-{"ts":"2026-03-26T01:21:09+0900","id":"T223","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T01:21:14+0900","id":"T223","event":"dispatched","detail":""}
-{"ts":"2026-03-26T01:25:16+0900","id":"T222","event":"completed","detail":""}
-{"ts":"2026-03-26T01:32:35+0900","id":"T223","event":"completed","detail":""}
-{"ts":"2026-03-26T01:34:27+0900","id":"T224","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T01:34:30+0900","id":"T224","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T01:34:31+0900","id":"T224","event":"dispatched","detail":""}
-{"ts":"2026-03-26T01:39:39+0900","id":"T224","event":"completed","detail":""}
-{"ts":"2026-03-26T01:49:36+0900","id":"MODE","event":"mode_change","detail":"from=conserve-gemini to=full reason=boot_reset"}
-{"ts":"2026-03-26T01:56:54+0900","id":"T225","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T01:56:59+0900","id":"T225","event":"dispatched","detail":""}
-{"ts":"2026-03-26T01:57:51+0900","id":"T226","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T01:57:56+0900","id":"T226","event":"dispatched","detail":""}
-{"ts":"2026-03-26T01:58:24+0900","id":"MODE","event":"mode_change","detail":"from=full to=conserve-gemini reason=rate_limit_gemini"}
-{"ts":"2026-03-26T01:58:25+0900","id":"T215","event":"queued","detail":""}
-{"ts":"2026-03-26T01:58:28+0900","id":"T215","event":"dispatched","detail":""}
-{"ts":"2026-03-26T02:02:25+0900","id":"T215","event":"queued","detail":""}
-{"ts":"2026-03-26T02:02:26+0900","id":"T215","event":"queued","detail":""}
-{"ts":"2026-03-26T02:17:35+0900","id":"T227","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T02:18:01+0900","id":"T228","event":"created","detail":"agent=chatgpt"}
-{"ts":"2026-03-26T02:18:05+0900","id":"T228","event":"dispatched","detail":""}
-{"ts":"2026-03-26T02:21:20+0900","id":"T228","event":"queued","detail":""}
-{"ts":"2026-03-26T02:21:23+0900","id":"T226","event":"completed","detail":""}
-{"ts":"2026-03-26T02:21:23+0900","id":"T228","event":"dispatched","detail":""}
-{"ts":"2026-03-26T02:27:28+0900","id":"T225","event":"completed","detail":""}
-{"ts":"2026-03-26T02:27:56+0900","id":"T228","event":"completed","detail":""}
-{"ts":"2026-03-26T02:30:47+0900","id":"T220","event":"completed","detail":""}
-{"ts":"2026-03-26T02:30:50+0900","id":"T229","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T02:30:54+0900","id":"T229","event":"dispatched","detail":""}
-{"ts":"2026-03-26T02:44:51+0900","id":"T229","event":"completed","detail":""}
-{"ts":"2026-03-26T02:46:12+0900","id":"T230","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T02:46:12+0900","id":"T230","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T02:46:17+0900","id":"T230","event":"dispatched","detail":""}
-{"ts":"2026-03-26T02:46:40+0900","id":"T230","event":"completed","detail":""}
-{"ts":"2026-03-26T02:48:33+0900","id":"MODE","event":"mode_change","detail":"from=conserve-gemini to=full reason=boot_reset"}
-{"ts":"2026-03-26T02:49:39+0900","id":"T231","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T02:49:43+0900","id":"T231","event":"dispatched","detail":""}
-{"ts":"2026-03-26T02:53:23+0900","id":"T231","event":"completed","detail":""}
-{"ts":"2026-03-26T02:53:39+0900","id":"T232","event":"created","detail":"agent=gemini"}
-{"ts":"2026-03-26T02:53:44+0900","id":"T232","event":"dispatched","detail":""}
-{"ts":"2026-03-26T02:54:57+0900","id":"T232","event":"completed","detail":""}
-{"ts":"2026-03-26T02:55:49+0900","id":"T233","event":"created","detail":"agent=codex"}
-{"ts":"2026-03-26T02:55:54+0900","id":"T233","event":"dispatched","detail":""}
-{"ts":"2026-03-26T03:10:02+0900","id":"T233","event":"completed","detail":""}
-{"ts":"2026-03-26T03:17:04+0900","id":"MODE","event":"mode_change","detail":"from=full to=full reason=boot_reset"}
+{"ts":"2026-03-26T01:27:20+0900","id":"MODE","event":"mode_change","detail":"from=full to=solo reason=manual"}
+{"ts":"2026-03-26T01:27:20+0900","id":"T070","event":"created","detail":"agent=codex"}
+{"ts":"2026-03-26T01:27:27+0900","id":"MODE","event":"mode_change","detail":"from=solo to=full reason=boot_reset"}
+{"ts":"2026-03-26T08:00:14+0900","id":"T071","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T08:00:16+0900","id":"T071","event":"dispatched","detail":""}
+{"ts":"2026-03-26T08:03:15+0900","id":"T072","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T08:03:16+0900","id":"T072","event":"dispatched","detail":""}
+{"ts":"2026-03-26T08:03:54+0900","id":"T072","event":"completed","detail":""}
+{"ts":"2026-03-26T08:03:54+0900","id":"T073","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T08:03:55+0900","id":"T073","event":"dispatched","detail":""}
+{"ts":"2026-03-26T08:04:28+0900","id":"T073","event":"completed","detail":""}
+{"ts":"2026-03-26T08:30:15+0900","id":"T074","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T08:30:16+0900","id":"T074","event":"dispatched","detail":""}
+{"ts":"2026-03-26T08:33:15+0900","id":"T075","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T08:33:16+0900","id":"T075","event":"dispatched","detail":""}
+{"ts":"2026-03-26T08:35:03+0900","id":"T075","event":"completed","detail":""}
+{"ts":"2026-03-26T08:35:04+0900","id":"T076","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T08:35:05+0900","id":"T076","event":"dispatched","detail":""}
+{"ts":"2026-03-26T08:36:11+0900","id":"T076","event":"completed","detail":""}
+{"ts":"2026-03-26T10:00:39+0900","id":"T077","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T10:00:39+0900","id":"T077","event":"dispatched","detail":""}
+{"ts":"2026-03-26T10:03:39+0900","id":"T078","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T10:03:39+0900","id":"T078","event":"dispatched","detail":""}
+{"ts":"2026-03-26T10:04:35+0900","id":"T078","event":"completed","detail":""}
+{"ts":"2026-03-26T10:04:35+0900","id":"T079","event":"created","detail":"agent=gemini"}
+{"ts":"2026-03-26T10:04:36+0900","id":"T079","event":"dispatched","detail":""}
+{"ts":"2026-03-26T10:05:56+0900","id":"T079","event":"completed","detail":""}

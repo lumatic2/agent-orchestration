@@ -152,7 +152,7 @@ do_check() {
   fi
 
   local changed=0
-  for file in ; do
+  for file in "${files[@]+"${files[@]}"}" ; do
     check_file "$file" && true
     echo ""
     sleep 2   # API rate limit 방지
