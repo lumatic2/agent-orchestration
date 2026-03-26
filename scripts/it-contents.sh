@@ -514,6 +514,9 @@ collect_rss_sources() {
     "조대협|https://bcho.tistory.com/rss"
     # 뉴스/큐레이션
     "긱뉴스|https://news.hada.io/rss"
+    "요즘IT|https://yozm.wishket.com/magazine/feed/"
+    "pytorch.kr|https://discuss.pytorch.kr/latest.rss"
+    "aisparkup|https://aisparkup.com/feed"
     # 기업 테크 블로그
     "SK C&C|https://rss.blog.naver.com/skcc_official.xml"
     "네이버 D2|https://d2.naver.com/d2.atom"

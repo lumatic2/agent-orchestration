@@ -72,6 +72,14 @@ Examples:
 
 ---
 
+## Windows 로컬 도구
+
+- **파일 검색**: `es "검색어"` — Everything CLI (전 드라이브 즉시 검색)
+  - 예: `es "*.py" -path C:\Users\1\Desktop` / `es ext:mp4 -sort size-descending -n 10`
+  - Everything이 실행 중일 때만 작동 (시작프로그램 등록됨)
+
+---
+
 ## Knowledge Vault
 
 - **Location**: `luma3@m4:~/vault/` (MCP: `obsidian-vault`)

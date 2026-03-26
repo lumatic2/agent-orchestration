@@ -248,121 +248,6 @@ set_active_mode() {
   log_activity "MODE" "mode_change" "from=$prev_mode to=$mode_name reason=$reason"
 }
 
-check_auto_trigger() {
-  local current_mode
-  current_mode="$(get_active_mode)"
-  if [[ "$current_mode" == conserve-* ]]; then
-    return 0
-  fi
-
-  python3 - "$AGENT_CONFIG_FILE" "$ACTIVITY_LOG" "$(date +%Y-%m-%d)" "$QUEUE_DIR" << 'PYEOF'
-import json
-import re
-import sys
-from pathlib import Path
-
-try:
-    import yaml  # type: ignore
-except ImportError:
-    raise SystemExit(0)
-
-config_path = Path(sys.argv[1])
-activity_path = Path(sys.argv[2])
-today = str(sys.argv[3] or "").strip()
-queue_dir = Path(sys.argv[4])
-
-try:
-    config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-except Exception:
-    config = {}
-
-def normalize_family(agent: str) -> str:
-    key = str(agent or "").strip().lower()
-    if key.startswith("gemini"):
-        return "gemini"
-    if key.startswith("codex"):
-        return "codex"
-    return ""
-
-dispatch_ids = []
-id_to_agent = {}
-
-if activity_path.exists():
-    for raw in activity_path.read_text(encoding="utf-8", errors="ignore").splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        try:
-            row = json.loads(line)
-        except Exception:
-            continue
-        ts = str(row.get("ts") or "")
-        if not ts.startswith(today):
-            continue
-        event = str(row.get("event") or "").strip()
-        task_id = str(row.get("id") or "").strip()
-        detail = str(row.get("detail") or "")
-
-        if event == "created" and task_id:
-            match = re.search(r"agent=([A-Za-z0-9._-]+)", detail)
-            if match:
-                id_to_agent.setdefault(task_id, match.group(1))
-
-        if event == "dispatched" and task_id:
-            dispatch_ids.append(task_id)
-
-for task_id in dispatch_ids:
-    if task_id in id_to_agent:
-        continue
-    for meta_path in queue_dir.glob(f"{task_id}_*/meta.json"):
-        try:
-            meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        agent = str(meta.get("agent") or "").strip()
-        if agent:
-            id_to_agent[task_id] = agent
-            break
-
-counts = {"gemini": 0, "codex": 0}
-for task_id in dispatch_ids:
-    family = normalize_family(id_to_agent.get(task_id, ""))
-    if family in counts:
-        counts[family] += 1
-
-modes = config.get("modes") or {}
-gemini_limit = (((config.get("limits") or {}).get("gemini_pro") or {}).get("shared_requests_per_day") or 0)
-try:
-    gemini_limit = float(gemini_limit)
-except Exception:
-    gemini_limit = 0.0
-
-for mode_name, mode_cfg in modes.items():
-    if not isinstance(mode_cfg, dict):
-        continue
-    auto = mode_cfg.get("auto_trigger")
-    if not isinstance(auto, dict):
-        continue
-
-    metric = str(auto.get("metric") or "").strip()
-    try:
-        threshold = float(auto.get("threshold"))
-    except Exception:
-        continue
-
-    if metric == "gemini_daily_pct":
-        if gemini_limit <= 0:
-            continue
-        if (counts["gemini"] / gemini_limit) >= threshold:
-            print(mode_name)
-            raise SystemExit(0)
-    elif metric == "codex_daily_count":
-        if counts["codex"] >= threshold:
-            print(mode_name)
-            raise SystemExit(0)
-PYEOF
-}
-
 list_modes() {
   python3 - "$AGENT_CONFIG_FILE" << 'PYEOF'
 import sys
@@ -515,32 +400,6 @@ is_rate_limited() {
     return 0
   fi
   return 1
-}
-
-apply_rate_limit_auto_mode() {
-  local family="${1:-}"
-  local target_mode=""
-  local current_mode
-  current_mode="$(get_active_mode)"
-
-  if [[ "$current_mode" == conserve-* ]]; then
-    return 0
-  fi
-
-  case "$family" in
-    gemini) target_mode="conserve-gemini" ;;
-    codex) target_mode="conserve-codex" ;;
-    *) return 0 ;;
-  esac
-
-  if ! mode_exists "$target_mode" >/dev/null 2>&1; then
-    return 0
-  fi
-
-  if set_active_mode "$target_mode" "rate_limit_${family}"; then
-    export ACTIVE_MODE="$target_mode"
-    echo "[AUTO-MODE] Rate limit detected ($family) -> $target_mode"
-  fi
 }
 
 # --- Parse Codex JSON result → extract final message ---
@@ -1777,7 +1636,6 @@ ${task_with_checklist}"
 
   if is_rate_limited "$result"; then
     echo "[RATE_LIMIT] Codex hit rate limit"
-    apply_rate_limit_auto_mode "codex"
     [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
     [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
     return 1
@@ -1883,7 +1741,6 @@ $(cat "$checklist_file")"
 
   if is_rate_limited "$result"; then
     echo "[RATE_LIMIT] Gemini hit rate limit"
-    apply_rate_limit_auto_mode "gemini"
     [ -d "${QUEUE_TASK_DIR:-}" ] && update_meta_status "$QUEUE_TASK_DIR" "queued" "queued_reason" "rate_limited"
     [ -d "${QUEUE_TASK_DIR:-}" ] && sedi "s|\"log_file\": *[^,]*|\"log_file\": \"$log_file\"|" "$QUEUE_TASK_DIR/meta.json"
     return 1
@@ -3019,13 +2876,6 @@ if [ "$DRY_RUN" != "true" ]; then
 fi
 
 # --- Main dispatch ---
-auto_mode="$(check_auto_trigger 2>/dev/null || true)"
-if [ -n "${auto_mode:-}" ]; then
-  prev_mode="$(get_active_mode)"
-  if [ "$auto_mode" != "$prev_mode" ] && set_active_mode "$auto_mode" "auto_trigger"; then
-    echo "[AUTO-MODE] Auto-switched: $prev_mode -> $auto_mode (activity)"
-  fi
-fi
 ACTIVE_MODE="$(get_active_mode)"
 export ACTIVE_MODE
 echo "[ROUTER] mode=$ACTIVE_MODE"
