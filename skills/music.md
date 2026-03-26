@@ -261,3 +261,22 @@ mcp__obsidian-vault__search_notes(query="music-skill-update", limit=5)
 아직 리서치 파일이 없어요. 크론은 매월 1일 09:45에 실행돼요.
 지금 바로: bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini "Suno 최신 업데이트 조사" "music-skill-update-manual"
 ```
+
+---
+
+## 세션 종료 & 연계 제안
+
+프롬프트 완성 후 아래 형식으로 연계 제안을 반드시 표시한다.
+
+```
+이어서 진행할까요?
+```
+
+**곡 성격별 연계 제안:**
+
+| 곡 성격 | 🎨 /drawing | ✏️ /writing |
+|---|---|---|
+| 가사 있는 곡 | 앨범 커버 or 뮤직비디오 컨셉아트 만들기 | 가사를 에세이·시로 확장하기 |
+| 인스트루멘탈 | 이 분위기의 시네마틱 이미지 만들기 | 이 곡에 어울리는 짧은 산문 써보기 |
+| 시네마틱 / OST | 이 장면의 컨셉아트 만들기 | 이 장면을 소설 도입부로 써보기 |
+| 앨범 컨셉 | 앨범 커버 or 브랜드 비주얼 만들기 | 앨범 소개글 / 아티스트 노트 써보기 |
