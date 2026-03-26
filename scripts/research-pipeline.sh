@@ -1512,26 +1512,31 @@ ${recheck_draft}
               exit 42
             fi
           else
-            echo "[pipeline] WARN: S15 자동 수정 실패 (exit=$er) — 원본 초안 유지"
+            echo "[pipeline] WARN: S15 자동 수정 실패 (exit=$er) — 원본 초안 유지, S16으로 진행"
           fi
         else
           echo "[pipeline] S15 verdict: ${s15_verdict:-확인불가} — 수정 불필요, S16으로 진행"
         fi
+        echo "[pipeline] S15 검증 완료 → S16 PDF 생성"
         ;;
       S16)
         # markdown → Typst → PDF (typst compile)
         # 파일명: 논문 첫 줄 제목 기반 (한국어 포함, 파일명 불가 문자만 제거)
         local paper_title
-        # H1만 제목으로 사용, H2(초록 등) 제외
-        paper_title="$(grep -m1 '^# [^#]' "$PAPER_DIR/draft.md" 2>/dev/null | sed 's/^#* *//' || true)"
-        # H1 없으면 SLUG 사용
-        [ -z "$paper_title" ] && paper_title="${SLUG}"
-        # 파일명 불가 문자(/ \ : * ? " < > |)와 공백 → 언더스코어, 연속 언더스코어 정리
-        paper_title="$(printf '%s' "$paper_title" | sed 's|[/\\:*?"<>|]|_|g; s/[[:space:]]/_/g; s/__*/_/g; s/^_//; s/_$//')"
-        if [ "${#paper_title}" -lt 2 ]; then
-          paper_title="${SLUG}_$(date +%Y%m%d)"
+        # Windows는 한글 파일명 깨짐 → SLUG 강제 사용
+        if [[ "$PLATFORM" == "windows" ]]; then
+          paper_title="${SLUG}"
+        else
+          # H1만 제목으로 사용, H2(초록 등) 제외
+          paper_title="$(grep -m1 '^# [^#]' "$PAPER_DIR/draft.md" 2>/dev/null | sed 's/^#* *//' || true)"
+          [ -z "$paper_title" ] && paper_title="${SLUG}"
+          # 파일명 불가 문자(/ \ : * ? " < > |)와 공백 → 언더스코어
+          paper_title="$(printf '%s' "$paper_title" | sed 's|[/\\:*?"<>|]|_|g; s/[[:space:]]/_/g; s/__*/_/g; s/^_//; s/_$//')"
+          if [ "${#paper_title}" -lt 2 ]; then
+            paper_title="${SLUG}_$(date +%Y%m%d)"
+          fi
+          paper_title="${paper_title:0:60}"
         fi
-        paper_title="${paper_title:0:60}"
         local pdf_path="$PAPER_DIR/${paper_title}.pdf"
         local typ_path="$PAPER_DIR/${paper_title}.typ"
 
@@ -1543,10 +1548,17 @@ ${recheck_draft}
           printf '# S16 PDF 변환\n\nWARN: pandoc 미설치\n' > "$out_file"
         else
           # 0) 논문 제목 + 초록 추출
+          # Windows(MSYS2): Python에 전달할 경로를 Windows 형식으로 변환
+          local draft_path_py body_path_py
+          if [[ "$PLATFORM" == "windows" ]]; then
+            draft_path_py="$(cygpath -w "$PAPER_DIR/draft.md" 2>/dev/null || echo "$PAPER_DIR/draft.md")"
+          else
+            draft_path_py="$PAPER_DIR/draft.md"
+          fi
           local raw_title abstract_text
           raw_title="$(grep -m1 '^# [^#]' "$PAPER_DIR/draft.md" 2>/dev/null | sed 's/^#* *//' || true)"
           [ -z "$raw_title" ] && raw_title="${TOPIC}"
-          abstract_text="$(python3 - "$PAPER_DIR/draft.md" << 'PYEOF'
+          abstract_text="$(python3 - "$draft_path_py" << 'PYEOF'
 import sys, re
 lines = open(sys.argv[1], encoding="utf-8").read().split('\n')
 in_abstract = False
@@ -1566,7 +1578,12 @@ PYEOF
 
           # 1) 초록 제외한 본문 추출 + 헤딩 전후 빈 줄 보장
           local body_md="$PAPER_DIR/draft_body.md"
-          python3 - "$PAPER_DIR/draft.md" "$body_md" << 'PYEOF'
+          if [[ "$PLATFORM" == "windows" ]]; then
+            body_path_py="$(cygpath -w "$body_md" 2>/dev/null || echo "$body_md")"
+          else
+            body_path_py="$body_md"
+          fi
+          python3 - "$draft_path_py" "$body_path_py" << 'PYEOF'
 import sys, re
 lines = open(sys.argv[1], encoding="utf-8").read().split('\n')
 out = []
@@ -1649,7 +1666,14 @@ PYEOF
             if ssh -o ConnectTimeout=10 m4 "cat > ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf" < "$pdf_path" 2>/dev/null; then
               vault_pdf_status="✅ ~/vault/30-projects/papers/$SLUG/${paper_title}.pdf"
             fi
-            local desktop_pdf="$HOME/Desktop/${paper_title}.pdf"
+            local desktop_dir
+            if [[ "$PLATFORM" == "windows" ]]; then
+              desktop_dir="$HOME/Desktop/research"
+            else
+              desktop_dir="$HOME/Desktop"
+            fi
+            mkdir -p "$desktop_dir" 2>/dev/null || true
+            local desktop_pdf="$desktop_dir/${paper_title}.pdf"
             if cp "$pdf_path" "$desktop_pdf" 2>/dev/null; then
               desktop_pdf_status="✅ $desktop_pdf"
             fi
