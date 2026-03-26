@@ -591,7 +591,8 @@ with open(in_path, "r", encoding="utf-8", errors="ignore") as f:
             except ValueError:
                 sent_dt = datetime.now()
             if sent_dt >= cutoff:
-                reexposed_rows.append((source, title, url, date_text))
+                display_date = sent_date if not date_text else date_text
+                reexposed_rows.append((source, title, url, display_date))
             continue
         rows.append((source, title, url, date_text))
 
@@ -623,7 +624,7 @@ if [[ "$TOTAL_COUNT" -eq 0 ]]; then
     if [[ "$REEXPOSED_COUNT" -gt 0 ]]; then
       while IFS=$'\t' read -r source title url date_text; do
         [[ -z "${source:-}" ]] && continue
-        echo "- **$source** | [$title]($url) *()*"
+        echo "- **$source** | [$title]($url)${date_text:+ *($date_text)*}"
       done < "$REEXPOSED_ITEMS"
     else
       echo "- 없음"
