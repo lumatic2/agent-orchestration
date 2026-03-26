@@ -360,14 +360,12 @@ deploy_claude() {
     echo "[OK] session-logger.sh → $claude_dir/session-logger.sh"
   fi
 
-  # Deploy skills to ~/.claude/commands/ as symlinks (prevents overwrite on sync)
+  # Deploy skills to ~/.claude/commands/
   local skills_src="$REPO_DIR/skills"
   if [ -d "$skills_src" ]; then
     mkdir -p "$target_dir/commands"
-    for skill_file in "$skills_src"/*.md; do
-      ln -sf "$skill_file" "$target_dir/commands/$(basename "$skill_file")"
-    done
-    echo "[OK] Skills ($(ls "$skills_src"/*.md | wc -l | tr -d ' ')개) → $target_dir/commands/ (symlinked)"
+    cp "$skills_src"/*.md "$target_dir/commands/"
+    echo "[OK] Skills ($(ls "$skills_src"/*.md | wc -l | tr -d ' ')개) → $target_dir/commands/"
   fi
 
   # Patch settings.json common hooks (pre-pull scope, push failure detection)
