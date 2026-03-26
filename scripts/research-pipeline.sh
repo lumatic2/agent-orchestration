@@ -548,7 +548,7 @@ run_pipeline_stages() {
               echo "[pipeline] S02: Gemini 키워드 변환 실패 (${_kw_exit}) — ChatGPT fallback" >&2
               NO_VAULT=true FORCE=true _run_with_timeout 60 bash "$ORCH" chatgpt "$_kw_prompt" "s02-en-keywords-fb-${SLUG}" > "$_kw_tmp" 2>/dev/null || true
             fi
-            en_keywords="$(cat "$_kw_tmp" 2>/dev/null | grep -v '^\[' | grep -v '^---' | grep -v '^$' | tail -1 || true)"
+            en_keywords="$(cat "$_kw_tmp" 2>/dev/null | grep -v '^\[' | grep -v '^---' | grep -v '^$' | grep -v '"usage"' | grep -v 'input_tokens' | tail -1 || true)"
             rm -f "$_kw_tmp"
             if [ -n "$en_keywords" ] && [ -f "$STATE_DIR/s01_scope.md" ] && ! grep -q '^\- \*\*영문 검색 키워드\*\*:' "$STATE_DIR/s01_scope.md"; then
               printf '\n- **영문 검색 키워드**: %s\n' "$en_keywords" >> "$STATE_DIR/s01_scope.md"
