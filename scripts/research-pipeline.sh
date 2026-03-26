@@ -543,10 +543,10 @@ run_pipeline_stages() {
             local _kw_prompt="다음 한국어 연구 주제를 arXiv 검색에 적합한 영문 키워드 3~5개로 변환해줘. 키워드만 공백으로 구분해서 한 줄로 출력. 다른 설명 없이 키워드만.\n주제: $TOPIC"
             local _kw_tmp; _kw_tmp="$(mktemp)"
             local _kw_exit=0
-            _run_with_timeout 60 bash "$ORCH" gemini "$_kw_prompt" s02-en-keywords > "$_kw_tmp" 2>/dev/null || _kw_exit=$?
+            NO_VAULT=true FORCE=true _run_with_timeout 60 bash "$ORCH" gemini "$_kw_prompt" "s02-en-keywords-${SLUG}" > "$_kw_tmp" 2>/dev/null || _kw_exit=$?
             if [ "$_kw_exit" -ne 0 ]; then
               echo "[pipeline] S02: Gemini 키워드 변환 실패 (${_kw_exit}) — ChatGPT fallback" >&2
-              _run_with_timeout 60 bash "$ORCH" chatgpt "$_kw_prompt" s02-en-keywords-fb > "$_kw_tmp" 2>/dev/null || true
+              NO_VAULT=true FORCE=true _run_with_timeout 60 bash "$ORCH" chatgpt "$_kw_prompt" "s02-en-keywords-fb-${SLUG}" > "$_kw_tmp" 2>/dev/null || true
             fi
             en_keywords="$(cat "$_kw_tmp" 2>/dev/null | grep -v '^\[' | grep -v '^---' | grep -v '^$' | tail -1 || true)"
             rm -f "$_kw_tmp"
