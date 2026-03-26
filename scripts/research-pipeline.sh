@@ -534,7 +534,7 @@ run_pipeline_stages() {
 
         # S01 scope 파일에서 영문 키워드 먼저 읽기
         if [ -f "$STATE_DIR/s01_scope.md" ]; then
-          en_keywords="$(grep '^\- \*\*영문 검색 키워드\*\*:' "$STATE_DIR/s01_scope.md" | sed 's/.*: //' | head -1)"
+          en_keywords="$(grep '^\- \*\*영문 검색 키워드\*\*:' "$STATE_DIR/s01_scope.md" 2>/dev/null | sed 's/.*: //' | head -1 || true)"
         fi
 
         # S01에 없으면 TOPIC이 한글인 경우 Gemini→ChatGPT fallback으로 영문 키워드 생성
