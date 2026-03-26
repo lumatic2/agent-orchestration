@@ -227,13 +227,6 @@ wait_gate() {
   jq --arg s "$stage" '.gate_pending_stage = $s' "$PIPELINE_FILE" > "$tmp" && mv "$tmp" "$PIPELINE_FILE"
   echo "[pipeline] GATE: $stage — 검토 후 --approve-gate $stage 로 재실행"
 
-  # Windows: vault가 Desktop 외부일 때 중간 결과 복사
-  if [[ "$PLATFORM" == "windows" && "$VAULT" != *"Desktop/research"* ]]; then
-    local desktop_dest="${HOME}/Desktop/research/$(basename "$PAPER_DIR")"
-    mkdir -p "$desktop_dest"
-    cp -r "$STATE_DIR"/* "$desktop_dest/" 2>/dev/null || true
-    echo "[pipeline] Windows 중간 결과 복사: $desktop_dest"
-  fi
   exit 42
 }
 
@@ -1906,14 +1899,18 @@ main() {
     echo "[pipeline] MetaClaw: 실행 이력 수집 완료" >&2
   fi
 
-  # Windows: vault가 Desktop 외부일 때 결과물 복사
-  if [[ "$PLATFORM" == "windows" && "$VAULT" != *"Desktop/research"* ]]; then
-    local desktop_dest="${HOME}/Desktop/research/$(basename "$PAPER_DIR")"
-    mkdir -p "$desktop_dest"
-    cp -r "$STATE_DIR"/* "$desktop_dest/" 2>/dev/null || true
-    [ -f "$PAPER_DIR/draft.md" ] && cp "$PAPER_DIR/draft.md" "$desktop_dest/" 2>/dev/null
-    [ -f "$PAPER_DIR/draft.pdf" ] && cp "$PAPER_DIR/draft.pdf" "$desktop_dest/" 2>/dev/null
-    echo "[pipeline] Windows 결과 복사: $desktop_dest"
+  # Windows: 최종 결과물(PDF/MD)을 ~/Desktop/research/에 복사
+  if [[ "$PLATFORM" == "windows" ]]; then
+    local desktop_dir="${HOME}/Desktop/research"
+    mkdir -p "$desktop_dir"
+    if [ -f "$PAPER_DIR/draft.pdf" ]; then
+      cp "$PAPER_DIR/draft.pdf" "$desktop_dir/${SLUG}.pdf" 2>/dev/null
+      echo "[pipeline] PDF 복사: $desktop_dir/${SLUG}.pdf"
+    fi
+    if [ -f "$PAPER_DIR/draft.md" ]; then
+      cp "$PAPER_DIR/draft.md" "$desktop_dir/${SLUG}.md" 2>/dev/null
+      echo "[pipeline] MD 복사: $desktop_dir/${SLUG}.md"
+    fi
   fi
 }
 
