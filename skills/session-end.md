@@ -31,6 +31,7 @@
 3. **Git commit & push (코드/스크립트 레포만)**
    - `~/projects/` 아래 git 레포 중 **agent-orchestration** 등 코드/스크립트 레포만 커밋·푸시해라.
    - SCHEDULE 파일(vault)은 obsidian-git이 자동 관리하므로 git에 포함하지 마라.
+   - ⚠️ **스킬 파일 편집 시**: 반드시 `~/projects/agent-orchestration/skills/*.md`를 수정해라. `~/.claude/commands/`는 배포 대상이므로 직접 수정 금지.
    - 커밋 메시지 형식: `session: [날짜] [한 일 핵심 1줄]`
      예: `session: 2026-03-19 스케줄 시스템 vault 이전`
    - 실행 방법:
