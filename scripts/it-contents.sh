@@ -87,6 +87,7 @@ RSS_ITEMS="$TMP_DIR/rss_items.tsv"
 WEB_ITEMS="$TMP_DIR/web_items.tsv"
 ALL_ITEMS="$TMP_DIR/all_items.tsv"
 UNIQUE_ITEMS="$TMP_DIR/unique_items.tsv"
+REEXPOSED_ITEMS="$TMP_DIR/reexposed.tsv"
 COLLECTED_LIST="$TMP_DIR/collected_list.txt"
 SUMMARY_PROMPT="$TMP_DIR/summary_prompt.txt"
 IMMEDIATE_ITEMS="$TMP_DIR/immediate.tsv"
@@ -94,7 +95,7 @@ LATER_ITEMS="$TMP_DIR/later.tsv"
 OVERVIEW_FILE="$TMP_DIR/overview.txt"
 
 NEWSAPI_ITEMS="$TMP_DIR/newsapi_items.tsv"
-touch "$RSS_ITEMS" "$WEB_ITEMS" "$ALL_ITEMS" "$UNIQUE_ITEMS" "$IMMEDIATE_ITEMS" "$LATER_ITEMS" "$OVERVIEW_FILE" "$NEWSAPI_ITEMS"
+touch "$RSS_ITEMS" "$WEB_ITEMS" "$ALL_ITEMS" "$UNIQUE_ITEMS" "$REEXPOSED_ITEMS" "$IMMEDIATE_ITEMS" "$LATER_ITEMS" "$OVERVIEW_FILE" "$NEWSAPI_ITEMS"
 
 run_orchestrate() {
   local prompt="$1"
@@ -542,25 +543,33 @@ collect_newsapi_sources
 
 cat "$RSS_ITEMS" "$WEB_ITEMS" "$NEWSAPI_ITEMS" > "$ALL_ITEMS"
 
-python3 - "$ALL_ITEMS" "$UNIQUE_ITEMS" "$SENT_URLS_FILE" <<'PYEOF'
+python3 - "$ALL_ITEMS" "$UNIQUE_ITEMS" "$REEXPOSED_ITEMS" "$SENT_URLS_FILE" <<'PYEOF'
 import sys
+from datetime import datetime, timedelta
 
 in_path = sys.argv[1]
 out_path = sys.argv[2]
-sent_urls_path = sys.argv[3]
+reexposed_path = sys.argv[3]
+sent_urls_path = sys.argv[4]
+today = datetime.now().strftime("%Y-%m-%d")
+cutoff = datetime.now() - timedelta(days=7)
 
 # 이미 전송한 URL 로드 ("YYYY-MM-DD URL" 또는 plain URL 형식 모두 지원)
 with open(sent_urls_path, "r", encoding="utf-8", errors="ignore") as f:
-    sent_urls = set()
+    sent_urls = {}
     for line in f:
         line = line.strip()
         if not line:
             continue
         parts = line.split(' ', 1)
-        sent_urls.add(parts[1] if len(parts) == 2 else parts[0])
+        if len(parts) == 2 and len(parts[0]) == 10:
+            sent_urls[parts[1]] = parts[0]
+        else:
+            sent_urls[parts[0]] = today
 
 seen = set()
 rows = []
+reexposed_rows = []
 
 with open(in_path, "r", encoding="utf-8", errors="ignore") as f:
     for raw in f:
@@ -574,29 +583,51 @@ with open(in_path, "r", encoding="utf-8", errors="ignore") as f:
         key = (title, url)
         if key in seen:
             continue
-        if url in sent_urls:
-            continue
         seen.add(key)
+        sent_date = sent_urls.get(url)
+        if sent_date:
+            try:
+                sent_dt = datetime.strptime(sent_date, "%Y-%m-%d")
+            except ValueError:
+                sent_dt = datetime.now()
+            if sent_dt >= cutoff:
+                reexposed_rows.append((source, title, url, date_text))
+            continue
         rows.append((source, title, url, date_text))
 
 with open(out_path, "w", encoding="utf-8") as out:
     for row in rows:
         out.write("\t".join(row) + "\n")
+
+with open(reexposed_path, "w", encoding="utf-8") as out:
+    for row in reexposed_rows:
+        out.write("\t".join(row) + "\n")
 PYEOF
 
 TOTAL_COUNT=$(wc -l < "$UNIQUE_ITEMS" 2>/dev/null | tr -d ' ')
+REEXPOSED_COUNT=$(wc -l < "$REEXPOSED_ITEMS" 2>/dev/null | tr -d ' ')
 
 if [[ "$TOTAL_COUNT" -eq 0 ]]; then
   {
     echo "# IT 콘텐츠 — $RUN_DATE"
     echo
-    echo "> 수집: 0개 항목 | 즉시읽기 0개 | 나중에 0개"
+    echo "> 수집: 0개 항목 | 즉시읽기 0개 | 나중에 0개 | 다시보기 ${REEXPOSED_COUNT}개"
     echo
     echo "## 즉시읽기 (0개)"
     echo "- 없음"
     echo
     echo "## 나중에 (0개)"
     echo "- 없음"
+    echo
+    echo "## 다시 보기 — 최근 7일 (${REEXPOSED_COUNT}개)"
+    if [[ "$REEXPOSED_COUNT" -gt 0 ]]; then
+      while IFS=$'\t' read -r source title url date_text; do
+        [[ -z "${source:-}" ]] && continue
+        echo "- **$source** | [$title]($url) *()*"
+      done < "$REEXPOSED_ITEMS"
+    else
+      echo "- 없음"
+    fi
   } > "$REPORT_FILE"
 
   send_telegram "[IT 콘텐츠] $RUN_DATE
@@ -622,7 +653,7 @@ fi
 {
   echo "# IT 콘텐츠 — $RUN_DATE"
   echo
-  echo "> 수집: ${TOTAL_COUNT}개 항목 | 즉시읽기 ${IMMEDIATE_COUNT}개 | 나중에 ${LATER_COUNT}개"
+  echo "> 수집: ${TOTAL_COUNT}개 항목 | 즉시읽기 ${IMMEDIATE_COUNT}개 | 나중에 ${LATER_COUNT}개 | 다시보기 ${REEXPOSED_COUNT}개"
   echo
   if [[ -s "$OVERVIEW_FILE" ]]; then
     echo "## 오늘의 동향"
@@ -653,6 +684,16 @@ fi
   else
     echo "- 없음"
   fi
+  echo
+  echo "## 다시 보기 — 최근 7일 (${REEXPOSED_COUNT}개)"
+  if [[ "$REEXPOSED_COUNT" -gt 0 ]]; then
+    while IFS=$'\t' read -r source title url date_text; do
+      [[ -z "${source:-}" ]] && continue
+      echo "- **$source** | [$title]($url) *()*"
+    done < "$REEXPOSED_ITEMS"
+  else
+    echo "- 없음"
+  fi
 } > "$REPORT_FILE"
 
 TELEGRAM_PREVIEW="$TMP_DIR/telegram_preview.txt"
@@ -679,7 +720,7 @@ if [[ -s "$OVERVIEW_FILE" ]]; then
 fi
 
 TELEGRAM_MESSAGE="[IT 콘텐츠] $RUN_DATE
-즉시읽기 ${IMMEDIATE_COUNT}개 | 나중에 ${LATER_COUNT}개
+즉시읽기 ${IMMEDIATE_COUNT}개 | 나중에 ${LATER_COUNT}개 | 다시보기 ${REEXPOSED_COUNT}개
 
 <b>📊 오늘의 동향</b>
 ${OVERVIEW_TEXT}
