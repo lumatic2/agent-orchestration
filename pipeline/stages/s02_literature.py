@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import re
 from pathlib import Path
+from pipeline.core.platform import get_orch_path, get_repo_dir
 
 from pipeline.agents.fallback import AgentPool, run_with_fallback
 from pipeline.core.file_ops import atomic_write, safe_read
@@ -85,9 +86,9 @@ class S02Literature(Stage):
         scope_text = safe_read(ctx.state_dir / "s01_scope.md")
         query = _extract_keywords(scope_text) or ctx.topic
 
-        repo_dir = Path(__file__).resolve().parent.parent.parent
-        orch_path = repo_dir / "scripts" / "orchestrate.sh"
-        pool = AgentPool(str(orch_path))
+        repo_dir = get_repo_dir()
+        orch_path = get_orch_path()
+        pool = AgentPool(orch_path)
 
         if _contains_korean(f"{ctx.topic}\n{query}"):
             routing = ctx.config.agents.s02_keywords
@@ -102,7 +103,13 @@ class S02Literature(Stage):
                 ctx.logger,
             )
             if translated.content.strip():
-                query = translated.content.strip()
+                raw_kw = translated.content.strip()
+                # Clean: remove bullets, numbering, literal \n, join to single line
+                raw_kw = raw_kw.replace("\\n", " ")
+                raw_kw = re.sub(r"^[\-\*•\d.]+\s*", "", raw_kw, flags=re.MULTILINE)
+                raw_kw = re.sub(r"\s+", " ", " ".join(raw_kw.splitlines())).strip()
+                # Take first 150 chars max for clean API query
+                query = raw_kw[:150]
 
         sources: list[tuple[AcademicSource, int]] = [
             (ArxivSource(), ctx.config.api.arxiv_max),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from pipeline.core.platform import get_orch_path, get_repo_dir
 
 from pipeline.agents.fallback import AgentPool, run_with_fallback
 from pipeline.core.file_ops import atomic_write, safe_read
@@ -22,9 +23,9 @@ class S04Extraction(Stage):
         literature = safe_read(ctx.state_dir / "s02_literature.md")
         truncated = literature[: ctx.config.thresholds.payload_truncate]
 
-        repo_dir = Path(__file__).resolve().parent.parent.parent
-        orch_path = repo_dir / "scripts" / "orchestrate.sh"
-        pool = AgentPool(str(orch_path))
+        repo_dir = get_repo_dir()
+        orch_path = get_orch_path()
+        pool = AgentPool(orch_path)
 
         template_path = repo_dir / ctx.config.templates.prompts_dir / "s04_knowledge_extract.md"
         if template_path.exists():

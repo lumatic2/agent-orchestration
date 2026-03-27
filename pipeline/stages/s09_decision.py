@@ -15,7 +15,7 @@ class S09Decision(Stage):
         return "Experiment decision"
 
     def should_skip(self, ctx: StageContext) -> bool:
-        return bool(getattr(ctx.config, "skip_experiment", False))
+        return bool(ctx.skip_experiment)
 
     def run(self, ctx: StageContext) -> StageResult:
         results = safe_read(ctx.state_dir / "s08_results.md")

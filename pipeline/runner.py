@@ -143,6 +143,7 @@ class PipelineRunner:
             paper_dir=self.paper_dir,
             config=self.config,
             logger=self.logger,
+            skip_experiment=self.args.skip_experiment,
         )
 
         for stage in stages[start - 1 :]:

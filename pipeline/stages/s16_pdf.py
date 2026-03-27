@@ -5,6 +5,7 @@ import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from pipeline.core.platform import get_orch_path, get_repo_dir
 
 from pipeline.core.file_ops import atomic_write, safe_read
 from pipeline.core.platform import is_windows, to_native_path
@@ -13,8 +14,8 @@ from pipeline.stages.base import Stage, StageContext
 from pipeline.vault.ssh_sync import VaultSync
 
 
-REPO_DIR = Path(__file__).resolve().parent.parent.parent
-orch_path = str(REPO_DIR / "scripts" / "orchestrate.sh")
+from pipeline.core.platform import get_orch_path, get_repo_dir
+ORCH_PATH = get_orch_path()
 
 
 def _extract_title(md: str) -> str:
@@ -110,10 +111,10 @@ class S16Pdf(Stage):
         if template_key not in {"A", "B", "C", "D"}:
             template_key = "A"
 
-        template_path = REPO_DIR / ctx.config.templates.typst_dir / f"paper_{template_key}.typ"
+        template_path = get_repo_dir() / ctx.config.templates.typst_dir / f"paper_{template_key}.typ"
         if not template_path.exists():
             ctx.logger.warn(f"Template not found: {template_path}. Falling back to paper_A.typ")
-            template_path = REPO_DIR / ctx.config.templates.typst_dir / "paper_A.typ"
+            template_path = get_repo_dir() / ctx.config.templates.typst_dir / "paper_A.typ"
 
         body_md = _extract_body(draft)
         body_md_path = ctx.paper_dir / "draft_body.md"

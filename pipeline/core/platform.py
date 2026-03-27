@@ -44,11 +44,30 @@ def to_posix_path(path: str) -> str:
         return path
 
 
+def get_repo_dir() -> Path:
+    return Path(__file__).parent.parent.parent
+
+
+def get_orch_path() -> str:
+    raw = str(get_repo_dir())
+    if is_windows():
+        repo = to_posix_path(raw)
+        return repo + "/scripts/orchestrate.sh"
+    return str(Path(raw) / "scripts" / "orchestrate.sh")
+
+
 def get_temp_dir() -> Path:
     return Path(tempfile.gettempdir())
 
 
-def get_shell() -> str:
+def get_bash() -> str:
+    if is_windows():
+        for candidate in [
+            "C:/Program Files/Git/bin/bash.exe",
+            "C:/Program Files (x86)/Git/bin/bash.exe",
+        ]:
+            if Path(candidate).exists():
+                return candidate
     if sys.platform == "darwin" and Path("/usr/bin/bash").exists():
         return "/usr/bin/bash"
     if Path("/bin/bash").exists():

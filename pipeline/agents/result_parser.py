@@ -9,7 +9,7 @@ _CONTENT_PATTERN = re.compile(
     r"^--- (Codex Summary|Codex Result|Gemini Result|ChatGPT Result) ---\s*(.*?)\s*^--- Token Usage ---",
     re.DOTALL | re.MULTILINE,
 )
-_LOG_PATTERN = re.compile(r"^\[(LOG|QUEUE)\]")
+_LOG_PATTERN = re.compile(r"^\[(LOG|QUEUE|ROUTER|DISPATCH|CHECKLIST|SUBAGENT|UA|RATE_LIMIT|FALLBACK)\]")
 _STACK_PATTERN = re.compile(r"^\s*at\s+")
 _NODE_VERSION_PATTERN = re.compile(r"^Node\.js v\d+")
 

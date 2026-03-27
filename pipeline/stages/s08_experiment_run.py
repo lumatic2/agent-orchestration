@@ -4,6 +4,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from pipeline.core.platform import get_orch_path
 
 from pipeline.agents.fallback import AgentPool, run_with_fallback
 from pipeline.core.file_ops import atomic_write, safe_read
@@ -11,9 +12,9 @@ from pipeline.models.stage_result import StageResult
 from pipeline.stages.base import Stage, StageContext
 
 
-REPO_DIR = Path(__file__).resolve().parent.parent.parent
-orch_path = str(REPO_DIR / 'scripts' / 'orchestrate.sh')
-pool = AgentPool(orch_path)
+from pipeline.core.platform import get_orch_path
+ORCH_PATH = get_orch_path()
+pool = AgentPool(ORCH_PATH)
 
 
 def _classify_error(stderr: str) -> str:
@@ -41,9 +42,7 @@ class S08ExperimentRun(Stage):
         return "Experiment execution"
 
     def should_skip(self, ctx: StageContext) -> bool:
-        if hasattr(ctx, "skip_experiment"):
-            return bool(getattr(ctx, "skip_experiment"))
-        return bool(getattr(ctx.config, "skip_experiment", False))
+        return ctx.skip_experiment
 
     def run(self, ctx: StageContext) -> StageResult:
         code_dir = ctx.state_dir / "s07_code"

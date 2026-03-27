@@ -6,7 +6,7 @@ import time
 
 from pipeline.agents.base import AgentResult, AgentRunner
 from pipeline.agents.result_parser import extract_content
-from pipeline.core.platform import is_windows, to_native_path
+from pipeline.core.platform import is_windows, to_posix_path, get_bash
 
 
 class ChatGPTRunner(AgentRunner):
@@ -19,14 +19,14 @@ class ChatGPTRunner(AgentRunner):
 
     def run(self, prompt: str, task_name: str, timeout: int) -> AgentResult:
         start = time.monotonic()
-        orch_path = to_native_path(self.orch_path) if is_windows() else self.orch_path
-        cmd = ["bash", orch_path, self.name, prompt, task_name]
+        orch_path = to_posix_path(self.orch_path) if is_windows() else self.orch_path
+        cmd = [get_bash(), orch_path, self.name, prompt, task_name]
         env = {**os.environ, "NO_VAULT": "true", "FORCE": "true"}
         try:
             proc = subprocess.run(
                 cmd,
                 capture_output=True,
-                text=True,
+                encoding="utf-8", errors="replace",
                 timeout=timeout,
                 env=env,
             )

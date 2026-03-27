@@ -17,6 +17,7 @@ class StageContext:
     paper_dir: Path
     config: PipelineConfig
     logger: Any
+    skip_experiment: bool = False
 
 
 class Stage(ABC):

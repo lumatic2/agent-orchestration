@@ -15,7 +15,7 @@ class S06Experiment(Stage):
         return "Experiment design"
 
     def should_skip(self, ctx: StageContext) -> bool:
-        return bool(getattr(ctx.config, "skip_experiment", False))
+        return ctx.skip_experiment
 
     def run(self, ctx: StageContext) -> StageResult:
         template = (

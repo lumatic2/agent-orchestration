@@ -5,6 +5,7 @@ import math
 import re
 from collections import Counter
 from pathlib import Path
+from pipeline.core.platform import get_orch_path
 from typing import Any, Awaitable, Iterable
 
 from pipeline.agents.base import AgentResult
@@ -13,8 +14,8 @@ from pipeline.core.file_ops import atomic_write, safe_read
 from pipeline.models.stage_result import StageResult
 from pipeline.stages.base import Stage, StageContext
 
-REPO_DIR = Path(__file__).resolve().parent.parent.parent
-orch_path = str(REPO_DIR / 'scripts' / 'orchestrate.sh')
+from pipeline.core.platform import get_orch_path
+ORCH_PATH = get_orch_path()
 
 
 def _normalize_verdict(value: str) -> str:
@@ -173,7 +174,7 @@ class S15Validation(Stage):
         )
 
         config = ctx.config
-        pool = AgentPool(orch_path)
+        pool = AgentPool(ORCH_PATH)
         timeout_map = {
             "gemini": config.timeouts.agent_gemini,
             "codex": config.timeouts.agent_codex,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import re
 from pathlib import Path
+from pipeline.core.platform import get_orch_path
 from urllib.parse import quote
 
 import aiohttp
@@ -13,9 +14,9 @@ from pipeline.models.stage_result import StageResult
 from pipeline.stages.base import Stage, StageContext
 
 
-REPO_DIR = Path(__file__).resolve().parent.parent.parent
-orch_path = str(REPO_DIR / "scripts" / "orchestrate.sh")
-pool = AgentPool(orch_path)
+from pipeline.core.platform import get_orch_path
+ORCH_PATH = get_orch_path()
+pool = AgentPool(ORCH_PATH)
 
 
 class S14CitationVerify(Stage):

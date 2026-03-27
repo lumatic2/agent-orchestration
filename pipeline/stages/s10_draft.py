@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from pipeline.core.platform import get_orch_path, get_repo_dir
 
 from pipeline.agents.fallback import AgentPool, run_with_fallback
 from pipeline.core.file_ops import atomic_write, safe_read
@@ -9,9 +10,9 @@ from pipeline.stages.base import Stage, StageContext
 from pipeline.templates.renderer import render
 
 
-REPO_DIR = Path(__file__).resolve().parent.parent.parent
-orch_path = str(REPO_DIR / 'scripts' / 'orchestrate.sh')
-pool = AgentPool(orch_path)
+from pipeline.core.platform import get_orch_path, get_repo_dir
+ORCH_PATH = get_orch_path()
+pool = AgentPool(ORCH_PATH)
 
 
 class S10Draft(Stage):
@@ -30,7 +31,7 @@ class S10Draft(Stage):
 
         try:
             prompt = render(
-                REPO_DIR / "templates" / "prompts" / "s10_paper_draft.md",
+                get_repo_dir() / "templates" / "prompts" / "s10_paper_draft.md",
                 {"TOPIC": ctx.topic, "SYNTHESIS": synthesis},
             )
         except OSError:
