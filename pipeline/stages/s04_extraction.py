@@ -22,13 +22,14 @@ class S04Extraction(Stage):
     def run(self, ctx: StageContext) -> StageResult:
         literature = safe_read(ctx.state_dir / "s02_literature.md")
         truncated = literature[: ctx.config.thresholds.payload_truncate]
+        has_papers = "WARNING: No papers found" not in literature and len(literature) > 300
 
         repo_dir = get_repo_dir()
         orch_path = get_orch_path()
         pool = AgentPool(orch_path)
 
         template_path = repo_dir / ctx.config.templates.prompts_dir / "s04_knowledge_extract.md"
-        if template_path.exists():
+        if template_path.exists() and has_papers:
             prompt = render(
                 template_path,
                 {
@@ -36,12 +37,24 @@ class S04Extraction(Stage):
                     "LITERATURE": truncated,
                 },
             )
-        else:
+        elif has_papers:
             prompt = (
                 "Extract key findings, methodologies, and data from literature:\n\n"
                 f"Topic: {ctx.topic}\n\n"
                 f"Literature:\n{truncated}\n\n"
-                "Output structured knowledge extraction."
+                "Output structured knowledge extraction in markdown."
+            )
+        else:
+            prompt = (
+                "You are a research expert. Write a comprehensive knowledge extraction "
+                "about the following topic based on your expertise. Include:\n"
+                "1. Key concepts and definitions\n"
+                "2. Major theories and frameworks\n"
+                "3. Known findings from the field\n"
+                "4. Methodologies commonly used\n"
+                "5. Current debates and open questions\n\n"
+                f"Topic: {ctx.topic}\n\n"
+                "Output in detailed Korean markdown (2000+ words)."
             )
 
         result = run_with_fallback(

@@ -96,10 +96,14 @@ class S02Literature(Stage):
                 pool,
                 routing.primary,
                 routing.fallback,
-                f"Translate to English academic keywords: {ctx.topic}",
+                (
+                    "Translate the following Korean research topic to 5-8 English academic keywords "
+                    "separated by commas. Output ONLY the keywords, nothing else.\n\n"
+                    f"Topic: {ctx.topic}"
+                ),
                 f"s02-keywords-{ctx.slug}",
-                60,
-                60,
+                120,
+                120,
                 ctx.logger,
             )
             if translated.content.strip():
@@ -109,7 +113,20 @@ class S02Literature(Stage):
                 raw_kw = re.sub(r"^[\-\*•\d.]+\s*", "", raw_kw, flags=re.MULTILINE)
                 raw_kw = re.sub(r"\s+", " ", " ".join(raw_kw.splitlines())).strip()
                 # Take first 150 chars max for clean API query
-                query = raw_kw[:150]
+                if len(raw_kw) > 10 and not _contains_korean(raw_kw):
+                    query = raw_kw[:150]
+
+        # If query still Korean after agent translation attempt, use topic as-is
+        # but also try a simple keyword extraction from non-Korean parts
+        if _contains_korean(query):
+            # Extract any English words already in the topic
+            en_words = re.findall(r"[A-Za-z]{3,}", ctx.topic)
+            if en_words:
+                query = " ".join(en_words)[:150]
+            else:
+                # Last resort: use the topic directly (some APIs handle Korean)
+                if ctx.logger:
+                    ctx.logger.warn("S02: keyword translation failed, using Korean query as fallback")
 
         sources: list[tuple[AcademicSource, int]] = [
             (ArxivSource(), ctx.config.api.arxiv_max),
