@@ -130,7 +130,8 @@ class S16Pdf(Stage):
                 timeout=60,
                 check=True,
                 capture_output=True,
-                text=True,
+                encoding="utf-8",
+                errors="replace",
             )
             pandoc_ok = True
         except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
@@ -164,7 +165,8 @@ class S16Pdf(Stage):
                 timeout=120,
                 check=True,
                 capture_output=True,
-                text=True,
+                encoding="utf-8",
+                errors="replace",
             )
         except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
             ctx.logger.warn(f"Typst compile failed: {exc}")

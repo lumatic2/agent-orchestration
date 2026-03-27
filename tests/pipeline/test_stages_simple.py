@@ -45,7 +45,7 @@ def test_s06_creates_experiment(tmp_path) -> None:
 
 def test_s06_skip(tmp_path) -> None:
     ctx = _ctx(tmp_path)
-    ctx.config.__dict__["skip_experiment"] = True
+    ctx.skip_experiment = True
     assert S06Experiment().should_skip(ctx) is True
 
 

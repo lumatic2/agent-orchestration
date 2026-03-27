@@ -1,5 +1,5 @@
 timeouts:
-  agent_gemini: 180
+  agent_gemini: 300
   agent_codex: 300
   agent_chatgpt: 300
   agent_claude: 180

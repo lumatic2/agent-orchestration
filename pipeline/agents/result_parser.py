@@ -5,11 +5,21 @@ import re
 from typing import Any
 
 
-_CONTENT_PATTERN = re.compile(
+_CONTENT_WITH_USAGE = re.compile(
     r"^--- (Codex Summary|Codex Result|Gemini Result|ChatGPT Result) ---\s*(.*?)\s*^--- Token Usage ---",
     re.DOTALL | re.MULTILINE,
 )
-_LOG_PATTERN = re.compile(r"^\[(LOG|QUEUE|ROUTER|DISPATCH|CHECKLIST|SUBAGENT|UA|RATE_LIMIT|FALLBACK)\]")
+_CONTENT_NO_USAGE = re.compile(
+    r"^--- (Codex Summary|Codex Result|Gemini Result|ChatGPT Result) ---\s*(.*)",
+    re.DOTALL | re.MULTILINE,
+)
+_GEMINI_ERROR = re.compile(
+    r"^(Attempt \d+ failed|GaxiosError|  config:|  response:|  status:|"
+    r"  headers:|  body:|  signal:|  retry:|  data:|    url:|    method:|"
+    r"    params:|    responseType:|    paramsSerializer:|    validateStatus:|"
+    r"    errorRedactor:|  \}|  \]|\}|\]|'[a-z-]+':)",
+)
+_LOG_PATTERN = re.compile(r"^\[(LOG|QUEUE|ROUTER|DISPATCH|CHECKLIST|SUBAGENT|UA|RATE_LIMIT|FALLBACK|VAULT|GUARD|QUEUE_DIR|MODE)\]")
 _STACK_PATTERN = re.compile(r"^\s*at\s+")
 _NODE_VERSION_PATTERN = re.compile(r"^Node\.js v\d+")
 
@@ -56,11 +66,24 @@ def _extract_balanced_json(text: str) -> str | None:
     return None
 
 
+def _strip_gemini_errors(text: str) -> str:
+    lines = []
+    for line in text.splitlines():
+        if _GEMINI_ERROR.match(line.strip()):
+            continue
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+
 def extract_content(raw: str) -> str:
-    match = _CONTENT_PATTERN.search(raw)
-    if not match:
-        return _strip_noise(raw)
-    return _strip_noise(match.group(2))
+    match = _CONTENT_WITH_USAGE.search(raw)
+    if match:
+        return _strip_noise(match.group(2))
+    match = _CONTENT_NO_USAGE.search(raw)
+    if match:
+        content = _strip_noise(match.group(2))
+        return _strip_gemini_errors(content)
+    return _strip_noise(raw)
 
 
 def extract_token_usage(raw: str) -> dict[str, Any] | None:

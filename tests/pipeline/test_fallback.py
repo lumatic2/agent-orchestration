@@ -5,6 +5,9 @@ from pipeline.agents.fallback import run_with_fallback
 
 
 class MockRunner(AgentRunner):
+    def __init__(self) -> None:
+        pass
+
     @property
     def name(self) -> str:
         return "mock"
@@ -21,6 +24,9 @@ class MockRunner(AgentRunner):
 
 
 class FailRunner(AgentRunner):
+    def __init__(self) -> None:
+        pass
+
     @property
     def name(self) -> str:
         return "fail"
