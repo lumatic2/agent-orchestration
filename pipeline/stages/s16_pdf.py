@@ -130,6 +130,8 @@ class S16Pdf(Stage):
             template_path = get_repo_dir() / ctx.config.templates.typst_dir / "paper_A.typ"
 
         body_md = _extract_body(draft)
+        # Force line break before inline headings (LLM sometimes writes ### mid-paragraph)
+        body_md = re.sub(r"(?<!\n)(#{2,4}\s+)", r"\n\n\1", body_md)
         # Promote heading levels: ### → ##, #### → ### (so pandoc maps to proper typst levels)
         body_md = re.sub(r"^####\s+", "### ", body_md, flags=re.MULTILINE)
         body_md = re.sub(r"^###\s+", "## ", body_md, flags=re.MULTILINE)
