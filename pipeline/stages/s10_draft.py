@@ -36,12 +36,16 @@ class S10Draft(Stage):
             )
         except OSError:
             prompt = (
-                "Write a complete academic paper draft in markdown:\n\n"
+                "Write a complete academic paper draft in markdown.\n\n"
+                "IMPORTANT FORMAT RULES:\n"
+                "- Start with: # [논문 제목]\n"
+                "- Then: ## 초록\n"
+                "- Then sections: ## 1. 서론, ## 2. 이론적 배경, ## 3. 연구 방법, "
+                "## 4. 연구 결과, ## 5. 고찰, ## 6. 결론, ## 후속 연구 제안, ## 참고문헌\n"
+                "- Use ## for all section headings (not ### or #)\n"
+                "- Write in Korean. Formal academic tone. Detailed content (not outlines).\n\n"
                 f"Topic: {ctx.topic}\n\n"
-                f"Research synthesis:\n{synthesis}\n\n"
-                "Include: Title, Abstract, 1. Introduction, 2. Background, 3. Methodology, "
-                "4. Analysis, 5. Discussion, 6. Conclusion, References.\n"
-                "Use formal academic tone. Write section content in detail (not outlines)."
+                f"Research synthesis:\n{synthesis}"
             )
 
         fallback = ctx.config.agents.s10.fallback

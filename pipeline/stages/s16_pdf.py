@@ -19,19 +19,29 @@ ORCH_PATH = get_orch_path()
 
 
 def _extract_title(md: str) -> str:
-    match = re.search(r"^#\s+(.+?)\s*$", md, flags=re.MULTILINE)
+    # Match # Title (not ## or ###)
+    match = re.search(r"^#\s+(?!#)(.+?)\s*$", md, flags=re.MULTILINE)
     if match:
         return match.group(1).strip()
+    # Fallback: first heading of any level
+    match = re.search(r"^#{1,3}\s+(.+?)\s*$", md, flags=re.MULTILINE)
+    if match:
+        heading = match.group(1).strip()
+        # Skip if it's just "초록" or "Abstract"
+        if heading.lower() not in ("초록", "abstract"):
+            return heading
     return "Research Paper"
 
 
 def _extract_abstract(md: str) -> str:
-    match = re.search(r"^##\s*(Abstract|초록)\s*$", md, flags=re.IGNORECASE | re.MULTILINE)
+    # Match ## or ### Abstract/초록
+    match = re.search(r"^#{2,3}\s*(Abstract|초록)\s*$", md, flags=re.IGNORECASE | re.MULTILINE)
     if not match:
         return ""
-    tail = md[match.end() :]
-    next_heading = re.search(r"^##\s+", tail, flags=re.MULTILINE)
-    block = tail[: next_heading.start()] if next_heading else tail
+    tail = md[match.end():]
+    # Stop at next heading of same or higher level
+    next_heading = re.search(r"^#{1,3}\s+", tail, flags=re.MULTILINE)
+    block = tail[:next_heading.start()] if next_heading else tail
     return block.strip()
 
 
@@ -44,14 +54,17 @@ def _extract_body(md: str) -> str:
     for raw in lines:
         line = raw.rstrip("\n")
         stripped = line.strip()
-        if skip_title and stripped.startswith("# "):
-            skip_title = False
-            continue
-        if re.match(r"^##\s*(Abstract|초록)\s*$", stripped, flags=re.IGNORECASE):
+        # Skip first heading (title)
+        if skip_title and re.match(r"^#{1,3}\s+", stripped):
+            if not re.match(r"^#{1,3}\s*(Abstract|초록)\s*$", stripped, re.IGNORECASE):
+                skip_title = False
+                continue
+        # Detect abstract section
+        if re.match(r"^#{1,3}\s*(Abstract|초록)\s*$", stripped, re.IGNORECASE):
             in_abstract = True
             abstract_seen = True
             continue
-        if in_abstract and stripped.startswith("## "):
+        if in_abstract and re.match(r"^#{1,3}\s+", stripped):
             in_abstract = False
         if in_abstract:
             continue
