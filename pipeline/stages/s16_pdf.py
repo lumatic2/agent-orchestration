@@ -130,6 +130,9 @@ class S16Pdf(Stage):
             template_path = get_repo_dir() / ctx.config.templates.typst_dir / "paper_A.typ"
 
         body_md = _extract_body(draft)
+        # Promote heading levels: ### → ##, #### → ### (so pandoc maps to proper typst levels)
+        body_md = re.sub(r"^####\s+", "### ", body_md, flags=re.MULTILINE)
+        body_md = re.sub(r"^###\s+", "## ", body_md, flags=re.MULTILINE)
         body_md_path = ctx.paper_dir / "draft_body.md"
         body_typ_path = ctx.paper_dir / "draft_body.typ"
         atomic_write(body_md_path, body_md)
