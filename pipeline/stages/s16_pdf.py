@@ -132,9 +132,11 @@ class S16Pdf(Stage):
         body_md = _extract_body(draft)
         # Force line break before inline headings (LLM sometimes writes ### mid-paragraph)
         body_md = re.sub(r"(?<!\n)(#{2,4}\s+)", r"\n\n\1", body_md)
-        # Promote heading levels: ### → ##, #### → ### (so pandoc maps to proper typst levels)
-        body_md = re.sub(r"^####\s+", "### ", body_md, flags=re.MULTILINE)
-        body_md = re.sub(r"^###\s+", "## ", body_md, flags=re.MULTILINE)
+        # Promote all headings to top level (title already extracted separately)
+        # #### → ##, ### → #, ## → #
+        body_md = re.sub(r"^####\s+", "## ", body_md, flags=re.MULTILINE)
+        body_md = re.sub(r"^###\s+", "# ", body_md, flags=re.MULTILINE)
+        body_md = re.sub(r"^##\s+", "# ", body_md, flags=re.MULTILINE)
         body_md_path = ctx.paper_dir / "draft_body.md"
         body_typ_path = ctx.paper_dir / "draft_body.typ"
         atomic_write(body_md_path, body_md)
