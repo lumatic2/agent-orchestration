@@ -18,8 +18,12 @@ from pipeline.stages.base import Stage, StageContext
 
 
 def slugify(text: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", text.strip().lower())
+    # Keep Korean (가-힣), alphanumeric, replace rest with dashes
+    slug = re.sub(r"[^a-z0-9가-힣]+", "-", text.strip().lower())
     slug = re.sub(r"-{2,}", "-", slug).strip("-")
+    # Truncate to 60 chars at word boundary
+    if len(slug) > 60:
+        slug = slug[:60].rsplit("-", 1)[0]
     return slug or "topic"
 
 

@@ -148,7 +148,7 @@ class S16Pdf(Stage):
 
         final_typ = (
             f"{template_text.rstrip()}\n\n"
-            "#show: conf(\n"
+            "#show: conf.with(\n"
             f'  title: "{title}",\n'
             f"  abstract: [{abstract}],\n"
             ")\n\n"
@@ -168,7 +168,11 @@ class S16Pdf(Stage):
                 encoding="utf-8",
                 errors="replace",
             )
-        except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
+        except subprocess.CalledProcessError as exc:
+            err_detail = (exc.stderr or exc.stdout or str(exc))[:500]
+            ctx.logger.warn(f"Typst compile failed: {err_detail}")
+            return StageResult(content=f"PDF generation skipped: {err_detail}")
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
             ctx.logger.warn(f"Typst compile failed: {exc}")
             return StageResult(content=f"PDF generation skipped: {exc}")
 
