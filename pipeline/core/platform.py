@@ -21,7 +21,8 @@ def to_native_path(path: str) -> str:
         result = subprocess.run(
             ["cygpath", "-m", path],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             check=True,
         )
         return result.stdout.strip() or path
@@ -36,7 +37,8 @@ def to_posix_path(path: str) -> str:
         result = subprocess.run(
             ["cygpath", "-u", path],
             capture_output=True,
-            text=True,
+            encoding="utf-8",
+            errors="replace",
             check=True,
         )
         return result.stdout.strip() or path
