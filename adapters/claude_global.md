@@ -80,6 +80,16 @@ Examples:
 
 ---
 
+## gstack
+
+웹 브라우징은 `/browse` 스킬 사용. `mcp__claude-in-chrome__*` 도구 사용 금지.
+
+사용 가능한 스킬: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade
+
+스킬이 동작하지 않으면: `cd ~/.claude/skills/gstack && ./setup`
+
+---
+
 ## Knowledge Vault
 
 - **Location**: `luma3@m4:~/vault/` (MCP: `obsidian-vault`)

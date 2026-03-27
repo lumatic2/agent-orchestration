@@ -1,0 +1,60 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from pipeline.agents.fallback import AgentPool, run_with_fallback
+from pipeline.core.file_ops import atomic_write, safe_read
+from pipeline.models.stage_result import StageResult
+from pipeline.stages.base import Stage, StageContext
+from pipeline.templates.renderer import render
+
+
+class S04Extraction(Stage):
+    @property
+    def name(self) -> str:
+        return "S04"
+
+    @property
+    def description(self) -> str:
+        return "Knowledge extraction"
+
+    def run(self, ctx: StageContext) -> StageResult:
+        literature = safe_read(ctx.state_dir / "s02_literature.md")
+        truncated = literature[: ctx.config.thresholds.payload_truncate]
+
+        repo_dir = Path(__file__).resolve().parent.parent.parent
+        orch_path = repo_dir / "scripts" / "orchestrate.sh"
+        pool = AgentPool(str(orch_path))
+
+        template_path = repo_dir / ctx.config.templates.prompts_dir / "s04_knowledge_extract.md"
+        if template_path.exists():
+            prompt = render(
+                template_path,
+                {
+                    "TOPIC": ctx.topic,
+                    "LITERATURE": truncated,
+                },
+            )
+        else:
+            prompt = (
+                "Extract key findings, methodologies, and data from literature:\n\n"
+                f"Topic: {ctx.topic}\n\n"
+                f"Literature:\n{truncated}\n\n"
+                "Output structured knowledge extraction."
+            )
+
+        result = run_with_fallback(
+            pool,
+            ctx.config.agents.s04.primary,
+            ctx.config.agents.s04.fallback,
+            prompt,
+            f"s04-extract-{ctx.slug}",
+            ctx.config.timeouts.agent_chatgpt,
+            ctx.config.timeouts.agent_gemini,
+            ctx.logger,
+        )
+        if len(result.content) < ctx.config.thresholds.s04_min_output_bytes:
+            raise RuntimeError("S04 output too short, cascade prevention")
+
+        atomic_write(ctx.state_dir / "s04_extracted.md", result.content)
+        return StageResult(content=result.content)

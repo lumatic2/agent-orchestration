@@ -13,7 +13,7 @@
     number-align: center,
   )
   set text(font: ("AppleMyungjo", "Batang", "Noto Serif CJK KR", "Georgia"), size: 10pt, lang: "ko")
-  set par(justify: true, leading: 0.75em, spacing: 1.8em, first-line-indent: 0em)
+  set par(justify: true, leading: 0.85em, spacing: 2.2em, first-line-indent: 1em)
   set heading(numbering: "1.1")
 
   // Title block

@@ -1,0 +1,49 @@
+timeouts:
+  agent_gemini: 180
+  agent_codex: 300
+  agent_chatgpt: 300
+  agent_claude: 180
+  watchdog_stale_minutes: 10
+thresholds:
+  s04_min_output_bytes: 500
+  s14_unverified_rate_gate: 50
+  max_refine: 3
+  max_pivot: 2
+  payload_truncate: 8000
+  payload_truncate_s11: 20000
+api:
+  arxiv_max: 15
+  ss_max: 10
+  openalex_max: 10
+  pubmed_max: 15
+agents:
+  s02_keywords:
+    primary: "gemini"
+    fallback: "chatgpt"
+  s04:
+    primary: "chatgpt"
+    fallback: "gemini"
+  s05:
+    primary: "gemini"
+    fallback: "chatgpt"
+  s10:
+    primary: "gemini"
+    fallback: "chatgpt"
+  s11:
+    primary: "gemini"
+    fallback: "chatgpt"
+  s14:
+    primary: "gemini"
+    fallback: "chatgpt"
+  s15_reviewers:
+    - "gemini"
+    - "codex"
+    - "claude"
+vault:
+  ssh_host: "m4"
+  ssh_timeout: 10
+  base_path: "~/vault/30-projects/papers"
+templates:
+  typst_dir: "templates/typst"
+  prompts_dir: "templates/prompts"
+  default: "A"
