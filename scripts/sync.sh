@@ -360,13 +360,10 @@ deploy_claude() {
     echo "[OK] session-logger.sh → $claude_dir/session-logger.sh"
   fi
 
-  # Deploy skills to ~/.claude/commands/
-  local skills_src="$REPO_DIR/skills"
-  if [ -d "$skills_src" ]; then
-    mkdir -p "$target_dir/commands"
-    cp "$skills_src"/*.md "$target_dir/commands/"
-    echo "[OK] Skills ($(ls "$skills_src"/*.md | wc -l | tr -d ' ')개) → $target_dir/commands/"
-  fi
+  # Skills 복사 제거됨 (2026-03-28)
+  # skills/*.md → commands/ 덮어쓰기가 직접 수정한 commands/ 파일을 날릴 위험.
+  # 스킬은 skills/ SoT에서 직접 관리하고, commands/는 수동 배포.
+  # 필요 시: cp ~/projects/agent-orchestration/skills/foo.md ~/.claude/commands/foo.md
 
   # Patch settings.json common hooks (pre-pull scope, push failure detection)
   local settings_file="$target_dir/settings.json"
