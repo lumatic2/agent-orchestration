@@ -4,8 +4,8 @@
 #
 # What it does:
 #   1. Detects OS (Windows / macOS)
-#   2. Reads SHARED_PRINCIPLES.md + SHARED_MEMORY.md
-#   3. Injects them into each adapter (claude.md, codex.md, gemini.md)
+#   2. Reads SHARED_PRINCIPLES.md
+#   3. Injects into each adapter (claude.md, codex.md, gemini.md)
 #   4. Copies adapters to each agent's expected config location
 #   5. Verifies each agent CLI is installed and compatible
 #
@@ -410,7 +410,7 @@ deploy_codex_brain() {
   local target_dir="$BASE_DIR/.codex"
   mkdir -p "$target_dir"
 
-  # Build codex_brain with injected SHARED_MEMORY
+  # Build codex_brain
   cp "$REPO_DIR/adapters/codex_brain.md" "$REPO_DIR/adapters/codex_brain.md.build"
   inject_shared "$REPO_DIR/adapters/codex_brain.md.build"
   mv "$REPO_DIR/adapters/codex_brain.md.build" "$target_dir/CODEX_BRAIN.md"

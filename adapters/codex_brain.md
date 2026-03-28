@@ -86,7 +86,7 @@ MCP 미연결 상태에서 MCP 작업 요청 시:
 ## Claude와 다른 제약사항
 
 - Claude Code 스킬(`/session-end`, `/today` 등)은 실행 불가 → 스킬 내용을 직접 구현
-- SHARED_MEMORY.md 업데이트는 직접 파일 편집
+- context/ 또는 vault에 직접 기록
 - `session.md` 업데이트도 직접 파일 편집
 
 ---
@@ -110,5 +110,3 @@ MCP 미연결 상태에서 MCP 작업 요청 시:
 
 ---
 
-<!-- BEGIN SHARED_MEMORY -->
-<!-- END SHARED_MEMORY -->

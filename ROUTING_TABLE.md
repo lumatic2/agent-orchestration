@@ -20,10 +20,10 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
 
 ## Step 0: Do I Need Orchestration?
 
-1. 리서치가 필요한가? → Gemini 선행
-2. 브라우저/GUI/시각화 작업인가? → **OpenClaw** (아래 참조)
-3. 1-3파일, 5분 내 작업인가? → Claude 직접 처리
-4. 순수 리서치인가? → Gemini 단독
+1. 단순 리서치인가? (≤3회 검색, 단일 주제, 사실 조회) → Claude 직접 처리
+2. 복잡 리서치인가? (4+ 소스, 트렌드, 비교 분석, 대량 수집) → Gemini 선행
+3. 브라우저/GUI/시각화 작업인가? → **OpenClaw** (아래 참조)
+4. 1-3파일, 5분 내 작업인가? → Claude 직접 처리
 5. 대규모 코드 작업(5+ 파일, 테스트 루프)인가? → Codex 단독
 6. 리서치+구현 결합인가?
    - 소규모 구현: Claude + Gemini
@@ -31,7 +31,8 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
    - 심층 리서치+대규모 구현: Full orchestration
 
 원칙:
-- 리서치는 Claude가 직접 수행하지 않는다.
+- 단순 리서치(≤3회 검색, 단일 주제)는 Claude가 직접 처리한다.
+- 복잡 리서치(4+ 소스, 트렌드/비교 분석, 대량 수집, 50p+ 문서)는 Gemini에 위임한다.
 - 수치 임계값, 모델 tier, fallback 순서는 `agent_config.yaml`을 따른다.
 
 ---
@@ -41,7 +42,8 @@ bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
 | 작업 특성 | 라우팅 |
 |---|---|
 | 단순 수정 (1-3 파일) | Claude alone |
-| 순수 리서치/문서 분석 | Gemini alone |
+| 단순 리서치 (≤3 검색, 단일 주제) | Claude alone |
+| 복잡 리서치/문서 분석 (4+ 소스) | Gemini alone |
 | 대규모 구현/리팩터 | Codex alone |
 | 리서치 후 소규모 반영 | Claude + Gemini |
 | 분석 후 대규모 구현 | Claude + Codex |

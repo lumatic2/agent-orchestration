@@ -5,7 +5,7 @@
 **404 오류의 주원인: 잘못된 토큰 사용.** page_id를 받으면 아래 순서로 워크스페이스를 판별한다.
 
 ## 1단계: page_id로 판별
-SHARED_MEMORY.md "Planby 회사 데이터 지도" 섹션에 등록된 ID → **회사 워크스페이스** (`notion-company`)
+회사 워크스페이스 page_id (COMPANY_NOTION_TOKEN 필요) → **회사 워크스페이스** (`notion-company`)
 그 외 모든 page_id → **개인 워크스페이스** (`notion-personal`)
 
 ## 2단계: 404 발생 시 폴백

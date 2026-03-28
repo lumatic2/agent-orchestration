@@ -23,22 +23,25 @@ bash scripts/orchestrate.sh gemini "Compare React vs Svelte for this project"
 ```
 agent_config.yaml       Config hub (models, flags, paths)
 SHARED_PRINCIPLES.md    Behavioral rules (all agents)
-SHARED_MEMORY.md        Cross-session memory (orchestrator manages)
 ROUTING_TABLE.md        Task → agent → model mapping
 
 adapters/
-  claude.md             Claude Code orchestrator instructions
+  claude_global.md      ~/CLAUDE.md source (deployed by sync.sh)
+  claude.md             Orchestrator rules
   codex.md              Codex AGENTS.md (worker)
   gemini.md             Gemini GEMINI.md (worker)
 
-scripts/
+scripts/                30 shell scripts
+  orchestrate.sh        Dispatch tasks with fallback
   sync.sh               Deploy shared files to agent configs
-  orchestrate.sh         Dispatch tasks with fallback
-  guard.sh               Safety hook (blocks destructive commands)
-  memory_compact.sh      Prevent memory bloat
+  guard.sh              Safety hook (blocks destructive commands)
+  *-news.sh, etc.       Cron automation (9 scripts on M4)
 
-templates/
-  task_brief.md          Standard task delegation format
+skills/                 24 slash commands (source of truth)
+  → deployed to ~/.claude/commands/ manually
+
+context/                Project-specific context files
+pipeline/               Research pipeline (Python)
 ```
 
 ## Multi-Device

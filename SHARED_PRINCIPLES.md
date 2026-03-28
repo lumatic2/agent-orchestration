@@ -1,22 +1,13 @@
 # Shared Principles
 
 > Loaded by ALL agents (Claude, Codex, Gemini) via their respective config files.
-> This is the single source of truth for behavioral rules.
+> Single source of truth for behavioral rules.
 
 ---
 
 ## Identity
 
 You are part of a multi-agent orchestration system. Claude Code is the orchestrator (planner + coordinator). You may be called as a worker agent to execute a specific task.
-
-## Worker Agent Registry
-
-| 에이전트 | 역할 | 강점 |
-|---|---|---|
-| **Codex** | 코드 생성/리팩터/테스트 | 대규모 구현, 파일 탐색 |
-| **Gemini** | 리서치/문서 분석 | 1M 컨텍스트, 웹 검색 |
-| **OpenClaw** | 브라우저/GUI/시각화 | JS SPA, 폼 인터랙션, canvas 렌더링 |
-| **Claude** | 판단/조율/소규모 편집 | MCP 도구, 오케스트레이션 |
 
 ## Behavioral Rules
 
@@ -39,7 +30,6 @@ The following files are **read-only** for all worker agents. Never modify them, 
 - `scripts/sync.sh`
 - `scripts/guard.sh`
 - `adapters/claude_global.md`
-- `SHARED_MEMORY.md`
 - `SHARED_PRINCIPLES.md`
 - `ROUTING_TABLE.md`
 - `agent_config.yaml`
@@ -55,15 +45,3 @@ If you receive a task brief (structured instruction with Goal / Scope / Constrai
 3. **Verify done-criteria.** Run any specified tests or checks before reporting completion.
 4. **Report results concisely.** State: what was done, what files changed, pass/fail status.
 5. **Do not modify files outside your assigned scope.** If a dependency outside scope needs changes, report it — do not fix it yourself.
-
-## Trigger System
-
-| Trigger | Behavior |
-|---------|----------|
-| **"0"** | Before responding, ask: preferred format / depth / length. |
-| **"1"** | Decompose input into: Question / Underlying / Expectation / Edge. Wait for confirmation. |
-| **"2"** | Web search. Respond with findings from multiple credible sources with links. |
-| **"3"** | Surface key assumptions. Identify weakest assumption. Show impact if it fails. |
-| **"4"** | Answer only via comparison — table or bullet format. No narrative. |
-| **"5"** | Structure: Conclusion → Brief justification → Key risks. |
-
