@@ -2762,6 +2762,7 @@ do_chain() {
 case "${1:-}" in
   run)        shift; python "$SCRIPT_DIR/run_blueprint.py" "$@"; exit $? ;;
   schema)     shift; do_schema "$@" ;;
+  --boot)     do_boot ;;
   --mode)     shift; do_mode "${1:-}" ;;
   --chain)    do_chain "$@" ;;
 esac
