@@ -2266,11 +2266,8 @@ do_boot() {
     fi
   done
 
-  # Skills 자동 배포 (git pull 후 repo/skills/ → ~/.claude/commands/)
-  local skills_src="$SCRIPT_DIR/../skills"
-  if [ -d "$skills_src" ]; then
-    cp "$skills_src"/*.md "$HOME/.claude/commands/" 2>/dev/null || true
-  fi
+  # Skills 자동 배포는 비활성화 — boot 시 자동 복사 시 수동 편집 내용 덮어씌워지는 문제 방지
+  # 수동 배포: cp ~/projects/agent-orchestration/skills/foo.md ~/.claude/commands/foo.md
 
   # Knowledge file refresh (최근 1일 이내 갱신된 경우 스킵)
   REFRESH_SCRIPT="$SCRIPT_DIR/refresh_knowledge.sh"
