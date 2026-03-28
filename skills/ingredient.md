@@ -1,6 +1,6 @@
 식재료 재고 현황을 조회하고 분석한다. 다음 순서대로 실행해라:
 
-1. M1에 SSH로 접속해서 재고 현황을 가져와라:
+1. M4에 SSH로 접속해서 재고 현황을 가져와라:
    ```
    "cd ~/ingredient-bot && python3 -c \"
 from db import IngredientDB
