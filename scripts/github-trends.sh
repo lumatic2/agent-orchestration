@@ -356,7 +356,7 @@ send_telegram "$TELEGRAM_MESSAGE" || fail "텔레그램 알림 전송 실패"
 
 # vault 저장
 if [[ "$DRY_RUN" == "false" ]]; then
-  VAULT_DIR="$HOME/vault/10-knowledge/research"
+  VAULT_DIR="${VAULT_RESEARCH:-$HOME/vault/10-knowledge/research}"
   mkdir -p "$VAULT_DIR"
   VAULT_FILE="$VAULT_DIR/github-trends-$RUN_DATE.md"
   {

@@ -29,7 +29,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/env.sh"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
-LOCAL_VAULT_PATH="${LOCAL_VAULT_PATH:-$HOME/vault}" # Default to ~/vault, user can override
+LOCAL_VAULT_PATH="${LOCAL_VAULT_PATH:-${VAULT_ROOT:-$HOME/vault}}"
 LOG_DIR="$REPO_DIR/logs"
 QUEUE_DIR="$REPO_DIR/queue"
 TEMPLATE_DIR="$REPO_DIR/templates"

@@ -628,7 +628,7 @@ PYEOF
 fi
 
 if [[ "$DRY_RUN" == "false" ]]; then
-  VAULT_DIR="$HOME/vault/10-knowledge/accounting"
+  VAULT_DIR="${VAULT_ACCOUNTING:-$HOME/vault/10-knowledge/accounting}"
   mkdir -p "$VAULT_DIR"
   VAULT_FILE="$VAULT_DIR/news-$RUN_DATE.md"
   {

@@ -62,13 +62,11 @@ inject_shared() {
   local adapter_file="$1"
   local tmp_file="${adapter_file}.tmp"
   local principles_path="$REPO_DIR/SHARED_PRINCIPLES.md"
-  local memory_path="$REPO_DIR/SHARED_MEMORY.md"
-  local orchestration_setup_path="$REPO_DIR/ORCHESTRATION_SETUP.md"
 
   # Replace the placeholder sections.
   # macOS /usr/bin/awk (BSD awk) doesn't accept multi-line strings passed via -v,
   # so pass file paths and print file contents from inside awk instead.
-  awk -v principles_file="$principles_path" -v memory_file="$memory_path" -v orchestration_setup_file="$orchestration_setup_path" '
+  awk -v principles_file="$principles_path" '
     function print_file(f, line) {
       while ((getline line < f) > 0) print line
       close(f)
@@ -80,28 +78,6 @@ inject_shared() {
       next
     }
     /<!-- END SHARED_PRINCIPLES -->/{
-      in_block=0
-      print
-      next
-    }
-    /<!-- BEGIN SHARED_MEMORY -->/{
-      print
-      print_file(memory_file)
-      in_block=1
-      next
-    }
-    /<!-- END SHARED_MEMORY -->/{
-      in_block=0
-      print
-      next
-    }
-    /<!-- BEGIN ORCHESTRATION_SETUP -->/{
-      print
-      print_file(orchestration_setup_file)
-      in_block=1
-      next
-    }
-    /<!-- END ORCHESTRATION_SETUP -->/{
       in_block=0
       print
       next
@@ -559,6 +535,29 @@ main() {
   echo "--- MCP Servers ---"
   setup_mcp
   python3 "$REPO_DIR/scripts/check_mcp.py" 2>/dev/null || true
+
+  # --- Line Budget Check ---
+  echo ""
+  echo "--- Line Budget Check ---"
+  check_budget() {
+    local file="$1" budget="$2" label="$3"
+    if [ -f "$file" ]; then
+      local lines
+      lines=$(wc -l < "$file" | tr -d ' ')
+      if [ "$lines" -gt "$budget" ]; then
+        echo "[WARN] $label exceeds budget ($lines/$budget lines)"
+      else
+        echo "[OK]   $label ($lines/$budget lines)"
+      fi
+    fi
+  }
+  # Check deployed files (after SHARED_PRINCIPLES injection)
+  check_budget "$BASE_DIR/CLAUDE.md" 120 "~/CLAUDE.md"
+  check_budget "$BASE_DIR/.claude/orchestrator_rules.md" 150 "orchestrator_rules.md"
+  check_budget "$BASE_DIR/.codex/AGENTS.md" 120 "AGENTS.md (Codex)"
+  check_budget "$BASE_DIR/.gemini/GEMINI.md" 150 "GEMINI.md"
+  # Check source files
+  check_budget "$REPO_DIR/SHARED_PRINCIPLES.md" 50 "SHARED_PRINCIPLES.md (source)"
 
   echo ""
   echo "========================================"

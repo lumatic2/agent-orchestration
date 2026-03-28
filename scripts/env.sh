@@ -54,3 +54,7 @@ safe_mktemp() {
   mktemp "${SYS_TMP}/${prefix}-XXXXXX${suffix}"
 }
 export -f safe_mktemp
+
+# ── Vault paths ──────────────────────────────────────────────
+_VP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/vault_paths.sh"
+[[ -f "$_VP" ]] && source "$_VP"; unset _VP
