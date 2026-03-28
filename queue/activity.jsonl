@@ -2550,3 +2550,4 @@
 {"ts":"2026-03-28T11:03:21+0900","id":"T533","event":"completed","detail":""}
 {"ts":"2026-03-28T11:21:44+0900","id":"MODE","event":"mode_change","detail":"from=full to=full reason=boot_reset"}
 {"ts":"2026-03-28T11:29:15+0900","id":"MODE","event":"mode_change","detail":"from=full to=full reason=boot_reset"}
+{"ts":"2026-03-28T18:36:44+0900","id":"MODE","event":"mode_change","detail":"from=full to=full reason=boot_reset"}

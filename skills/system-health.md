@@ -33,7 +33,27 @@ echo "=== vault research/ ===" && ssh -o ConnectTimeout=5 m4 "find ~/vault/10-kn
 
 5. **skills ↔ commands 동기화**
 ```bash
-echo "=== Skill Sync ===" && missing=0; drift=0; for f in ~/projects/agent-orchestration/skills/*.md; do b=$(basename "$f"); [ ! -f ~/.claude/commands/"$b" ] && echo "  MISSING: $b" && missing=$((missing+1)); done; for f in ~/.claude/commands/*.md; do b=$(basename "$f"); s=~/projects/agent-orchestration/skills/"$b"; [ -f "$s" ] && [ "$f" -nt "$s" ] && echo "  DRIFT: $b" && drift=$((drift+1)); done; echo "Missing: $missing, Drift: $drift"
+echo "=== Skill Sync ===" && missing=0; drift=0; for f in ~/projects/agent-orchestration/skills/*.md; do b=$(basename "$f"); [[ "$b" == *-public.md ]] && continue; [ ! -f ~/.claude/commands/"$b" ] && echo "  MISSING: $b" && missing=$((missing+1)); done; for f in ~/.claude/commands/*.md; do b=$(basename "$f"); s=~/projects/agent-orchestration/skills/"$b"; [ ! -f "$s" ] && echo "  ORPHAN: $b" && drift=$((drift+1)); done; echo "Missing: $missing, Orphan: $drift"
+```
+
+6. **MEMORY.md stale 포인터** (삭제된 파일 참조)
+```bash
+echo "=== MEMORY stale pointers ===" && grep -oE '\(memory/[^)]+\)' ~/.claude/projects/C--Users-1/memory/MEMORY.md 2>/dev/null | tr -d '()' | while read p; do [ ! -f ~/.claude/projects/C--Users-1/"$p" ] && echo "  DEAD: $p"; done; grep -oE 'context/[a-z_-]+\.md' ~/.claude/projects/C--Users-1/memory/MEMORY.md 2>/dev/null | while read p; do [ ! -f ~/projects/agent-orchestration/"$p" ] && echo "  DEAD: $p"; done; echo "done"
+```
+
+7. **삭제된 파일 참조 (repo 활성 파일만)**
+```bash
+echo "=== Stale refs ===" && for ghost in SHARED_MEMORY ORCHESTRATION_SETUP; do refs=$(grep -rl "$ghost" ~/projects/agent-orchestration/{scripts,adapters,context,skills,README.md} 2>/dev/null | wc -l | tr -d ' '); [ "$refs" -gt 0 ] && echo "  [WARN] $ghost: $refs refs"; done; echo "done"
+```
+
+8. **queue/ 용량**
+```bash
+echo "=== Queue ===" && du -sh ~/projects/agent-orchestration/queue/ 2>/dev/null && find ~/projects/agent-orchestration/queue/ -name "*.md" 2>/dev/null | wc -l | xargs -I{} echo "{} files"
+```
+
+9. **vault 빈 도메인 + research/ 초과**
+```bash
+echo "=== Vault domains ===" && ssh -o ConnectTimeout=5 m4 "for d in ~/vault/10-knowledge/*/; do domain=\$(basename \"\$d\"); files=\$(ls \"\$d\"/*.md 2>/dev/null | grep -v 00-INDEX | wc -l | tr -d ' '); [ \"\$files\" -eq 0 ] && echo \"  EMPTY: \$domain\"; [ \"\$files\" -gt 20 ] && echo \"  OVER20: \$domain (\$files)\"; done" 2>/dev/null || echo "SSH failed"
 ```
 
 ### Phase 1 결과 해석
@@ -65,7 +85,13 @@ done
    - `it-contents-*`, `github-trends-*`, `events-*` → 유지 (cron 출력)
    - 나머지 → 파일명에서 도메인 추정 → 이동 제안
 
-3. **DRIFT 스킬 처리**: commands/가 skills/보다 새로우면 → "skills/를 업데이트할까요, commands/를 덮어쓸까요?" AskUserQuestion
+3. **ORPHAN commands 처리**: commands/에만 있고 skills/에 없는 파일 → 삭제 확인 AskUserQuestion
+
+4. **MEMORY stale 포인터**: 삭제된 파일을 참조하는 MEMORY.md 항목 → 해당 줄 제거/수정
+
+5. **삭제된 파일 참조**: SHARED_MEMORY 등 유령 참조가 활성 파일에 남아있으면 → 해당 줄 수정/제거
+
+6. **빈 vault 도메인**: 파일 0개인 도메인 → 삭제 확인 AskUserQuestion
 
 Phase 2 완료 후 → "audit도 실행할까요?" AskUserQuestion
 

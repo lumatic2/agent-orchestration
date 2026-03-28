@@ -1,7 +1,7 @@
 # Law Automation — 법령 자동 업데이트 파이프라인
 
-**상태**: 파이프라인 완성, M1 배포 및 법제처 API 승인 대기 중
-**마지막 업데이트**: 2026-03-15
+**상태**: 파이프라인 완성, M4 배포 완료, 법제처 API 승인 완료
+**마지막 업데이트**: 2026-03-28
 
 ---
 
@@ -12,48 +12,25 @@
 | `pdf-to-vault.py` | `~/Desktop/` | PDF → Markdown 변환 + vault 저장 |
 | `law-check.py` | `~/Desktop/` | 법제처 API 버전 비교 + 자동 다운로드 |
 | `law_registry.yaml` | `~/Desktop/` | 36개 법령 추적 목록 (ls_id, current_no, current_date) |
-| `com.luma2.law-check.plist` | `~/Desktop/` | M1 launchd 설정 (매주 일요일 09:00) |
+| `com.luma2.law-check.plist` | `~/Desktop/` | M4 launchd 설정 (매주 일요일 09:00) |
 
-M1 배포 경로: `~/Desktop/` (3파일) + `~/Library/LaunchAgents/` (plist)
-
----
-
-## M1 배포 명령어 (API 승인 전 미리 가능)
-
-```bash
-scp "C:/Users/1/Desktop/law-check.py" m1:~/Desktop/
-scp "C:/Users/1/Desktop/pdf-to-vault.py" m1:~/Desktop/
-scp "C:/Users/1/Desktop/law_registry.yaml" m1:~/Desktop/
-scp "C:/Users/1/Desktop/com.luma2.law-check.plist" "m1:~/Library/LaunchAgents/"
-ssh m1 "launchctl load ~/Library/LaunchAgents/com.luma2.law-check.plist"
-ssh m1 "launchctl list | grep law-check"
-```
+M4 배포 완료: `~/Desktop/` (3파일) + `~/Library/LaunchAgents/` (plist)
 
 ---
 
-## 법제처 API 승인 후 작업
+## 법제처 API 승인 완료
 
-1. 승인 확인: https://open.law.go.kr/LSO/openApi/cuAskList.do
-2. OC값을 M1 `.env`에 추가:
-   ```bash
-   ssh m1 "echo 'LAW_API_OC=<OC값>' >> ~/Desktop/content-automation/.env"
-   ```
-3. ls_id 자동 탐색 (최초 1회):
-   ```bash
-   ssh m1 "python3 ~/Desktop/law-check.py --discover"
-   ```
-4. `law_registry.yaml`을 M1 → Windows로 동기화 (ls_id 채워진 버전):
-   ```bash
-   scp m1:~/Desktop/law_registry.yaml "C:/Users/1/Desktop/law_registry.yaml"
-   ```
+- 승인 확인: https://open.law.go.kr/LSO/openApi/cuAskList.do
+- OC값 M4 `.env`에 설정 완료
+- `--discover`로 ls_id 채워진 상태
 
 ---
 
-## 자동 업데이트 흐름 (M1 기준)
+## 자동 업데이트 흐름 (M4 기준)
 
 ```
 launchd 매주 일요일 09:00
-  → law-check.py (OS 자동감지 → M1 경로)
+  → law-check.py (OS 자동감지 → M4 경로)
     → 법제처 API 조회 (36개 법령)
     → 개정 감지 시: PDF 다운로드 → ~/Desktop/pdf-input/
     → pdf-to-vault.py 호출 (LOCAL_VAULT_PATH 설정됨)
@@ -84,7 +61,7 @@ launchd 매주 일요일 09:00
 
 - **법령 모드**: 파일명에 `(법률)`, `(대통령령)`, `(부령)`, `시행령`, `시행규칙` 포함 시 Gemini 스킵
 - **도메인 분류기**: filename_rules 우선 → content_rules 폴백 (앞 5,000자)
-- **LOCAL_VAULT_PATH 환경변수**: 설정 시 SCP 대신 로컬 vault에 직접 저장 (M1 네이티브)
+- **LOCAL_VAULT_PATH 환경변수**: 설정 시 SCP 대신 로컬 vault에 직접 저장 (M4 네이티브)
 - **Gemini CLI**: `gemini.cmd --yolo -m gemini-2.5-flash`, 입력 80,000자 제한
 
 ### 도메인 분류기 — 주의 패턴 (이전에 오분류된 케이스)
