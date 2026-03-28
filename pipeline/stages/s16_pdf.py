@@ -190,11 +190,18 @@ class S16Pdf(Stage):
             )
         except subprocess.CalledProcessError as exc:
             err_detail = (exc.stderr or exc.stdout or str(exc))[:500]
-            ctx.logger.warn(f"Typst compile failed: {err_detail}")
-            return StageResult(content=f"PDF generation skipped: {err_detail}")
-        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
-            ctx.logger.warn(f"Typst compile failed: {exc}")
-            return StageResult(content=f"PDF generation skipped: {exc}")
+            raise RuntimeError(f"S16 Typst compile failed: {err_detail}") from exc
+        except FileNotFoundError as exc:
+            raise RuntimeError("S16 Typst not found — install typst and ensure it is on PATH") from exc
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            raise RuntimeError(f"S16 Typst compile error: {exc}") from exc
+
+        # PDF quality gate
+        if not pdf_path.exists():
+            raise RuntimeError(f"S16 PDF not created: {pdf_path}")
+        pdf_size = pdf_path.stat().st_size
+        if pdf_size < 2048:
+            raise RuntimeError(f"S16 PDF suspiciously small ({pdf_size} bytes): {pdf_path}")
 
         desktop_dir = Path.home() / "Desktop" / "research"
         display_slug = _compute_display_slug(ctx)

@@ -75,15 +75,25 @@ def _strip_gemini_errors(text: str) -> str:
     return "\n".join(lines).strip()
 
 
+def _unescape_markdown(text: str) -> str:
+    """Undo JSON-style escaping that LLMs sometimes emit (e.g. literal \\n, \\#\\#)."""
+    # Actual newlines first (\\r\\n before \\n)
+    text = text.replace("\\r\\n", "\n").replace("\\n", "\n")
+    text = text.replace("\\t", "\t")
+    # Unescape markdown-significant chars: \# → #, \* → *, \_ → _, etc.
+    text = re.sub(r"\\([#*_\[\]`>~|])", r"\1", text)
+    return text
+
+
 def extract_content(raw: str) -> str:
     match = _CONTENT_WITH_USAGE.search(raw)
     if match:
-        return _strip_noise(match.group(2))
+        return _unescape_markdown(_strip_noise(match.group(2)))
     match = _CONTENT_NO_USAGE.search(raw)
     if match:
         content = _strip_noise(match.group(2))
-        return _strip_gemini_errors(content)
-    return _strip_noise(raw)
+        return _unescape_markdown(_strip_gemini_errors(content))
+    return _unescape_markdown(_strip_noise(raw))
 
 
 def extract_token_usage(raw: str) -> dict[str, Any] | None:
