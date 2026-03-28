@@ -229,8 +229,9 @@ build_guard_table() {
 |---|---|
 | ${cond_lines} | ${action_lines} |
 | ${cond_files} | ${action_files} |
-| Any research needed | ${action_research} |
+| Complex research (4+ sources, trend, crawl, 50p+ doc) | ${action_research} |
 | Browser/GUI/canvas/JS SPA needed | ${action_browser} |
+| Simple research (≤3 searches, single topic) | Proceed directly (WebSearch/WebFetch) |
 | Simple edit (1-${max_files} files, <${max_lines} lines) | ${action_simple} |
 EOF
 }

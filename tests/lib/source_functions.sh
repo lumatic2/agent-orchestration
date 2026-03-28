@@ -16,6 +16,7 @@ source_orchestrate_functions() {
   # Neutralize only non-function top-level code
   sed \
     -e 's/^set -euo pipefail/# [neutralized] set -euo pipefail/' \
+    -e 's|^source "\$SCRIPT_DIR/env.sh"|# [neutralized] source "$SCRIPT_DIR/env.sh"|' \
     -e 's/^mkdir -p /# [neutralized] mkdir -p /' \
     -e 's/^TIMESTAMP=.*/# [neutralized] TIMESTAMP/' \
     -e 's/^ISO_NOW=.*/# [neutralized] ISO_NOW/' \

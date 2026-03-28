@@ -31,13 +31,13 @@ source "$SCRIPT_DIR/env.sh"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 LOCAL_VAULT_PATH="${LOCAL_VAULT_PATH:-${VAULT_ROOT:-$HOME/vault}}"
 LOG_DIR="$REPO_DIR/logs"
-QUEUE_DIR="$REPO_DIR/queue"
+QUEUE_DIR="${TMPDIR:-/tmp}/orchestrate-$$"
 TEMPLATE_DIR="$REPO_DIR/templates"
 AGENT_CONFIG_FILE="$REPO_DIR/agent_config.yaml"
-ACTIVITY_LOG="$QUEUE_DIR/activity.jsonl"
-ACTIVE_MODE_FILE="$QUEUE_DIR/.active_mode"
-PERSIST_MODE_FILE="$QUEUE_DIR/.persist_mode"
-mkdir -p "$LOG_DIR" "$QUEUE_DIR"
+ACTIVITY_LOG="/dev/null"
+ACTIVE_MODE_FILE="$REPO_DIR/queue/.active_mode"
+PERSIST_MODE_FILE="$REPO_DIR/queue/.persist_mode"
+mkdir -p "$LOG_DIR" "$QUEUE_DIR" "$REPO_DIR/queue"
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 # Dynamic timestamp — call now_iso() each time to avoid all timestamps being identical
@@ -2762,15 +2762,8 @@ do_chain() {
 case "${1:-}" in
   run)        shift; python "$SCRIPT_DIR/run_blueprint.py" "$@"; exit $? ;;
   schema)     shift; do_schema "$@" ;;
-  --boot)     do_boot ;;
   --mode)     shift; do_mode "${1:-}" ;;
-  --status)   shift; do_status "${1:-}" ;;
-  --resume)   do_resume ;;
-  --complete) shift; do_complete "$@" ;;
-  --cost)     do_cost ;;
-  --clean)    shift; do_clean "${1:-}" ;;
   --chain)    do_chain "$@" ;;
-  set_status) shift; do_set_status "$@" ;;
 esac
 
 # --- Generate task brief from args ---
@@ -2923,7 +2916,7 @@ case "$AGENT" in
     echo "[ERROR] Unknown agent: $AGENT"
     echo "Available: codex, codex-spark, chatgpt, chatgpt-mini, chatgpt-light, gemini, gemini-pro, openclaw, openclaw-high"
     echo "Options:   run <blueprint_file> [--var key=value ...]"
-    echo "           --boot, --mode [name], --status, --resume, --complete <ID> <summary>, schema [agent] [--json]"
+    echo "           --mode [name], schema [agent] [--json]"
     echo "           --brief <goal> <scope> <constraints>"
     echo "           --dry-run, --json '{\"goal\":\"...\"}'"
     exit 1
@@ -2936,4 +2929,3 @@ fi
 
 echo ""
 echo "[LOG] $LOG_DIR/${AGENT}_${TASK_NAME}_${TIMESTAMP}.*"
-echo "[QUEUE] $QUEUE_TASK_DIR/"

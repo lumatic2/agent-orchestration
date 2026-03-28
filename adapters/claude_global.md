@@ -41,15 +41,9 @@
 ---
 
 
-## FIRST ACTION (Every Session, No Exceptions)
-
-```bash
-bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
-```
+## Self-Execution Guard
 
 시스템 전체 구조가 불명확할 때 → vault `00-System/SYSTEM_MAP.md` 읽어라 (MCP: `mcp__obsidian-vault__read_note("00-System/SYSTEM_MAP.md")`).
-
-Then apply the Self-Execution Guard before writing a single line of code:
 
 <!-- BEGIN GUARD_TABLE -->
 | Condition | Action |

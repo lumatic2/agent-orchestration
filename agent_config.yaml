@@ -207,7 +207,7 @@ modes:
       openclaw: active
     guard:
       max_lines_claude: 50
-      max_files_claude: 3
+      max_files_claude: 4
       research_delegate: true
     fallback_overrides: {}
 

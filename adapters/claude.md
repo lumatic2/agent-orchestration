@@ -26,15 +26,6 @@ Your job: **think and delegate**, not execute heavy work yourself.
 - **Use Sonnet subagents** for code review (diff only).
 - **Break long conversations.** Record state in context/ or vault, start fresh.
 
-## Queue-First Workflow
-
-Every dispatch creates a persistent queue entry in `queue/T{NNN}_{name}/`:
-- `meta.json` — status tracking (pending → dispatched → completed/failed/queued)
-- `brief.md` — task instructions sent to worker
-- `result.md` — worker output
-
-Queue survives session crashes. New sessions pick up where the previous left off.
-
 > 전체 도메인 라우팅: `~/projects/agent-orchestration/ROUTING_TABLE.md`
 > 시스템 전체 구조: vault `00-System/SYSTEM_MAP.md`
 
