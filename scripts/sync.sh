@@ -337,10 +337,8 @@ deploy_claude() {
     echo "[OK] session-logger.sh → $claude_dir/session-logger.sh"
   fi
 
-  # Skills 복사 제거됨 (2026-03-28)
-  # skills/*.md → commands/ 덮어쓰기가 직접 수정한 commands/ 파일을 날릴 위험.
-  # 스킬은 skills/ SoT에서 직접 관리하고, commands/는 수동 배포.
-  # 필요 시: cp ~/projects/agent-orchestration/skills/foo.md ~/.claude/commands/foo.md
+  # 커스텀 스킬은 ~/projects/custom-skills/ 레포에서 관리 (2026-03-29 이전)
+  # 배포: bash ~/projects/custom-skills/setup.sh
 
   # Patch settings.json common hooks (pre-pull scope, push failure detection)
   local settings_file="$target_dir/settings.json"

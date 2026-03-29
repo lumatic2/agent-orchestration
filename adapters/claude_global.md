@@ -45,6 +45,8 @@
 
 시스템 전체 구조가 불명확할 때 → vault `00-System/SYSTEM_MAP.md` 읽어라 (MCP: `mcp__obsidian-vault__read_note("00-System/SYSTEM_MAP.md")`).
 
+> 현재 모드: full
+
 <!-- BEGIN GUARD_TABLE -->
 | Condition | Action |
 |---|---|
@@ -53,7 +55,7 @@
 | Complex research (4+ sources, trend, crawl, 50p+ doc) | STOP → `orchestrate.sh gemini "task" name` |
 | Browser/GUI/canvas/JS SPA needed | STOP → `orchestrate.sh openclaw "task" name` |
 | Simple research (≤3 searches, single topic) | Proceed directly (WebSearch/WebFetch) |
-| Simple edit (1-3 files, <50 lines) | Proceed directly |
+| Simple edit (1-4 files, <50 lines) | Proceed directly |
 <!-- END GUARD_TABLE -->
 
 > ⚠️ **리서치 위임 방법**: 반드시 `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"task\" name")` 직접 호출.
@@ -68,6 +70,14 @@ Examples:
 - OpenClaw 작업 템플릿 → `~/projects/agent-orchestration/templates/handoff_openclaw.md`
 
 상세 오케스트레이션 규칙 (Pre-flight, Multi-Agent, Routing, Handoff, Queue) → `/orchestrate` 스킬 참조.
+
+---
+
+## 새 프로젝트 관례
+
+- **위치**: 모든 새 프로젝트는 `C:\Users\1\projects\{이름}\` (bash: `~/projects/{name}/`) 에 생성
+- **초기화**: `/prd {이름}` 스킬로 폴더 생성 + CLAUDE.md 자동 작성 + VS Code 오픈
+- 명시적 위치 지정 없으면 항상 이 경로 사용
 
 ---
 
