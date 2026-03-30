@@ -29,11 +29,10 @@
 - 캐싱 효율 80%+ 유지가 목표이므로 최우선 활용
 
 **Gemini (리서치/문서 분석)**
-- 4개+ 소스 비교, 트렌드 분석 등 복잡 리서치 담당
+- 웹 검색이 필요한 모든 리서치 담당
 - 50+ 페이지 문서 요약/분석 담당
 - 배치 작업(대량 콘텐츠 수집, 크롤링) 우선 담당
 - 일 1500 한도 대비 저활용 구간을 해소하도록 적극 사용
-- 단순 리서치(3회 이내 검색, 단일 주제)는 Claude가 직접 처리
 
 현재 모델이 부적절하면 세션 시작 시 한 번만 안내:
 "이 작업은 [모델]이 적합해요. `/model [모델]`로 바꾸시겠어요?"
@@ -41,22 +40,21 @@
 ---
 
 
-## Self-Execution Guard
+## FIRST ACTION (Every Session, No Exceptions)
 
-시스템 전체 구조가 불명확할 때 → vault `00-System/SYSTEM_MAP.md` 읽어라 (MCP: `mcp__obsidian-vault__read_note("00-System/SYSTEM_MAP.md")`).
+```bash
+bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
+```
 
-> 현재 모드: full
+Then apply the Self-Execution Guard before writing a single line of code:
 
-<!-- BEGIN GUARD_TABLE -->
 | Condition | Action |
 |---|---|
 | 50+ lines of code to write | STOP → `orchestrate.sh codex "task" name` |
 | 4+ files to create/modify | STOP → `orchestrate.sh codex "task" name` |
-| Complex research (4+ sources, trend, crawl, 50p+ doc) | STOP → `orchestrate.sh gemini "task" name` |
+| Any research needed | STOP → `orchestrate.sh gemini "task" name` |
 | Browser/GUI/canvas/JS SPA needed | STOP → `orchestrate.sh openclaw "task" name` |
-| Simple research (≤3 searches, single topic) | Proceed directly (WebSearch/WebFetch) |
-| Simple edit (1-4 files, <50 lines) | Proceed directly |
-<!-- END GUARD_TABLE -->
+| Simple edit (1-3 files, <50 lines) | Proceed directly |
 
 > ⚠️ **리서치 위임 방법**: 반드시 `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"task\" name")` 직접 호출.
 > `Agent(subagent_type="gemini-researcher")` 사용 **금지** — 위임 루프 버그로 실제 리서치를 수행하지 않음.
@@ -64,8 +62,7 @@
 Examples:
 - "지뢰찾기 게임 만들어줘" → Python ~100줄 → **`orchestrate.sh codex`로 위임**
 - "README 첫 줄 수정" → 1파일 1줄 → 직접 수행
-- "이 라이브러리 최신 버전 찾아줘" → 단순 검색 1회 → **Claude 직접 처리**
-- "AI 에이전트 프레임워크 5개 비교해줘" → 복잡 리서치 → **`orchestrate.sh gemini`로 위임**
+- "이 라이브러리 최신 버전 찾아줘" → 리서치 → **`orchestrate.sh gemini`로 위임**
 - "빗썸 시세 긁어줘" / "차트 만들어줘" / "네이버 검색해줘" → **`orchestrate.sh openclaw`로 위임**
 - OpenClaw 작업 템플릿 → `~/projects/agent-orchestration/templates/handoff_openclaw.md`
 
@@ -73,36 +70,36 @@ Examples:
 
 ---
 
-## 새 프로젝트 관례
-
-- **위치**: 모든 새 프로젝트는 `C:\Users\1\projects\{이름}\` (bash: `~/projects/{name}/`) 에 생성
-- **초기화**: `/prd {이름}` 스킬로 폴더 생성 + CLAUDE.md 자동 작성 + VS Code 오픈
-- 명시적 위치 지정 없으면 항상 이 경로 사용
-
----
-
-## Windows 로컬 도구
-
-- **파일 검색**: `es "검색어"` — Everything CLI (전 드라이브 즉시 검색)
-  - 예: `es "*.py" -path C:\Users\1\Desktop` / `es ext:mp4 -sort size-descending -n 10`
-  - Everything이 실행 중일 때만 작동 (시작프로그램 등록됨)
-
----
-
-## gstack
-
-웹 브라우징은 `/browse` 스킬 사용. `mcp__claude-in-chrome__*` 도구 사용 금지.
-
-사용 가능한 스킬: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade
-
-스킬이 동작하지 않으면: `cd ~/.claude/skills/gstack && ./setup`
-
----
-
 ## Knowledge Vault
 
 - **Location**: `luma3@m4:~/vault/` (MCP: `obsidian-vault`)
-- **진입점**: `00-System/VAULT_INDEX.md` → 도메인 `00-INDEX.md` → 파일
-- **Write rules**: 리서치 → `10-knowledge/{domain}/`, 프로젝트 → `30-projects/`, 로그 → `40-log/`, 전문가 → `20-experts/`
-- **컨벤션**: `_sources/`=법령원문, `_toc.md`=목차매핑, 요약 파일 우선 참조
-- **상세**: vault `00-System/SYSTEM_MAP.md` 참조
+- **Entry point**: `00-System/VAULT_INDEX.md` — 에이전트가 vault 작업 전 반드시 읽을 것
+- **쓰기 권한**: **MCP `obsidian-vault` 또는 M4 직접** — 다른 기기에서 쓸 때는 MCP 사용
+  - 로컬 vault clone 금지 (혼동 방지 — Windows vault는 삭제됨)
+- **Write rules**:
+  - 리서치 결과 → `10-knowledge/{domain}/`
+  - 전문가 AI 업데이트 → `20-experts/{name}.md`
+  - 프로젝트 노트 → `30-projects/{project}/`
+  - 미분류/급할 때 → `00-inbox/`
+  - 날짜 로그 → `40-log/YYYY-MM-DD.md` (session-end 자동 기록)
+- **Frontmatter 필수**: type, domain, source, date, status
+- Gemini 리서치 완료 후 → vault에 저장 (SHARED_MEMORY.md 덮어쓰기 금지)
+
+---
+
+## Claude Code 커맨드 관리
+
+- **커맨드 원본**: `~/projects/claude-code-setup/claude/commands/`
+- **적용 방식**: `~/.claude/commands/`에 심볼릭 링크로 연결
+- **대상 기기**: Mac Air (luma2), M4 (luma3), Windows (1)
+
+커맨드 추가/수정 시:
+```bash
+# repo에서 편집 후 push
+cd ~/projects/claude-code-setup && git add -A && git commit -m "feat: ..." && git push
+
+# 다른 기기에서 동기화
+cd ~/projects/claude-code-setup && git pull && bash install.sh
+```
+
+직접 `~/.claude/commands/`에 파일을 만들지 말 것 — repo에 반영되지 않음.
