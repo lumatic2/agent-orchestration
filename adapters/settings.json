@@ -24,10 +24,6 @@
           {
             "type": "command",
             "command": "python3 -c \"import os,json,subprocess; inp=json.loads(os.environ.get('TOOL_INPUT','{}')); fp=inp.get('file_path',''); subprocess.run(['python3','-m','ruff','check','--fix','--unsafe-fixes',fp],capture_output=True) if fp.endswith('.py') else None\" 2>/dev/null || true"
-          },
-          {
-            "type": "command",
-            "command": "python3 -c \"import os,json,subprocess; inp=json.loads(os.environ.get('TOOL_INPUT','{}')); fp=inp.get('file_path','').replace('\\\\','/'); targets=['SCHEDULE.md','RECURRING.md','session.md','daily/']; match=any(t in fp for t in targets); repo=os.path.expanduser('~/projects/agent-orchestration'); subprocess.run(['git','-C',repo,'add',fp],capture_output=True) if match else None; subprocess.run(['git','-C',repo,'commit','-m','auto: schedule update'],capture_output=True) if match else None; r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=r=subprocess.run(['git','-C',repo,'push'],capture_output=True) if match else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None; print('[WARN] git push failed:',r.stderr.decode().strip(),flush=True) if match and r and r.returncode!=0 else None\" 2>/dev/null || true"
           }
         ]
       }
@@ -51,11 +47,37 @@
           }
         ]
       },
+      {
+        "matcher": "WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'RULE VIOLATION: WebSearch is blocked. Delegate research to Gemini instead: bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"<query>\" <task-name>' >&2 && exit 2"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude --dangerously-skip-permissions -p '/session-end' 2>/dev/null || true",
+            "timeout": 120,
+            "statusMessage": "컨텍스트 압축 전 세션 마무리 중..."
+          }
+        ]
+      }
     ]
   },
-  "effortLevel": "medium",
-  "skipDangerousModePermissionPrompt": true,
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline.sh"
+  },
   "enabledPlugins": {
     "telegram@claude-plugins-official": true
-  }
+  },
+  "effortLevel": "medium",
+  "skipDangerousModePermissionPrompt": true
 }
