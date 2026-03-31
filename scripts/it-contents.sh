@@ -305,7 +305,7 @@ PROMPT
   local tmp_prompt="$TMP_DIR/prompt_summary_$$.txt"
   cp "$SUMMARY_PROMPT" "$tmp_prompt"
   local result
-  result=$(gemini --yolo -m "$GEMINI_MODEL" < "$tmp_prompt" 2>&1 | grep -Ev "YOLO mode is enabled|All tool calls will be automatically approved|Loaded cached credentials")
+  result=$(cd /tmp && gemini --yolo -m "$GEMINI_MODEL" < "$tmp_prompt" 2>&1 | grep -Ev "YOLO mode is enabled|All tool calls will be automatically approved|Loaded cached credentials")
   rm -f "$tmp_prompt"
 
   if [[ -z "$result" ]]; then
@@ -390,7 +390,7 @@ PROMPT
   } > "$overview_prompt"
 
   local result
-  result=$(gemini --yolo -m "$GEMINI_MODEL" < "$overview_prompt" 2>&1 | grep -Ev "YOLO mode is enabled|All tool calls will be automatically approved|Loaded cached credentials")
+  result=$(cd /tmp && gemini --yolo -m "$GEMINI_MODEL" < "$overview_prompt" 2>&1 | grep -Ev "YOLO mode is enabled|All tool calls will be automatically approved|Loaded cached credentials")
 
   if [[ -z "$result" ]]; then
     echo "[WARN] Gemini 응답 없음: 종합 분석" >&2
