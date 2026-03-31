@@ -7,35 +7,16 @@
 - 한국어로 소통
 - 간결하게 응답
 
-## 모델 라우팅 규칙 (엄격 모드)
+## 모델 라우팅 규칙
 
-질문의 복잡도를 판단하여 현재 설정이 부적절하면 추천:
+| 모델 | 용도 | 금지 |
+|---|---|---|
+| **Sonnet** | 판단·위임·단순 편집 (1-3파일, <50줄) | 버그 수정, 기능 구현 |
+| **Opus** | 아키텍처·전략 (월 5-10회) | 코드 생성, 일상 판단 |
+| **Codex** | 4+파일/50+줄 구현, 리팩토링, 코드 리뷰 | — |
+| **Gemini** | 웹 리서치, 50p+ 문서, 배치 크롤링 | — |
 
-**Sonnet (오케스트레이터 판단 용도만)**
-- 1-3파일, <50줄의 단순 수정만 직접 수행
-- 작업: 파일 조회, 단순 편집, 위임 판단, 결과 검수
-- 금지: 버그 수정, 기능 구현, 리팩토링
-- 예: "README 첫 줄 수정"은 직접 수행 / "버그 고쳐줘"는 Codex 위임
-
-**Opus (전략/시스템 설계만)**
-- 사용: 오케스트레이션 아키텍처, 시스템 점검, 장기 전략
-- 사용 빈도: 월 5-10회 수준으로 제한
-- 절대 금지: 코드 생성, 문서 작성, 일상 판단
-- 예: "토큰 절약 시스템 재설계"는 Opus / "이 task는 Codex 위임 맞나?"는 Sonnet
-
-**Codex (코딩/분석 중심)**
-- 4+ 파일, 50+ 줄, 모든 구현/리팩토링 작업 담당
-- 코드 리뷰, 에러 분석, 데이터 처리 우선 담당
-- 캐싱 효율 80%+ 유지가 목표이므로 최우선 활용
-
-**Gemini (리서치/문서 분석)**
-- 웹 검색이 필요한 모든 리서치 담당
-- 50+ 페이지 문서 요약/분석 담당
-- 배치 작업(대량 콘텐츠 수집, 크롤링) 우선 담당
-- 일 1500 한도 대비 저활용 구간을 해소하도록 적극 사용
-
-현재 모델이 부적절하면 세션 시작 시 한 번만 안내:
-"이 작업은 [모델]이 적합해요. `/model [모델]`로 바꾸시겠어요?"
+모델이 부적절하면 세션 시작 시 한 번만: "이 작업은 [모델]이 적합해요."
 
 ---
 
@@ -46,20 +27,21 @@
 
 | Condition | Action |
 |---|---|
-| 50+ lines of code to write | `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh codex \"task\" name")` |
-| 4+ files to create/modify | `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh codex \"task\" name")` |
-| Complex research (4+ sources, trend, crawl, 50p+ doc) | `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"task\" name")` |
+| 50+ lines of code to write | `Bash("codex \"task\"")` |
+| 4+ files to create/modify | `Bash("codex \"task\"")` |
+| Complex research (4+ sources, trend, crawl, 50p+ doc) | `Bash("gemini -p \"task\"")` |
 | Browser/GUI/canvas/JS SPA needed | `/browse` 스킬 사용 |
 | Simple research (≤3 searches, single topic) | Claude 직접 WebSearch/WebFetch |
 | Simple edit (1-4 files, <50 lines) | 직접 수행 |
 
-**위임 방법**: 항상 `Bash` 도구로 `orchestrate.sh`를 직접 호출한다. `Agent(subagent_type=...)` 서브에이전트 사용 금지 — 불필요한 레이어 추가.
+**위임 방법**: `Bash` 도구로 CLI 직접 호출. `Agent(subagent_type=...)` 사용 금지.
+**vault 저장**: 리서치 후 사용자가 명시적으로 요청할 때만 `mcp__obsidian-vault__write_note` 호출.
 
 Examples:
-- "지뢰찾기 게임 만들어줘" → Python ~100줄 → `orchestrate.sh codex`로 위임
+- "지뢰찾기 게임 만들어줘" → Python ~100줄 → `codex "task"`로 위임
 - "README 첫 줄 수정" → 1파일 1줄 → 직접 수행
 - "이 라이브러리 최신 버전 찾아줘" → 단순 검색 → Claude 직접 처리
-- "AI 에이전트 프레임워크 5개 비교해줘" → 복잡 리서치 → `orchestrate.sh gemini`로 위임
+- "AI 에이전트 프레임워크 5개 비교해줘" → 복잡 리서치 → `gemini -p "task"`로 위임
 - "빗썸 시세 긁어줘" / "차트 만들어줘" / "네이버 검색해줘" → `/browse` 스킬
 
 ---
@@ -91,9 +73,6 @@ Examples:
 ## gstack
 
 웹 브라우징은 `/browse` 스킬 사용. `mcp__claude-in-chrome__*` 도구 사용 금지.
-
-사용 가능한 스킬: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade
-
 스킬이 동작하지 않으면: `cd ~/.claude/skills/gstack && ./setup`
 
 ---
@@ -105,14 +84,8 @@ Examples:
 - **Entry point**: `00-System/VAULT_INDEX.md` — 에이전트가 vault 작업 전 반드시 읽을 것
 - **쓰기 권한**: **MCP `obsidian-vault` 또는 M4 직접** — 다른 기기에서 쓸 때는 MCP 사용
   - 로컬 vault clone 금지 (혼동 방지 — Windows vault는 삭제됨)
-- **Write rules**:
-  - 리서치 결과 → `10-knowledge/{domain}/`
-  - 전문가 AI 업데이트 → `20-experts/{name}.md`
-  - 프로젝트 노트 → `30-projects/{project}/`
-  - 미분류/급할 때 → `00-inbox/`
-  - 날짜 로그 → `40-log/YYYY-MM-DD.md` (session-end 자동 기록)
+- **Write rules**: 리서치→`10-knowledge/`, 전문가→`20-experts/`, 프로젝트→`30-projects/`, 임시→`00-inbox/`, 로그→`40-log/YYYY-MM-DD.md`
 - **Frontmatter 필수**: type, domain, source, date, status
-- Gemini 리서치 완료 후 → vault에 저장 (SHARED_MEMORY.md 덮어쓰기 금지)
 
 ---
 
