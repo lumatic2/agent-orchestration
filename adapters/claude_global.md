@@ -40,33 +40,27 @@
 ---
 
 
-## FIRST ACTION (Every Session, No Exceptions)
+## Self-Execution Guard
 
-```bash
-bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
-```
-
-Then apply the Self-Execution Guard before writing a single line of code:
+작업 시작 전 아래 규칙을 적용한다:
 
 | Condition | Action |
 |---|---|
-| 50+ lines of code to write | STOP → `orchestrate.sh codex "task" name` |
-| 4+ files to create/modify | STOP → `orchestrate.sh codex "task" name` |
-| Any research needed | STOP → `orchestrate.sh gemini "task" name` |
-| Browser/GUI/canvas/JS SPA needed | STOP → `orchestrate.sh openclaw "task" name` |
-| Simple edit (1-3 files, <50 lines) | Proceed directly |
+| 50+ lines of code to write | `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh codex \"task\" name")` |
+| 4+ files to create/modify | `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh codex \"task\" name")` |
+| Complex research (4+ sources, trend, crawl, 50p+ doc) | `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"task\" name")` |
+| Browser/GUI/canvas/JS SPA needed | `/browse` 스킬 사용 |
+| Simple research (≤3 searches, single topic) | Claude 직접 WebSearch/WebFetch |
+| Simple edit (1-4 files, <50 lines) | 직접 수행 |
 
-> ⚠️ **리서치 위임 방법**: 반드시 `Bash("bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"task\" name")` 직접 호출.
-> `Agent(subagent_type="gemini-researcher")` 사용 **금지** — 위임 루프 버그로 실제 리서치를 수행하지 않음.
+**위임 방법**: 항상 `Bash` 도구로 `orchestrate.sh`를 직접 호출한다. `Agent(subagent_type=...)` 서브에이전트 사용 금지 — 불필요한 레이어 추가.
 
 Examples:
-- "지뢰찾기 게임 만들어줘" → Python ~100줄 → **`orchestrate.sh codex`로 위임**
+- "지뢰찾기 게임 만들어줘" → Python ~100줄 → `orchestrate.sh codex`로 위임
 - "README 첫 줄 수정" → 1파일 1줄 → 직접 수행
-- "이 라이브러리 최신 버전 찾아줘" → 리서치 → **`orchestrate.sh gemini`로 위임**
-- "빗썸 시세 긁어줘" / "차트 만들어줘" / "네이버 검색해줘" → **`orchestrate.sh openclaw`로 위임**
-- OpenClaw 작업 템플릿 → `~/projects/agent-orchestration/templates/handoff_openclaw.md`
-
-상세 오케스트레이션 규칙 (Pre-flight, Multi-Agent, Routing, Handoff, Queue) → `/orchestrate` 스킬 참조.
+- "이 라이브러리 최신 버전 찾아줘" → 단순 검색 → Claude 직접 처리
+- "AI 에이전트 프레임워크 5개 비교해줘" → 복잡 리서치 → `orchestrate.sh gemini`로 위임
+- "빗썸 시세 긁어줘" / "차트 만들어줘" / "네이버 검색해줘" → `/browse` 스킬
 
 ---
 
