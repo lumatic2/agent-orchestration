@@ -37,3 +37,9 @@ __pycache__/
 .claude/
 .understand-anything/
 .gstack/
+
+# Generated reports & runtime data (machine-local)
+reports/
+outputs/
+output/
+data/
