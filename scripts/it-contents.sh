@@ -45,6 +45,12 @@ REPORTS_DIR="$BASE_DIR/reports"
 TELEGRAM_SCRIPT="$SCRIPTS_DIR/telegram-send.sh"
 GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-flash}"
 
+# nvm PATH 보장 (비대화형 SSH에서 .zshrc 미로드 시)
+if [[ -d "$HOME/.nvm" ]]; then
+  NVM_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1)"
+  [[ -n "$NVM_BIN" && ":$PATH:" != *":$NVM_BIN:"* ]] && export PATH="$NVM_BIN:$PATH"
+fi
+
 mkdir -p "$REPORTS_DIR"
 
 trim() {
