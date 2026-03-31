@@ -47,15 +47,6 @@
           }
         ]
       },
-      {
-        "matcher": "WebSearch",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo 'RULE VIOLATION: WebSearch is blocked. Delegate research to Gemini instead: bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"<query>\" <task-name>' >&2 && exit 2"
-          }
-        ]
-      }
     ],
     "PreCompact": [
       {
@@ -63,7 +54,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claude --dangerously-skip-permissions -p '/session-end' 2>/dev/null || true",
+            "command": "bash ~/.claude/hooks/precompact_session_end.sh",
             "timeout": 120,
             "statusMessage": "컨텍스트 압축 전 세션 마무리 중..."
           }
