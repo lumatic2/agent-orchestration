@@ -13,7 +13,7 @@
       text(size: 8pt, fill: rgb("#999999"))[#counter(page).display("— 1 —")]
     ),
   )
-  set text(font: ("AppleMyungjo", "Batang", "Noto Serif CJK KR", "Palatino Linotype"), size: 11pt, lang: "ko")
+  set text(font: ("NanumMyeongjo", "Batang", "AppleMyungjo", "Noto Serif CJK KR", "Palatino Linotype"), size: 11pt, lang: "ko")
   set par(justify: true, leading: 0.9em, spacing: 2.0em, first-line-indent: 0.8em)
   set heading(numbering: none)
 

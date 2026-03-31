@@ -70,6 +70,41 @@ Examples:
 
 ---
 
+## 스킬 제작 관례
+
+- **새 스킬 만들 때**: 반드시 `/skill-creator` 스킬을 통해 드래프트 → 테스트 → 평가 → 개선 과정을 거친다
+- **기존 스킬 개선 시**: `/skill-creator`로 eval 돌려 검증 후 반영
+- 단순 설정 파일(SKILL.md) 직접 편집은 긴급 패치에만 허용, 이후 `/skill-creator` 로 재검증 필요
+
+---
+
+## 새 프로젝트 관례
+
+- **위치**: 모든 새 프로젝트는 `C:\Users\1\projects\{이름}\` (bash: `~/projects/{name}/`) 에 생성
+- **초기화**: `/prd {이름}` 스킬로 폴더 생성 + CLAUDE.md 자동 작성 + VS Code 오픈
+- 명시적 위치 지정 없으면 항상 이 경로 사용
+
+---
+
+## Windows 로컬 도구
+
+- **파일 검색**: `es "검색어"` — Everything CLI (전 드라이브 즉시 검색)
+  - 예: `es "*.py" -path C:\Users\1\Desktop` / `es ext:mp4 -sort size-descending -n 10`
+  - Everything이 실행 중일 때만 작동 (시작프로그램 등록됨)
+
+---
+
+## gstack
+
+웹 브라우징은 `/browse` 스킬 사용. `mcp__claude-in-chrome__*` 도구 사용 금지.
+
+사용 가능한 스킬: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse, /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro, /investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard, /unfreeze, /gstack-upgrade
+
+스킬이 동작하지 않으면: `cd ~/.claude/skills/gstack && ./setup`
+
+---
+
+
 ## Knowledge Vault
 
 - **Location**: `luma3@m4:~/vault/` (MCP: `obsidian-vault`)
