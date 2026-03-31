@@ -41,10 +41,9 @@ fi
 
 BASE_DIR="$HOME/projects/agent-orchestration"
 SCRIPTS_DIR="$BASE_DIR/scripts"
-LOGS_DIR="$BASE_DIR/logs"
 REPORTS_DIR="$BASE_DIR/reports"
 TELEGRAM_SCRIPT="$SCRIPTS_DIR/telegram-send.sh"
-ORCH_SCRIPT="$SCRIPTS_DIR/orchestrate.sh"
+GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-flash}"
 
 mkdir -p "$REPORTS_DIR"
 
@@ -71,7 +70,6 @@ fail() {
   exit 1
 }
 
-[[ -x "$ORCH_SCRIPT" ]] || fail "orchestrate.sh를 찾을 수 없습니다: $ORCH_SCRIPT"
 [[ -x "$TELEGRAM_SCRIPT" ]] || fail "telegram-send.sh를 찾을 수 없습니다: $TELEGRAM_SCRIPT"
 
 RUN_DATE="$(date +%Y-%m-%d)"
@@ -96,41 +94,6 @@ OVERVIEW_FILE="$TMP_DIR/overview.txt"
 
 NEWSAPI_ITEMS="$TMP_DIR/newsapi_items.tsv"
 touch "$RSS_ITEMS" "$WEB_ITEMS" "$ALL_ITEMS" "$UNIQUE_ITEMS" "$REEXPOSED_ITEMS" "$IMMEDIATE_ITEMS" "$LATER_ITEMS" "$OVERVIEW_FILE" "$NEWSAPI_ITEMS"
-
-run_orchestrate() {
-  local prompt="$1"
-  local task_name="$2"
-  local timeout_sec="${3:-180}"
-
-  python3 - "$ORCH_SCRIPT" "$prompt" "$task_name" "$timeout_sec" <<'PYEOF'
-import subprocess
-import sys
-
-orch_script, prompt, task_name, timeout_sec = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4])
-try:
-    import os
-    env = os.environ.copy()
-    env["NO_VAULT"] = env.get("NO_VAULT", "false")
-    subprocess.run(
-        ["bash", orch_script, "gemini", prompt, task_name],
-        cwd="/tmp",
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        timeout=timeout_sec,
-        check=True,
-        env=env,
-    )
-except subprocess.TimeoutExpired:
-    sys.exit(124)
-except subprocess.CalledProcessError as e:
-    sys.exit(e.returncode or 1)
-PYEOF
-}
-
-latest_gemini_log() {
-  local task_name="$1"
-  ls -t "$LOGS_DIR"/gemini_"$task_name"_*.txt 2>/dev/null | head -1 || true
-}
 
 fetch_feed() {
   local source_name="$1"
@@ -250,65 +213,80 @@ PYEOF
 }
 
 collect_web_sources() {
-  local task_name="it-contents-web-$SLUG"
-  local prompt
-  prompt=$(cat <<'PROMPT'
-다음 사이트들에서 최근 3일 이내 발행된 글/영상 제목과 링크를 찾아줘:
-- soylab AI: https://www.soylab.ai/
-- 달파 블로그: https://app.dalpha.so/blog/
-- litmers: https://litmers.com/blogs
-- brunch 성대리: https://brunch.co.kr/@sungdairi
-- 조코딩 유튜브: https://www.youtube.com/@jocoding
-- bkamp_ai 유튜브: https://www.youtube.com/@bkamp_ai
-- maker-evan 유튜브: https://www.youtube.com/@maker-evan
-- ddokham 유튜브: https://www.youtube.com/@ddokham
-- 긱뉴스: https://news.hada.io/
+  # YouTube 채널: 핸들 → 채널 ID 자동 추출 → RSS 수집
+  python3 - "$WEB_ITEMS" <<'PYEOF'
+import sys, urllib.request, re
+import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 
-없으면 최근 1주일 이내로 확장. 형식: 소스명 | 제목 | URL
-PROMPT
-)
-
-  local run_ok=true
-  if ! NO_VAULT=true run_orchestrate "$prompt" "$task_name"; then
-    run_ok=false
-  fi
-
-  local web_log
-  web_log="$(latest_gemini_log "$task_name")"
-  [[ -n "$web_log" ]] || fail "Gemini 웹검색 로그를 찾을 수 없습니다"
-  if [[ "$run_ok" != "true" ]]; then
-    echo "[WARN] Gemini 웹검색 호출 종료 지연/실패. 생성된 로그를 사용합니다: $web_log" >&2
-  fi
-
-  python3 - "$web_log" "$WEB_ITEMS" <<'PYEOF'
-import re
-import sys
-
-log_path = sys.argv[1]
-out_path = sys.argv[2]
-pattern = re.compile(r'^\s*(?:[-*]\s*)?(.+?)\s*\|\s*(.+?)\s*\|\s*(https?://\S+)\s*$')
-
+out_path = sys.argv[1]
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+cutoff = datetime.now(timezone.utc) - timedelta(hours=72)
 rows = []
-with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
-    for raw in f:
-        line = raw.strip()
-        m = pattern.match(line)
-        if not m:
-            continue
-        source, title, url = [x.strip() for x in m.groups()]
-        if source.startswith("[") and "]" in source:
-            source = source.split("]", 1)[1].strip()
-        if source and title and url:
-            rows.append((source, title, url, "WEB"))
 
-with open(out_path, "w", encoding="utf-8") as out:
-    for row in rows:
-        out.write("\t".join(row) + "\n")
+def fetch(url, timeout=15):
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read().decode("utf-8", errors="ignore")
+
+YT_HANDLES = [
+    ("조코딩", "jocoding"),
+    ("bkamp_ai", "bkamp_ai"),
+    ("maker-evan", "maker-evan"),
+    ("ddokham", "ddokham"),
+]
+for source_name, handle in YT_HANDLES:
+    try:
+        page = fetch(f"https://www.youtube.com/@{handle}", timeout=10)
+        m = re.search(r'"(?:channelId|externalId|browseId)":"(UC[^"]+)"', page)
+        if not m:
+            print(f"[WARN] {source_name}: 채널 ID 못 찾음", file=sys.stderr)
+            continue
+        rss_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={m.group(1)}"
+        feed = fetch(rss_url, timeout=10)
+        root = ET.fromstring(feed)
+        ns = {"atom": "http://www.w3.org/2005/Atom"}
+        count = 0
+        for entry in root.findall("atom:entry", ns)[:5]:
+            t = entry.find("atom:title", ns)
+            l = entry.find("atom:link", ns)
+            pub = entry.find("atom:published", ns)
+            if t is None or l is None:
+                continue
+            # YouTube는 7일 이내로 완화 (업로드 주기가 낮음)
+            try:
+                raw = (pub.text or "").strip()
+                if raw.endswith("Z"):
+                    raw = raw[:-1] + "+00:00"
+                dt = datetime.fromisoformat(raw)
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                yt_cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+                if dt < yt_cutoff:
+                    continue
+            except Exception:
+                pass
+            rows.append((source_name, (t.text or "").strip(), l.get("href", ""), "WEB"))
+            count += 1
+        print(f"[{source_name}] {count}개", file=sys.stderr)
+    except Exception as e:
+        print(f"[WARN] {source_name}: {e}", file=sys.stderr)
+
+seen, unique = set(), []
+for row in rows:
+    if row[2] not in seen:
+        seen.add(row[2])
+        unique.append(row)
+
+with open(out_path, "w", encoding="utf-8") as f:
+    for row in unique:
+        f.write("\t".join(row) + "\n")
+print(f"[YouTube수집] 총 {len(unique)}개", file=sys.stderr)
 PYEOF
 }
 
 summarize_items() {
-  local task_name="it-contents-summary-$SLUG"
   cat > "$SUMMARY_PROMPT" <<'PROMPT'
 다음 IT 콘텐츠 목록을 읽고 각 항목을 한 줄로 요약해줘.
 [즉시읽기] / [나중에] 태그도 붙여줘.
@@ -324,27 +302,28 @@ summarize_items() {
 PROMPT
   cat "$COLLECTED_LIST" >> "$SUMMARY_PROMPT"
 
-  local run_ok=true
-  if ! NO_VAULT=true run_orchestrate "$(cat "$SUMMARY_PROMPT")" "$task_name"; then
-    run_ok=false
+  local tmp_prompt="$TMP_DIR/prompt_summary_$$.txt"
+  cp "$SUMMARY_PROMPT" "$tmp_prompt"
+  local result
+  result=$(gemini --yolo -m "$GEMINI_MODEL" < "$tmp_prompt" 2>&1 | grep -Ev "YOLO mode is enabled|All tool calls will be automatically approved|Loaded cached credentials")
+  rm -f "$tmp_prompt"
+
+  if [[ -z "$result" ]]; then
+    echo "[WARN] Gemini 응답 없음: 통합 요약" >&2
   fi
 
-  local summary_log
-  summary_log="$(latest_gemini_log "$task_name")"
-  [[ -n "$summary_log" ]] || fail "Gemini 통합 요약 로그를 찾을 수 없습니다"
-  if [[ "$run_ok" != "true" ]]; then
-    echo "[WARN] Gemini 통합 요약 호출 종료 지연/실패. 생성된 로그를 사용합니다: $summary_log" >&2
-  fi
+  local result_file="$TMP_DIR/summary_result_$$.txt"
+  printf '%s\n' "$result" > "$result_file"
 
-  python3 - "$summary_log" "$IMMEDIATE_ITEMS" "$LATER_ITEMS" <<'PYEOF'
+  python3 - "$IMMEDIATE_ITEMS" "$LATER_ITEMS" "$result_file" <<'PYEOF'
 import sys
 
-log_path, immediate_path, later_path = sys.argv[1], sys.argv[2], sys.argv[3]
+immediate_path, later_path, result_file = sys.argv[1], sys.argv[2], sys.argv[3]
 
 immediate = []
 later = []
 
-with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+with open(result_file, encoding="utf-8", errors="ignore") as f:
     for raw in f:
         line = raw.strip()
         if line.startswith("- "):
@@ -374,10 +353,10 @@ with open(later_path, "w", encoding="utf-8") as f:
     for row in later:
         f.write("\t".join(row) + "\n")
 PYEOF
+  rm -f "$result_file"
 }
 
 generate_overview() {
-  local task_name="it-contents-overview-$SLUG"
   local overview_prompt="$TMP_DIR/overview_prompt.txt"
 
   {
@@ -410,32 +389,29 @@ PROMPT
     fi
   } > "$overview_prompt"
 
-  local run_ok=true
-  if ! NO_VAULT=true run_orchestrate "$(cat "$overview_prompt")" "$task_name" 120; then
-    run_ok=false
-  fi
+  local result
+  result=$(gemini --yolo -m "$GEMINI_MODEL" < "$overview_prompt" 2>&1 | grep -Ev "YOLO mode is enabled|All tool calls will be automatically approved|Loaded cached credentials")
 
-  local overview_log
-  overview_log="$(latest_gemini_log "$task_name")"
-  if [[ -z "$overview_log" ]]; then
-    echo "[WARN] Gemini 종합 분석 로그 없음, 스킵" >&2
+  if [[ -z "$result" ]]; then
+    echo "[WARN] Gemini 응답 없음: 종합 분석" >&2
     return 0
   fi
-  if [[ "$run_ok" != "true" ]]; then
-    echo "[WARN] Gemini 종합 분석 호출 종료 지연. 생성된 로그 사용: $overview_log" >&2
-  fi
 
-  # 로그에서 ## 섹션 구조를 Telegram HTML로 변환
-  python3 - "$overview_log" "$OVERVIEW_FILE" <<'PYEOF'
+  # ## 섹션 구조를 Telegram HTML로 변환
+  local result_file="$TMP_DIR/overview_result_$$.txt"
+  printf '%s\n' "$result" > "$result_file"
+
+  python3 - "$OVERVIEW_FILE" "$result_file" <<'PYEOF'
 import sys, re
 
-log_path, out_path = sys.argv[1], sys.argv[2]
+out_path = sys.argv[1]
+result_file = sys.argv[2]
 
 sections = []
 current_header = None
 current_body = []
 
-with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+with open(result_file, encoding="utf-8", errors="ignore") as f:
     for raw in f:
         line = raw.rstrip()
         if re.match(r'^\s*#{1,6}\s+', line):
@@ -464,6 +440,7 @@ for header, body in sections:
 with open(out_path, "w", encoding="utf-8") as f:
     f.write("\n\n".join(out_parts) + "\n")
 PYEOF
+  rm -f "$result_file"
 }
 
 
@@ -515,7 +492,7 @@ collect_rss_sources() {
     "bongman|https://bongman.tistory.com/rss"
     "조대협|https://bcho.tistory.com/rss"
     # 뉴스/큐레이션
-    # "긱뉴스|https://news.hada.io/rss"  # 2026-03-26: RSS 403 차단됨
+    "긱뉴스|https://news.hada.io/rss/news"
     "요즘IT|https://yozm.wishket.com/magazine/feed/"
     "pytorch.kr|https://discuss.pytorch.kr/latest.rss"
     "aisparkup|https://aisparkup.com/feed"
