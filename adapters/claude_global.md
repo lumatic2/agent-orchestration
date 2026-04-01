@@ -91,17 +91,17 @@ Examples:
 
 ## Claude Code 커맨드 관리
 
-- **커맨드 원본**: `~/projects/claude-code-setup/claude/commands/`
+- **커맨드 원본**: `~/projects/custom-skills/{스킬명}/SKILL.md`
 - **적용 방식**: `~/.claude/commands/`에 심볼릭 링크로 연결
 - **대상 기기**: Mac Air (luma2), M4 (luma3), Windows (1)
 
 커맨드 추가/수정 시:
 ```bash
-# repo에서 편집 후 push
-cd ~/projects/claude-code-setup && git add -A && git commit -m "feat: ..." && git push
+# custom-skills repo에서 편집 후 push
+cd ~/projects/custom-skills && git add -A && git commit -m "feat: ..." && git push
 
 # 다른 기기에서 동기화
-cd ~/projects/claude-code-setup && git pull && bash install.sh
+cd ~/projects/custom-skills && git pull && bash setup.sh
 ```
 
 직접 `~/.claude/commands/`에 파일을 만들지 말 것 — repo에 반영되지 않음.
