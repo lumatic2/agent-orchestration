@@ -27,8 +27,8 @@
 
 | Condition | Action |
 |---|---|
-| 50+ lines of code to write | `Bash("codex exec --full-auto --skip-git-repo-check \"task\"")` |
-| 4+ files to create/modify | `Bash("codex exec --full-auto --skip-git-repo-check \"task\"")` |
+| 50+ lines of code to write | `Bash("codex exec --full-auto --skip-git-repo-check \"task\" < /dev/null")` |
+| 4+ files to create/modify | `Bash("codex exec --full-auto --skip-git-repo-check \"task\" < /dev/null")` |
 | Complex research (4+ sources, trend, crawl, 50p+ doc) | `Bash("gemini -p \"task\"")` |
 | Browser/GUI/canvas/JS SPA needed | `/browse` 스킬 사용 |
 | Simple research (≤3 searches, single topic) | Claude 직접 WebSearch/WebFetch |
@@ -38,7 +38,7 @@
 **vault 저장**: 리서치 후 사용자가 명시적으로 요청할 때만 `mcp__obsidian-vault__write_note` 호출.
 
 Examples:
-- "지뢰찾기 게임 만들어줘" → Python ~100줄 → `codex exec --full-auto --skip-git-repo-check "task"`로 위임
+- "지뢰찾기 게임 만들어줘" → Python ~100줄 → `codex exec --full-auto --skip-git-repo-check "task" < /dev/null`로 위임
 - "README 첫 줄 수정" → 1파일 1줄 → 직접 수행
 - "이 라이브러리 최신 버전 찾아줘" → 단순 검색 → Claude 직접 처리
 - "AI 에이전트 프레임워크 5개 비교해줘" → 복잡 리서치 → `gemini -p "task"`로 위임
