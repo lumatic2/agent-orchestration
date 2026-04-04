@@ -46,7 +46,7 @@
             "command": "bash ~/projects/agent-orchestration/scripts/guard.sh \"$TOOL_INPUT\""
           }
         ]
-      },
+      }
     ],
     "PreCompact": [
       {
