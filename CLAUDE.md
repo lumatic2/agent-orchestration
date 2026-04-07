@@ -24,16 +24,16 @@
 ## 개발 명령어
 
 ```bash
-bash scripts/sync.sh --check
-bash scripts/sync.sh
-bash scripts/orchestrate.sh codex "task"
-bash scripts/orchestrate.sh gemini "research"
-bash dashboard/run.sh
+bash scripts/sync.sh --check     # adapter 동기화 검증
+bash scripts/sync.sh             # adapter → ~/CLAUDE.md, ~/.codex/, ~/.gemini/ 배포
+bash dashboard/run.sh            # 대시보드 실행
 ```
+
+> `scripts/orchestrate.sh`는 폐기 경로 (이전 큐잉 시스템). 현재는 글로벌 CLAUDE.md의 Self-Execution Guard 사용.
 
 ## 작업 방식
 
-- 새 기능 -> 항상 계획 먼저, 구현 나중
-- 50줄+ 코드 작성 -> Codex 위임
-- 복잡 리서치 -> Gemini 위임
-- 인프라 보호 파일(`scripts/orchestrate.sh`, `scripts/sync.sh`, `scripts/guard.sh` 등) 변경은 별도 승인 후 진행
+- 새 기능 → 항상 계획 먼저, 구현 나중
+- Codex/Gemini 위임 규칙은 글로벌 `~/CLAUDE.md`의 Self-Execution Guard 참조 (이 repo의 `adapters/claude_global.md`가 원본)
+- 인프라 보호 파일(`scripts/sync.sh`, `scripts/guard.sh`, `adapters/claude_global.md` 등) 변경은 별도 승인 후 진행
+- adapter 수정 후 반드시 `bash scripts/sync.sh` 실행하여 ~/CLAUDE.md에 배포
