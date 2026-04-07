@@ -40,7 +40,7 @@ tmux new-session -d -s "$SESSION" \
   "export PATH=\$HOME/.bun/bin:\$HOME/.nvm/versions/node/v24.14.0/bin:/opt/homebrew/bin:\$PATH; \
    export NVM_DIR=\$HOME/.nvm; \
    source \$HOME/.nvm/nvm.sh; \
-   exec claude --dangerously-skip-permissions --channels plugin:telegram@claude-plugins-official"
+   exec claude --permission-mode bypassPermissions --channels plugin:telegram@claude-plugins-official"
 
 tmux pipe-pane -t "$SESSION" -o "cat >> '$LOG'"
 
