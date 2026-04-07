@@ -47,9 +47,9 @@ tmux new-session -d -s "$SESSION" \
 #   ❯ 1. No, exit
 #     2. Yes, I accept
 # headless 환경에서는 직접 입력 불가 → tmux send-keys로 자동 처리.
-# 경고가 화면에 뜨길 기다린 뒤 Down(2 선택) + Enter 전송.
+# 키 '2'만 보내면 즉시 선택 + 통과 (Enter 불필요).
 sleep 3
-tmux send-keys -t "$SESSION" Down Enter
+tmux send-keys -t "$SESSION" '2'
 
 tmux pipe-pane -t "$SESSION" -o "cat >> '$LOG'"
 
