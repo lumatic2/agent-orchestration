@@ -20,29 +20,41 @@
 
 ---
 
-
 ## Self-Execution Guard
 
 작업 시작 전 아래 규칙을 적용한다:
 
 | Condition | Action |
 |---|---|
-| 50+ lines of code to write | `Bash("codex exec --full-auto --skip-git-repo-check \"task\" < /dev/null")` |
-| 4+ files to create/modify | `Bash("codex exec --full-auto --skip-git-repo-check \"task\" < /dev/null")` |
+| 50+ lines of code to write | `/codex:rescue --background --write --fresh "task"` |
+| 4+ files to create/modify | `/codex:rescue --background --write --fresh "task"` |
 | Complex research (4+ sources, trend, crawl, 50p+ doc) | `Bash("gemini -p \"task\"")` |
 | Browser/GUI/canvas/JS SPA needed | `/browse` 스킬 사용 |
 | Simple research (≤3 searches, single topic) | Claude 직접 WebSearch/WebFetch |
 | Simple edit (1-4 files, <50 lines) | 직접 수행 |
 
-**위임 방법**: `Bash` 도구로 CLI 직접 호출. `Agent(subagent_type=...)` 사용 금지.
-**vault 저장**: 리서치 후 사용자가 명시적으로 요청할 때만 `mcp__obsidian-vault__write_note` 호출.
+### Codex 위임
 
-Examples:
-- "지뢰찾기 게임 만들어줘" → Python ~100줄 → `codex exec --full-auto --skip-git-repo-check "task" < /dev/null`로 위임
-- "README 첫 줄 수정" → 1파일 1줄 → 직접 수행
-- "이 라이브러리 최신 버전 찾아줘" → 단순 검색 → Claude 직접 처리
-- "AI 에이전트 프레임워크 5개 비교해줘" → 복잡 리서치 → `gemini -p "task"`로 위임
-- "빗썸 시세 긁어줘" / "차트 만들어줘" / "네이버 검색해줘" → `/browse` 스킬
+`Skill("codex:rescue")` 사용. `codex exec` 직접 호출 금지.
+기본 플래그: `--background --write --fresh` (백그라운드 실행, 파일 수정 허용, resume 스킵)
+
+**모델/Effort**:
+- 단순(보일러플레이트, 1-2함수): `--model spark --effort low`
+- 그 외: 플래그 생략 (codex config 기본 = gpt-5.4/high)
+
+**완료 감지**: background 완료 시 자동 알림 → 결과 요약 보고. 상세는 `/codex:status`, `/codex:result`.
+
+**보고 형식**: Codex 위임 시작·완료 시 `(모델/effort/소요시간)` 명시. 예: "Codex 위임 (spark/low) → 완료 (45s)". 플래그 생략 시 `(gpt-5.4/high)`.
+
+**검증** (코드 작업 한정): 완료 후 ① 변경 파일 목록 보고 ② `git diff`로 훑어보기 ③ 이상 발견 시 사용자에게 알림.
+
+### 기타
+
+- Gemini: `Bash("gemini -p \"task\"")` 직접 호출
+- `Agent(subagent_type=codex-coder|gemini-researcher)` 사용 금지
+- vault 저장: 사용자 명시 요청 시만 `mcp__obsidian-vault__write_note`
+
+**Examples**: "지뢰찾기" → `/codex:rescue ... "task"` / "리팩토링" → `... --effort high` / "README 수정" → 직접 / "리서치" → `gemini -p` / "시세" → `/browse`
 
 ---
 
