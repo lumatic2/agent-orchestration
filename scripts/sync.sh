@@ -338,6 +338,20 @@ deploy_claude() {
     echo "[OK] session-logger.sh → $claude_dir/session-logger.sh"
   fi
 
+  # Deploy hook scripts to .claude/hooks directory
+  local claude_hooks_dir="$claude_dir/hooks"
+  mkdir -p "$claude_hooks_dir"
+  if [ -d "$REPO_DIR/scripts/hooks" ]; then
+    for hook in "$REPO_DIR/scripts/hooks"/*.py "$REPO_DIR/scripts/hooks"/*.sh; do
+      [ -f "$hook" ] || continue
+      local hook_name
+      hook_name="$(basename "$hook")"
+      cp "$hook" "$claude_hooks_dir/$hook_name"
+      [[ "$hook_name" == *.sh ]] && chmod +x "$claude_hooks_dir/$hook_name"
+      echo "[OK] hook → $claude_hooks_dir/$hook_name"
+    done
+  fi
+
   # 커스텀 스킬은 ~/projects/custom-skills/ 레포에서 관리 (2026-03-29 이전)
   # 배포: bash ~/projects/custom-skills/setup.sh
 

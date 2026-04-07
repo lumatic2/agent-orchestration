@@ -41,6 +41,10 @@
           {
             "type": "command",
             "command": "python3 -c \"import os,json,subprocess; inp=json.loads(os.environ.get('TOOL_INPUT','{}')); fp=inp.get('file_path','').replace('\\\\','/'); targets=['SCHEDULE.md','RECURRING.md','session.md','daily/']; repo=os.path.expanduser('~/projects/agent-orchestration'); subprocess.run(['git','-C',repo,'pull','--rebase'],capture_output=True) if any(t in fp for t in targets) else None\" 2>/dev/null || true"
+          },
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/hooks/codex_delegation_guard.py"
           }
         ]
       },
