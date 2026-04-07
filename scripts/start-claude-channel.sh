@@ -36,8 +36,10 @@ claude plugin update telegram@claude-plugins-official 2>&1 | tail -1
 # 6. 새 tmux 세션 시작 (detached)
 # 주의: claude는 PTY 필요. tee 파이프 거치면 stdin 사라져서 즉시 종료됨.
 # 로그는 tmux pipe-pane으로 별도 캡처.
+# ~/.zshenv source 필수 — TELEGRAM_BOT_TOKEN 등 환경변수가 launchctl/SSH 환경에는 없음.
 tmux new-session -d -s "$SESSION" \
-  "export PATH=\$HOME/.bun/bin:\$HOME/.nvm/versions/node/v24.14.0/bin:/opt/homebrew/bin:\$PATH; \
+  "[ -f \$HOME/.zshenv ] && source \$HOME/.zshenv; \
+   export PATH=\$HOME/.bun/bin:\$HOME/.nvm/versions/node/v24.14.0/bin:/opt/homebrew/bin:\$PATH; \
    export NVM_DIR=\$HOME/.nvm; \
    source \$HOME/.nvm/nvm.sh; \
    exec claude --dangerously-skip-permissions --channels plugin:telegram@claude-plugins-official"
