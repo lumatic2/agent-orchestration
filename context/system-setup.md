@@ -144,6 +144,19 @@ ssh windows  # Windows (Git Bash — 2026-03-16 변경)
 - tmux 세션은 SSH `exit` 시 죽을 수 있음 → 반드시 `Ctrl+B → D`로 detach 또는 detached 모드(`-d`)로 시작
 - channels 기능은 claude.ai 인증 전용 (API 계정에서는 작동 안 함)
 - telegram 플러그인 0.0.4 이상 필요
+- **`claude plugin enable telegram@claude-plugins-official` 상태 필수** — disabled면 MCP 안 뜸
+- **bypass permissions 경고**는 시작 스크립트가 자동 동의 (`tmux send-keys '2'`)
+- **TELEGRAM_BOT_TOKEN**이 `~/.zshenv`에 있어야 함 (시작 스크립트가 source)
+
+## 다른 텔레그램 봇 (M4 운영)
+
+| 봇 | 토큰 (앞 10자) | 프로젝트 | launchd | 용도 |
+|---|---|---|---|---|
+| @Floatery_bot (둥둥이) | `8574749488` | claude-channel | `com.luma3.claude-channel` | Claude Code 텔레그램 채널 |
+| @Michelin_Chef_bot | `8678722007` | `~/projects/ingredient-bot/` | `com.luma3.ingredient-bot` | 냉장고를부탁해 (식재료 관리) |
+| (IT 봇) | `TELEGRAM_BOT_TOKEN_IT` | — | — | 미정 |
+
+**중요**: 봇 코드는 반드시 `load_dotenv(override=True)` 사용 — 그래야 launchd 부모 shell 환경의 토큰이 .env를 덮어쓰지 않음. 무시하면 봇이 엉뚱한 토큰으로 실행되어 polling 충돌 발생.
 
 ## 새 기기 셋업 순서
 
