@@ -18,6 +18,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/env.sh"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 
 # --- OS Detection ---
@@ -551,7 +552,7 @@ main() {
     fi
   }
   # Check deployed files (after SHARED_PRINCIPLES injection)
-  check_budget "$BASE_DIR/CLAUDE.md" 120 "~/CLAUDE.md"
+  check_budget "$BASE_DIR/CLAUDE.md" 160 "~/CLAUDE.md"
   check_budget "$BASE_DIR/.claude/orchestrator_rules.md" 150 "orchestrator_rules.md"
   check_budget "$BASE_DIR/.codex/AGENTS.md" 120 "AGENTS.md (Codex)"
   check_budget "$BASE_DIR/.gemini/GEMINI.md" 150 "GEMINI.md"

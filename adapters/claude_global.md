@@ -26,35 +26,76 @@
 
 | Condition | Action |
 |---|---|
-| 50+ lines of code to write | `/codex:rescue --background --write --fresh "task"` |
-| 4+ files to create/modify | `/codex:rescue --background --write --fresh "task"` |
-| Complex research (4+ sources, trend, crawl, 50p+ doc) | `Bash("gemini -p \"task\"")` |
-| Browser/GUI/canvas/JS SPA needed | `/browse` 스킬 사용 |
-| Simple research (≤3 searches, single topic) | Claude 직접 WebSearch/WebFetch |
-| Simple edit (1-4 files, <50 lines) | 직접 수행 |
+| 코드 작성/수정 50줄+ 또는 4파일+ | Codex 위임 (write 모드) |
+| 코드 분석/조사/리뷰 (수정 없음) | Codex 위임 (read-only 모드) |
+| 복잡 리서치 (4+ 소스, 트렌드, 50p+ doc) | Gemini 위임 |
+| Browser/GUI/canvas/JS SPA | `/browse` 스킬 |
+| 단순 리서치 (≤3 검색, 단일 주제) | Claude 직접 WebSearch/WebFetch |
+| 단순 편집 (1-3파일, <50줄) | 직접 수행 |
 
 ### Codex 위임
 
-`Skill("codex:rescue")` 사용. `codex exec` 직접 호출 금지.
-기본 플래그: `--background --write --fresh` (백그라운드 실행, 파일 수정 허용, resume 스킵)
+**호출 방법**: `Skill` 도구로 `codex:rescue` 호출. `codex exec` 직접 호출 금지.
+
+**플래그 조합**:
+- 코드 작성/수정: `--background --write "task"`
+- 코드 분석/조사: `--background "task"` (write 없음)
+- Follow-up (사용자가 "이어서/계속/그 작업" 등 언급): 위 플래그에 `--resume` 추가
+- 새 작업이지만 이전 thread와 무관: `--fresh` 추가
 
 **모델/Effort**:
-- 단순(보일러플레이트, 1-2함수): `--model spark --effort low`
-- 그 외: 플래그 생략 (codex config 기본 = gpt-5.4/high)
+- 단순 (단일 함수, 보일러플레이트, 포맷팅, 단순 변환): `--model spark --effort low`
+- 그 외 (새 기능, 리팩토링, 디버깅, 멀티파일): 플래그 생략 → codex config 기본 (gpt-5.4/high)
 
-**완료 감지**: background 완료 시 자동 알림 → 결과 요약 보고. 상세는 `/codex:status`, `/codex:result`.
+**작업 설명 규칙**:
+- 항상 절대 경로 포함 (예: `~/Projects/agent-orchestration/scripts/foo.sh`)
+- 변경 대상 파일을 명시 (Codex의 cwd 추측에 의존하지 말 것)
+- **경로 제약**: Codex는 workspace-write sandbox → 현재 cwd 내부 경로만 수정 가능. 외부 경로 요청 시 사용자에게 "workspace 외부입니다. cwd 이동 또는 직접 수행 필요" 알림.
 
-**보고 형식**: Codex 위임 시작·완료 시 `(모델/effort/소요시간)` 명시. 예: "Codex 위임 (spark/low) → 완료 (45s)". 플래그 생략 시 `(gpt-5.4/high)`.
+**위임 시작 패턴**:
+1. 사용자에게 명시: "Codex 위임 시작 (모델/effort) — 작업: [한 줄 요약], 대상: [파일/영역]"
+2. `TaskCreate`로 task list에 등록 (제목: "Codex: [작업명]")
+3. background 알림 대기
 
-**검증** (코드 작업 한정): 완료 후 ① 변경 파일 목록 보고 ② `git diff`로 훑어보기 ③ 이상 발견 시 사용자에게 알림.
+**완료 알림 수신 시**:
+1. 보고: "Codex 완료 (모델/effort/소요시간) — [결과 요약]"
+2. 모델/effort 표기: spark/low 또는 gpt-5.4/high (플래그 생략 시)
+3. `TaskUpdate`로 완료 처리
+4. 코드 작업이면 검증 단계 수행
 
-### 기타
+**검증** (코드 작성/수정 작업 한정):
+- `git diff --stat` 먼저 실행 → 변경 규모 파악
+- 변경 100줄 미만: `git diff` 전체 읽고 핵심 확인
+- 100~500줄: 파일별 핵심 hunk만 확인
+- 500줄+: 변경 파일 목록 + 사용자에게 "diff가 큽니다, 검증 원하시면 알려주세요"
+- 이상 발견 시 사용자에게 즉시 알림 (자동 수정 금지)
 
-- Gemini: `Bash("gemini -p \"task\"")` 직접 호출
-- `Agent(subagent_type=codex-coder|gemini-researcher)` 사용 금지
+### Gemini 위임
+
+`Bash("gemini -p \"task\"")` 직접 호출. 결과 수신 후 검증:
+- 결과가 비어있거나 200자 미만: "Gemini 응답 비정상 — 재시도 필요" 알림
+- 결과가 있으면 핵심 요약 보고
+
+### 금지 사항
+
+- `Agent(subagent_type=codex-coder|gemini-researcher)` 직접 사용 금지 (단, plugin 내장 subagent는 Skill 도구를 통한 호출 허용)
 - vault 저장: 사용자 명시 요청 시만 `mcp__obsidian-vault__write_note`
 
-**Examples**: "지뢰찾기" → `/codex:rescue ... "task"` / "리팩토링" → `... --effort high` / "README 수정" → 직접 / "리서치" → `gemini -p` / "시세" → `/browse`
+### Examples
+
+- "지뢰찾기 게임 만들어줘" (Python ~100줄)
+  → `Skill("codex:rescue", args="--background --write \"~/projects/minesweeper/ 에 Python CLI 지뢰찾기 게임 구현\"")`
+- "이 함수 리팩토링해줘" (5+파일)
+  → `Skill("codex:rescue", args="--background --write \"~/Projects/X/src/foo.py 의 process_data 함수를 ... 로 리팩토링\"")`
+- "테스트 보일러플레이트 만들어줘" (단순)
+  → `Skill("codex:rescue", args="--background --write --model spark --effort low \"...\"")`
+- "이 파일 분석해줘" (read-only)
+  → `Skill("codex:rescue", args="--background \"~/Projects/X/src/foo.py 분석: ...\"")`
+- "그 작업 이어서" (follow-up)
+  → 직전 위임 + `--resume`
+- "README 첫 줄 수정" → 직접 수행
+- "AI 프레임워크 5개 비교" → `Bash("gemini -p \"...\"")`
+- "빗썸 시세" → `/browse` 스킬
 
 ---
 
