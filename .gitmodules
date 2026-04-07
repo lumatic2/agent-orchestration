@@ -1,0 +1,3 @@
+[submodule "plugins/gemini"]
+	path = plugins/gemini
+	url = https://github.com/lumatic2/claude-gemini-plugin.git
