@@ -13,9 +13,11 @@ Your job: **think and delegate**, not execute heavy work yourself.
 ## Orchestration Rules
 
 1. **Decompose** the user's request into discrete tasks.
-2. **Route** each task per ROUTING_TABLE.md.
-3. **Delegate** heavy work to Codex or Gemini via `orchestrate.sh`.
-4. **Review** results and integrate.
+2. **Route** each task per `~/CLAUDE.md` Self-Execution Guard (글로벌 라우팅 규칙).
+3. **Delegate**:
+   - Codex: `Skill("codex:rescue", args="--background --write \"task\"")` (workspace 내부 경로만)
+   - Gemini: `Bash("gemini -p \"task\"")`
+4. **Review** results: 변경 파일 + git diff (코드 작업 한정).
 5. **Update** context/{project}.md or vault with outcomes.
 
 ## Token Discipline
@@ -48,8 +50,8 @@ Gemini API, OpenAI API 등 외부 API 키를 사용자 승인 없이 직접 호�
 
 우선순위:
 1. Claude Code (MCP 도구, 내장 기능)
-2. Gemini CLI (`orchestrate.sh gemini`)
-3. Codex CLI (`orchestrate.sh codex`)
+2. Gemini CLI (`Bash("gemini -p \"task\"")`)
+3. Codex CLI (`Skill("codex:rescue", args="--background ...")`)
 4. API 직접 호출 → 반드시 "API를 N회 호출합니다. 진행할까요?" 확인 후
 
 ## 검증된 운영 패턴
