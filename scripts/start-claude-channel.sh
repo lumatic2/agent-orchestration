@@ -40,7 +40,16 @@ tmux new-session -d -s "$SESSION" \
   "export PATH=\$HOME/.bun/bin:\$HOME/.nvm/versions/node/v24.14.0/bin:/opt/homebrew/bin:\$PATH; \
    export NVM_DIR=\$HOME/.nvm; \
    source \$HOME/.nvm/nvm.sh; \
-   exec claude --permission-mode bypassPermissions --channels plugin:telegram@claude-plugins-official"
+   exec claude --dangerously-skip-permissions --channels plugin:telegram@claude-plugins-official"
+
+# 6.1. Bypass Permissions 경고 자동 동의
+# claude --dangerously-skip-permissions 첫 실행 시 매번 뜨는 경고:
+#   ❯ 1. No, exit
+#     2. Yes, I accept
+# headless 환경에서는 직접 입력 불가 → tmux send-keys로 자동 처리.
+# 경고가 화면에 뜨길 기다린 뒤 Down(2 선택) + Enter 전송.
+sleep 3
+tmux send-keys -t "$SESSION" Down Enter
 
 tmux pipe-pane -t "$SESSION" -o "cat >> '$LOG'"
 
