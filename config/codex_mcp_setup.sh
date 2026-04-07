@@ -13,7 +13,7 @@
 #   Google: gws auth login (브라우저 OAuth, 1회만)
 #
 # 사용법:
-#   bash configs/codex_mcp_setup.sh
+#   bash config/codex_mcp_setup.sh
 
 set -euo pipefail
 

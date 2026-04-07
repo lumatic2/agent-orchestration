@@ -69,7 +69,7 @@ ALIAS
 $alias_snippet
 ALIAS"
     echo "  ✓ codex-brain alias → $host:~/.zshrc"
-    scp "$REPO_DIR/configs/codex_mcp_setup.sh" "$host:~/projects/agent-orchestration/configs/codex_mcp_setup.sh" 2>/dev/null || true
+    scp "$REPO_DIR/config/codex_mcp_setup.sh" "$host:~/projects/agent-orchestration/config/codex_mcp_setup.sh" 2>/dev/null || true
     echo "  ✓ codex_mcp_setup.sh → $host"
   fi
 }

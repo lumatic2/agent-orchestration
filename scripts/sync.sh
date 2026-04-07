@@ -309,7 +309,7 @@ deploy_claude() {
   # - 있을 때: patch_hooks.py로 공통 훅만 최신화 (기기별 설정 보존)
   # - NEVER overwrite via SCP (nah_guard 등 기기 전용 항목 손실 위험)
   local settings_file="$target_dir/settings.json"
-  local common_file="$REPO_DIR/configs/settings_common.json"
+  local common_file="$REPO_DIR/config/settings_common.json"
 
   if [ ! -f "$settings_file" ]; then
     cp "$common_file" "$settings_file"
@@ -324,19 +324,7 @@ deploy_claude() {
   cp "$REPO_DIR/scripts/notion_db.py" "$BASE_DIR/notion_db.py"
   echo "[OK] notion_db.py → $BASE_DIR/notion_db.py"
 
-  # Deploy ppt_builder.py to .claude directory
   local claude_dir="$target_dir"
-  if [ -f "$REPO_DIR/scripts/ppt_builder.py" ]; then
-    cp "$REPO_DIR/scripts/ppt_builder.py" "$claude_dir/ppt_builder.py"
-    echo "[OK] ppt_builder.py → $claude_dir/ppt_builder.py"
-  fi
-
-  # Deploy session-logger.sh to .claude directory
-  if [ -f "$REPO_DIR/scripts/session-logger.sh" ]; then
-    cp "$REPO_DIR/scripts/session-logger.sh" "$claude_dir/session-logger.sh"
-    chmod +x "$claude_dir/session-logger.sh"
-    echo "[OK] session-logger.sh → $claude_dir/session-logger.sh"
-  fi
 
   # Deploy hook scripts to .claude/hooks directory
   local claude_hooks_dir="$claude_dir/hooks"
@@ -363,18 +351,11 @@ deploy_claude() {
       || echo "[WARN] settings.json hooks 패치 실패"
   fi
 
-  # Deploy connection layer scripts (save_to_notion.sh, memory_update.sh, chain.sh)
-  for script in save_to_notion.sh memory_update.sh chain.sh knowledge_update.sh feedback.sh; do
-    if [ -f "$REPO_DIR/scripts/$script" ]; then
-      cp "$REPO_DIR/scripts/$script" "$SCRIPT_DIR/$script" || true
-      chmod +x "$SCRIPT_DIR/$script"
-      echo "[OK] $script (already in scripts/)"
-    fi
-  done
+  # Connection layer scripts already live in scripts/ — no extra deploy needed.
 
   # Sync notion_pages.conf (page ID cache) — copy if src newer or dest missing
   local notion_conf_src="$HOME/.config/agent-orchestration/notion_pages.conf"
-  local notion_conf_dst="$REPO_DIR/configs/notion_pages.conf"
+  local notion_conf_dst="$REPO_DIR/config/notion_pages.conf"
   if [ -f "$notion_conf_src" ]; then
     cp "$notion_conf_src" "$notion_conf_dst"
     echo "[OK] notion_pages.conf → $notion_conf_dst (for cross-device sync)"
@@ -433,10 +414,10 @@ deploy_codex_main() {
 
 setup_mcp() {
   if [ -n "${GEMINI_API_KEY:-}" ]; then
-    bash "$REPO_DIR/configs/mcp_setup.sh"
+    bash "$REPO_DIR/config/mcp_setup.sh"
   else
     echo "[SKIP] MCP setup skipped — set GEMINI_API_KEY to register MCP servers"
-    echo "  Run manually: GEMINI_API_KEY=your_key bash configs/mcp_setup.sh"
+    echo "  Run manually: GEMINI_API_KEY=your_key bash config/mcp_setup.sh"
   fi
 }
 

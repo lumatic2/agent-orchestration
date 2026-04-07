@@ -3,7 +3,7 @@
 # mcp_setup.sh — Register MCP servers for Claude Code
 #
 # Usage:
-#   GEMINI_API_KEY="your_key" bash configs/mcp_setup.sh
+#   GEMINI_API_KEY="your_key" bash config/mcp_setup.sh
 #
 # Required env vars:
 #   GEMINI_API_KEY  — from https://aistudio.google.com/apikey (free tier: 500 img/day)

@@ -17,7 +17,7 @@
 - `pipeline/`: 리서치 파이프라인 Python 코드
 - `dashboard/`: 대시보드 앱 실행 코드 (`run.sh`, `app.py`)
 - `context/`, `docs/`: 운영 컨텍스트/문서
-- `config/`, `configs/`: 환경/도구 설정 스크립트
+- `config/`, `config/`: 환경/도구 설정 스크립트
 - `data/`, `outputs/`, `reports/`: 산출물 저장
 - `pyproject.toml`: Ruff 설정
 

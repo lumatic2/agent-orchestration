@@ -19,10 +19,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/projects/agent-orchestration/scripts/auto-stage.sh \"$TOOL_INPUT\""
-          },
-          {
-            "type": "command",
             "command": "python3 -c \"import os,json,subprocess; inp=json.loads(os.environ.get('TOOL_INPUT','{}')); fp=inp.get('file_path',''); subprocess.run(['python3','-m','ruff','check','--fix','--unsafe-fixes',fp],capture_output=True) if fp.endswith('.py') else None\" 2>/dev/null || true"
           },
           {
