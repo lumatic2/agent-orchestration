@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.luma3.claude-channel</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-c</string>
+    <string>/bin/bash /Users/luma3/projects/agent-orchestration/scripts/start-claude-channel.sh</string>
+  </array>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/luma3</string>
+    <key>PATH</key>
+    <string>/Users/luma3/.bun/bin:/Users/luma3/.nvm/versions/node/v24.14.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+    <key>Crashed</key>
+    <true/>
+  </dict>
+
+  <key>ThrottleInterval</key>
+  <integer>30</integer>
+
+  <key>StandardOutPath</key>
+  <string>/Users/luma3/Library/Logs/claude-channel-launchd.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/luma3/Library/Logs/claude-channel-launchd-error.log</string>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/luma3</string>
+</dict>
+</plist>

@@ -124,10 +124,26 @@ ssh windows  # Windows (Git Bash — 2026-03-16 변경)
 | Obsidian vault | MCP `mcp__obsidian-vault__*` (m4:~/vault/) |
 | 대용량 멀티문서 | `orchestrate.sh gemini` 위임 |
 
-## 텔레그램 봇
+## 텔레그램 봇 (claude-channel)
 
-**구조**: Galaxy → Telegram → claude-code-telegram (@Floatery_bot) → Claude Code → 결과 텔레그램 전송
-- M1 `~/projects/claude-code-telegram/`
+**구조**: Galaxy → Telegram → @Floatery_bot → claude-plugins-official/telegram MCP → Claude Code (M4) → 결과 응답
+
+**운영 환경 (M4, 2026-04-08 기준)**
+- 인증: **claude.ai 계정** (Max plan, $100 extra usage). API/Console 계정 아님.
+- 실행: tmux 세션 `claude-channel` (detached)
+- 시작 스크립트: `~/projects/agent-orchestration/scripts/start-claude-channel.sh`
+- launchd plist: `~/Library/LaunchAgents/com.luma3.claude-channel.plist` (자동 시작/재시작)
+- 필수 PATH: `~/.bun/bin`, `~/.nvm/versions/node/v24.14.0/bin`, `/opt/homebrew/bin`
+- 페어링: `~/.claude/channels/telegram/access.json` (chat_id allowlist)
+- 로그: `~/Library/Logs/claude-channel.log`
+
+**관리**: `/channel` 스킬 사용 (status / logs / restart / attach / fix)
+
+**주의사항**
+- 같은 봇 토큰으로 여러 프로세스 polling 시 충돌 → 시작 전 좀비 프로세스 정리 필수
+- tmux 세션은 SSH `exit` 시 죽을 수 있음 → 반드시 `Ctrl+B → D`로 detach 또는 detached 모드(`-d`)로 시작
+- channels 기능은 claude.ai 인증 전용 (API 계정에서는 작동 안 함)
+- telegram 플러그인 0.0.4 이상 필요
 
 ## 새 기기 셋업 순서
 
