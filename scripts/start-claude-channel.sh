@@ -34,11 +34,15 @@ claude plugin marketplace update claude-plugins-official 2>&1 | tail -1
 claude plugin update telegram@claude-plugins-official 2>&1 | tail -1
 
 # 6. 새 tmux 세션 시작 (detached)
+# 주의: claude는 PTY 필요. tee 파이프 거치면 stdin 사라져서 즉시 종료됨.
+# 로그는 tmux pipe-pane으로 별도 캡처.
 tmux new-session -d -s "$SESSION" \
   "export PATH=\$HOME/.bun/bin:\$HOME/.nvm/versions/node/v24.14.0/bin:/opt/homebrew/bin:\$PATH; \
    export NVM_DIR=\$HOME/.nvm; \
    source \$HOME/.nvm/nvm.sh; \
-   claude --dangerously-skip-permissions --channels plugin:telegram@claude-plugins-official 2>&1 | tee -a '$LOG'"
+   exec claude --dangerously-skip-permissions --channels plugin:telegram@claude-plugins-official"
+
+tmux pipe-pane -t "$SESSION" -o "cat >> '$LOG'"
 
 # 7. 검증
 sleep 6
