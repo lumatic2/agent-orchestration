@@ -4,19 +4,6 @@
 
 ---
 
-## Step -1: Queue First
-
-```bash
-bash ~/projects/agent-orchestration/scripts/orchestrate.sh --boot
-```
-
-우선순위:
-1. Stale dispatched → `--resume`
-2. Queued(rate-limited) → `--resume`
-3. Pending → dispatch
-4. New tasks → 큐 정리 후 수락
-
----
 
 ## Step 0: Do I Need Orchestration?
 

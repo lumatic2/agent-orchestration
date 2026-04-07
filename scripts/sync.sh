@@ -419,17 +419,6 @@ deploy_gemini() {
   echo "[OK] Gemini adapter → $target_dir/GEMINI.md"
 }
 
-deploy_codex_brain() {
-  # Codex Brain mode — Claude 한도 초과 시 오케스트레이터 역할
-  local target_dir="$BASE_DIR/.codex"
-  mkdir -p "$target_dir"
-
-  # Build codex_brain
-  cp "$REPO_DIR/adapters/codex_brain.md" "$REPO_DIR/adapters/codex_brain.md.build"
-  inject_shared "$REPO_DIR/adapters/codex_brain.md.build"
-  mv "$REPO_DIR/adapters/codex_brain.md.build" "$target_dir/CODEX_BRAIN.md"
-  echo "[OK] Codex Brain → $target_dir/CODEX_BRAIN.md"
-}
 
 deploy_codex_main() {
   local dest_agents="$HOME/projects/agent-orchestration-Codex_main/AGENTS.md"
@@ -537,8 +526,6 @@ main() {
     cp "$gemini_orig.bak" "$REPO_DIR/adapters/gemini.md" 2>/dev/null || true
   fi
 
-  # Codex Brain (항상 배포)
-  deploy_codex_brain
   deploy_codex_main
 
   # Cleanup

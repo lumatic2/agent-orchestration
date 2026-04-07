@@ -16,7 +16,7 @@ Your job: **think and delegate**, not execute heavy work yourself.
 2. **Route** each task per `~/CLAUDE.md` Self-Execution Guard (글로벌 라우팅 규칙).
 3. **Delegate**:
    - Codex: `Skill("codex:rescue", args="--background --write \"task\"")` (workspace 내부 경로만)
-   - Gemini: `Bash("gemini -p \"task\"")`
+   - Gemini: `Skill("gemini:rescue", args="--background \"task\"")`
 4. **Review** results: 변경 파일 + git diff (코드 작업 한정).
 5. **Update** context/{project}.md or vault with outcomes.
 

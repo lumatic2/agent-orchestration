@@ -44,13 +44,14 @@
 - 새 작업이지만 이전 thread와 무관: `--fresh` 추가
 
 **모델/Effort**:
-- 단순 (단일 함수, 보일러플레이트, 포맷팅, 단순 변환): `--model spark --effort low`
-- 그 외 (새 기능, 리팩토링, 디버깅, 멀티파일): 플래그 생략 → codex config 기본 (gpt-5.4/high)
+- 단순 (단일 함수, 보일러플레이트, 포맷팅, 단순 변환): `--model spark --effort medium`
+- 그 외 (새 기능, 리팩토링, 디버깅, 멀티파일): 플래그 생략 → codex config 기본 (gpt-5.4/medium)
 
 **작업 설명 규칙**:
 - 항상 절대 경로 포함 (예: `~/Projects/agent-orchestration/scripts/foo.sh`)
 - 변경 대상 파일을 명시 (Codex의 cwd 추측에 의존하지 말 것)
 - **경로 제약**: Codex는 workspace-write sandbox → 현재 cwd 내부 경로만 수정 가능. 외부 경로 요청 시 사용자에게 "workspace 외부입니다. cwd 이동 또는 직접 수행 필요" 알림.
+- **복잡한 작업 시** task 문자열에 추가: `Context Budget - MUST: [필수 파일] / DO NOT: [제외 파일]`, `Done: [검증 커맨드]`
 
 **위임 시작 패턴**:
 1. 사용자에게 명시: "Codex 위임 시작 (모델/effort) — 작업: [한 줄 요약], 대상: [파일/영역]"
@@ -59,7 +60,7 @@
 
 **완료 알림 수신 시**:
 1. 보고: "Codex 완료 (모델/effort/소요시간) — [결과 요약]"
-2. 모델/effort 표기: spark/low 또는 gpt-5.4/high (플래그 생략 시)
+2. 모델/effort 표기: spark/low 또는 gpt-5.4/medium (플래그 생략 시)
 3. `TaskUpdate`로 완료 처리
 4. 코드 작업이면 검증 단계 수행
 
@@ -72,9 +73,17 @@
 
 ### Gemini 위임
 
-`Bash("gemini -p \"task\"")` 직접 호출. 결과 수신 후 검증:
-- 결과가 비어있거나 200자 미만: "Gemini 응답 비정상 — 재시도 필요" 알림
-- 결과가 있으면 핵심 요약 보고
+**호출 방법**: `Skill("gemini:rescue", args="--background ...")`. `gemini -p` 직접 호출 금지.
+
+**플래그 조합**:
+- 기본: `--background "task내용"`
+- 심층 분석/대용량 문서: `--background --model pro "task내용"`
+
+**모델 라우팅**:
+- 단순 질문/빠른 요약/최신 정보 확인: 플래그 생략 → flash (gemini-3-flash-preview)
+- 기술 문서 분석/논문/장문 처리/여러 소스 종합/트렌드 비교 (3개+ 대상): `--model pro` (gemini-3.1-pro-preview)
+
+**보고**: Codex와 동일 패턴. "Gemini 위임 시작/완료 (모델/소요시간)". 결과 300자 미만이면 "응답 비정상 — 재시도 필요" 알림.
 
 ### 금지 사항
 
@@ -83,19 +92,13 @@
 
 ### Examples
 
-- "지뢰찾기 게임 만들어줘" (Python ~100줄)
-  → `Skill("codex:rescue", args="--background --write \"~/projects/minesweeper/ 에 Python CLI 지뢰찾기 게임 구현\"")`
-- "이 함수 리팩토링해줘" (5+파일)
-  → `Skill("codex:rescue", args="--background --write \"~/Projects/X/src/foo.py 의 process_data 함수를 ... 로 리팩토링\"")`
-- "테스트 보일러플레이트 만들어줘" (단순)
-  → `Skill("codex:rescue", args="--background --write --model spark --effort low \"...\"")`
-- "이 파일 분석해줘" (read-only)
-  → `Skill("codex:rescue", args="--background \"~/Projects/X/src/foo.py 분석: ...\"")`
-- "그 작업 이어서" (follow-up)
-  → 직전 위임 + `--resume`
-- "README 첫 줄 수정" → 직접 수행
-- "AI 프레임워크 5개 비교" → `Bash("gemini -p \"...\"")`
-- "빗썸 시세" → `/browse` 스킬
+- 새 기능 구현 (~100줄) → `Skill("codex:rescue", args="--background --write \"경로 + 작업\"")`
+- 단순 변환/포맷 → `Skill("codex:rescue", args="--background --write --model spark --effort low \"...\"")`
+- 파일 분석 (read-only) → `Skill("codex:rescue", args="--background \"경로 분석: ...\"")`
+- 이어서 → 위 플래그에 `--resume` 추가
+- AI 트렌드 리서치 → `Skill("gemini:rescue", args="--background \"...\"")`
+- 논문 100p 분석 → `Skill("gemini:rescue", args="--background --model pro \"...\"")`
+- 빗썸 시세 → `/browse` 스킬
 
 ---
 
@@ -130,7 +133,6 @@
 
 ---
 
-
 ## Knowledge Vault
 
 - **Location**: `luma3@m4:~/vault/` (MCP: `obsidian-vault`)
@@ -148,13 +150,6 @@
 - **적용 방식**: `~/.claude/commands/`에 심볼릭 링크로 연결
 - **대상 기기**: Mac Air (luma2), M4 (luma3), Windows (1)
 
-커맨드 추가/수정 시:
-```bash
-# custom-skills repo에서 편집 후 push
-cd ~/projects/custom-skills && git add -A && git commit -m "feat: ..." && git push
-
-# 다른 기기에서 동기화
-cd ~/projects/custom-skills && git pull && bash setup.sh
-```
+커맨드 추가/수정 시: `custom-skills` repo 편집 → push → 다른 기기에서 `git pull && bash setup.sh`
 
 직접 `~/.claude/commands/`에 파일을 만들지 말 것 — repo에 반영되지 않음.
