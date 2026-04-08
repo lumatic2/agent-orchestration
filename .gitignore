@@ -24,6 +24,9 @@ tmp/
 *.posco_review
 agents/knowledge/pending/
 
+# Node modules (MCP servers)
+node_modules/
+
 # Python virtual environments
 .venv*/
 venv*/
