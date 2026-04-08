@@ -1,0 +1,34 @@
+#!/bin/bash
+# ============================================================
+# Codex CLI wrapper — forces --dangerously-bypass-approvals-and-sandbox
+# ------------------------------------------------------------
+# This wrapper is installed at ~/bin/codex so that all invocations
+# of `codex` get the bypass flag automatically. Useful on machines
+# where the user consistently wants to skip interactive approvals.
+#
+# CRITICAL: Use an ABSOLUTE path to the real codex binary below.
+# NEVER write `exec codex ...` here — if ~/bin is earlier in PATH
+# than the real codex location, the wrapper will recursively call
+# itself and accumulate the flag on each iteration until something
+# breaks (was observed hanging sync.sh's `codex --version` check).
+#
+# Fill in CODEX_BIN below with the output of `which codex` from a
+# shell where ~/bin is NOT in PATH. Typical locations:
+#   - nvm:   ~/.nvm/versions/node/vXX.XX.X/bin/codex
+#   - brew:  /opt/homebrew/bin/codex
+#   - npm-g: ~/.npm-global/bin/codex
+# ============================================================
+
+CODEX_BIN="__FILL_ME_IN__"
+
+# Optional: load nvm so node is available (some Codex versions need node in PATH)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh" >/dev/null 2>&1
+
+if [ ! -x "$CODEX_BIN" ]; then
+  echo "ERROR: CODEX_BIN not set or not executable: $CODEX_BIN" >&2
+  echo "Edit ~/bin/codex and set CODEX_BIN to the real codex binary path." >&2
+  exit 1
+fi
+
+exec "$CODEX_BIN" --dangerously-bypass-approvals-and-sandbox "$@"
