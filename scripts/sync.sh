@@ -179,6 +179,19 @@ deploy_codex() {
   echo "[NOTE] Symlink to project roots: ln -s $target_dir/AGENTS.md /path/to/project/AGENTS.md"
 }
 
+deploy_codex_home() {
+  # Codex reads ~/AGENTS.md globally at session start (home-scope).
+  # This file carries home-scope rules (Notion helper, response preferences).
+  # SHARED_PRINCIPLES is intentionally NOT duplicated here — already loaded from ~/.codex/AGENTS.md.
+  local target_path="$BASE_DIR/AGENTS.md"
+  if [ -f "$target_path" ] && [ ! -f "$target_path.bak" ]; then
+    cp "$target_path" "$target_path.bak"
+    echo "[OK] Backed up existing ~/AGENTS.md → ~/AGENTS.md.bak"
+  fi
+  cp "$REPO_DIR/adapters/codex_home.md" "$target_path"
+  echo "[OK] Codex home adapter → $target_path"
+}
+
 deploy_gemini() {
   # Gemini reads GEMINI.md from project root or ~/.gemini/GEMINI.md
   local target_dir="$BASE_DIR/.gemini"
@@ -285,6 +298,7 @@ main() {
   if [ "$target_agent" = "all" ] || [ "$target_agent" = "codex" ]; then
     cp "$REPO_DIR/adapters/codex.md.deploy" "$REPO_DIR/adapters/codex.md"
     deploy_codex
+    deploy_codex_home
     cp "$codex_orig.bak" "$REPO_DIR/adapters/codex.md" 2>/dev/null || true
   fi
 
@@ -324,6 +338,7 @@ main() {
   check_budget "$BASE_DIR/CLAUDE.md" 160 "~/CLAUDE.md"
   check_budget "$BASE_DIR/.claude/orchestrator_rules.md" 150 "orchestrator_rules.md"
   check_budget "$BASE_DIR/.codex/AGENTS.md" 120 "AGENTS.md (Codex)"
+  check_budget "$BASE_DIR/AGENTS.md" 60 "~/AGENTS.md (Codex home)"
   check_budget "$BASE_DIR/.gemini/GEMINI.md" 150 "GEMINI.md"
   # Check source files
   check_budget "$REPO_DIR/SHARED_PRINCIPLES.md" 50 "SHARED_PRINCIPLES.md (source)"
