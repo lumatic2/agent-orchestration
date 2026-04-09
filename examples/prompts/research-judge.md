@@ -60,10 +60,11 @@ Coverage 테이블 형식 (라운드 로그에 그대로 append):
 - [ ] wall clock 도달 (scope constraints 의 `wall_clock_minutes`, 하드 캡 60분)
 - [ ] `data/deep-research/{slug}/STOP` 파일 존재 (사용자 수동 중단)
 - [ ] `user-hold` — 사용자가 대화 중 루프 일시정지 요청 (자연 종료 아님, 재개 가능)
+- [ ] `capacity-exhaustion-abort` — Round 시작 전 pre-check 또는 Round 중간에 Gemini pro `MODEL_CAPACITY_EXHAUSTED` 연속 발생 (자연 종료 아님, autoloop 가 사용자 합의 없이 발동 — 재시도 스케줄링 필요)
 
 하나라도 만족 → 종료 선언 → 5단계로.
 
-> `user-hold` 는 루프 "종료" 가 아니라 **일시 정지 마커**. 최종 보고서 작성은 건너뛰고 라운드 로그까지만 보존. 재개 시 coverage 상태 그대로 이어감.
+> `user-hold` 와 `capacity-exhaustion-abort` 는 루프 "종료" 가 아니라 **일시 정지 마커**. 최종 보고서 작성은 건너뛰고 라운드 로그까지만 보존. 재개 시 coverage 상태 그대로 이어감. `capacity-exhaustion-abort` 의 경우 재개 전 pro capacity pre-check 통과가 선행 조건.
 아니면 → 6단계 (다음 라운드 쿼리) 로.
 
 ### 5. 종료 선언 (해당 시)
@@ -73,7 +74,7 @@ Coverage 테이블 형식 (라운드 로그에 그대로 append):
 ```markdown
 ## Termination — Round N
 
-- reason: <coverage-full | stagnation | max-rounds | skeptic-failed | wall-clock | stop-file | user-hold>
+- reason: <coverage-full | stagnation | max-rounds | skeptic-failed | wall-clock | stop-file | user-hold | capacity-exhaustion-abort>
 - final_coverage: X / Y (Z%)
 - total_rounds: N
 - total_wall_clock: M minutes

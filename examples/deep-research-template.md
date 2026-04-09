@@ -189,13 +189,21 @@ vault 저장 원하시면 승인해주세요.
 
 ## Fallback
 
-### Gemini pro hang / 429
+### Gemini pro pre-check (Round 시작 전 필수, 2026-04-09 Session 3 R2 교훈)
+
+Round 1 발사 직전, 또는 Round N 중간 재개 직전, 반드시 `gemini_run(model="pro", prompt="<10토큰 probe>")` 1회 실행:
+
+- **통과** (정상 출력): Round 진행
+- **`MODEL_CAPACITY_EXHAUSTED`** 또는 **DEGRADED** (attempt 1 실패 → backoff 후 attempt 2 성공): **즉시 abort + 재시도 스케줄링**. 해당 라운드 발사 금지. Judge 로그에 `capacity-exhaustion-abort` 기록. 사용자에게 "현재 Gemini pro capacity 부족, [제안 시간] 재시도" 보고. autoloop 재개 전 pre-check 재실행 필수.
+- **근거**: Session 3 R2 (2026-04-09 10:40 KST) 에서 오전 × arxiv-heavy (이전에 safe 로 검증된 조건) 에도 불구하고 capacity exhaustion 발생. 시간대·도메인 제어만으로는 capacity 를 보장할 수 없음 — Google 일일 capacity 변수는 독립축.
+
+### Gemini pro hang / 429 (Round 진행 중)
 
 1. 해당 branch 만 `gemini_cancel`
 2. 1회 재시도 (timeoutMs 절반)
 3. 재시도 실패 → 해당 branch 는 빈 결과로 진행 (나머지 2 개로 라운드 계속)
 4. 3 branch 모두 실패 → 라운드 스킵 + Judge 가 "Gemini 전체 실패" 로그 + 다음 라운드 재시도
-5. 2 라운드 연속 3/3 실패 → 체인 중단 + 사용자 보고
+5. 2 라운드 연속 3/3 실패 또는 pro capacity 완전 exhaustion → `capacity-exhaustion-abort` 로 체인 중단 + 사용자 보고
 
 ⚠️ Step 2 실증에서 `gemini-3-flash-preview` hang 빈도 높았음. pro 는 상대적으로 안정하지만 여전히 가능. 3 branch 분산이 1차 보험.
 

@@ -104,9 +104,20 @@
 
 ## 스킬 제작 관례
 
-- **새 스킬 만들 때**: 반드시 `/skill-creator` 스킬을 통해 드래프트 → 테스트 → 평가 → 개선 과정을 거친다
-- **기존 스킬 개선 시**: `/skill-creator`로 eval 돌려 검증 후 반영
-- 단순 설정 파일(SKILL.md) 직접 편집은 긴급 패치에만 허용, 이후 `/skill-creator` 로 재검증 필요
+**canonical 위치**: `~/projects/custom-skills/{이름}/` — 모든 스킬 편집·생성·삭제는 여기서만. `~/.claude/skills/`는 배포 사본(git 레포 아님)이고 `setup.sh`가 덮어쓴다.
+
+**새 스킬 만들 때**:
+1. `/skill-creator` 스킬로 드래프트 → 테스트 → 평가 → 개선 과정을 거친다
+2. **드래프트 저장 경로는 항상 `~/projects/custom-skills/{이름}/`** (`~/.claude/skills/` 아님!)
+3. 배포: `bash ~/projects/custom-skills/setup.sh`
+4. 커밋·푸시: canonical repo에서 `git add {이름} && git commit && git push`
+5. 다른 기기 반영: 각 기기에서 `git pull && bash setup.sh`
+
+**기존 스킬 개선 시**: 위 1~5 동일 (canonical에서 편집).
+
+**예외**: 긴급 패치는 `~/.claude/skills/`에서 직접 편집 허용. 단 즉시 canonical에도 반영 필요 (다음 `setup.sh` 실행 시 덮어써짐).
+
+**토글 (켜고 끄기)**: `/skill-toggle` — `~/.claude/skills/`와 `~/.claude/skills-disabled/` 사이로 디렉토리 이동. 기기별 상태, version control 대상 아님.
 
 ---
 
@@ -144,12 +155,22 @@
 
 ---
 
-## Claude Code 커맨드 관리
+## 스킬 인프라 (custom-skills repo)
 
-- **커맨드 원본**: `~/projects/custom-skills/{스킬명}/SKILL.md`
-- **적용 방식**: `~/.claude/commands/`에 심볼릭 링크로 연결
+- **Canonical 원본**: `~/projects/custom-skills/` (lumatic2/custom-skills git repo) — 유일한 편집 위치
+- **배포 타겟**: `~/.claude/skills/` — `setup.sh`가 덮어씀. git repo 아님. 직접 편집은 긴급 패치만.
+- **토글 보관소**: `~/.claude/skills-disabled/` — 기기별 OFF 스킬 저장소. version control 대상 아님.
 - **대상 기기**: Mac Air (luma2), M4 (luma3), Windows (1)
 
-커맨드 추가/수정 시: `custom-skills` repo 편집 → push → 다른 기기에서 `git pull && bash setup.sh`
+**동기화 워크플로**:
+1. `~/projects/custom-skills/`에서 편집/생성
+2. `bash ~/projects/custom-skills/setup.sh` → `~/.claude/skills/`로 배포 (skills-disabled는 skip)
+3. `git add && commit && push`
+4. 다른 기기에서 `git pull && bash setup.sh`
 
-직접 `~/.claude/commands/`에 파일을 만들지 말 것 — repo에 반영되지 않음.
+**setup.sh 안전 보장**:
+- canonical에 없는 디렉토리는 건드리지 않음 (orphan 경고만 출력)
+- `~/.claude/skills-disabled/`에 있는 이름은 skip (토글 상태 유지)
+- 플랫 `*-public.md`, `README.md`, `CLAUDE.md`는 배포 제외
+
+**직접 `~/.claude/skills/`에 파일을 만들지 말 것** — canonical에 반영 안 되고, 다른 기기로 전파 안 됨.

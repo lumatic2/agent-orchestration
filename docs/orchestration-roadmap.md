@@ -21,7 +21,11 @@
 
 ## 3가지 유망 방향
 
-### 방향 1 — 적대적 리뷰 파이프라인 (Adversarial Review Chain)
+### 방향 1 — 적대적 리뷰 파이프라인 (Adversarial Review Chain) ⭐ **프로토타입 완료 (2026-04-08)**
+
+> 1회 실증 완주: Claude의 tool calling만으로 `codex_run` → `gemini_run`(리뷰) → Claude 심판 → `codex_run`(resume) 체인 검증. 1차 코드의 HIGH-severity silent-wrong-answer 4개를 리뷰가 잡고 2차에서 explicit ValueError로 전환됨.
+> 세션 로그: [`../examples/adversarial-review.md`](../examples/adversarial-review.md) · 복붙 템플릿: [`../examples/adversarial-review-template.md`](../examples/adversarial-review-template.md)
+> 잔여: gemini-3-flash-preview hang 빈도가 높아 "Claude 직접 리뷰" fallback이 사실상 기본 경로. flash 안정화되면 진짜 2-에이전트 체인으로 승격.
 
 **흐름**: Claude 계획 → Codex 구현 → Gemini 적대적 리뷰("이 코드를 깨뜨려봐") → Claude 심판 → 필요 시 Codex 재시도
 
@@ -38,7 +42,12 @@
 
 ---
 
-### 방향 2 — Codex/Gemini를 MCP 서버로 노출 ⭐ **선정**
+### 방향 2 — Codex/Gemini를 MCP 서버로 노출 ⭐ **선정 / 프로토타입 완료 + A2A 검증 (2026-04-08)**
+
+> 구현체: [`../mcp-servers/`](../mcp-servers/) · 상세 문서: [`mcp-servers.md`](./mcp-servers.md)
+> Phase 1~6 완료 (스캐폴딩 → codex-mcp → gemini-mcp → Claude Code 등록/스모크 → JSON.parse 버그 fix → 문서화 → auto-poll wrapper).
+> **A2A 단계 도달**: Codex CLI와 Gemini CLI가 양쪽 다 MCP 클라이언트 모드를 네이티브 지원하는 것을 확인하고, Codex 세션에서 gemini-mcp를 호출하고 Gemini 세션에서 codex-mcp를 호출하는 양방향 왕복을 1회씩 검증함 (2026-04-08). Cursor/Windsurf 실사용 검증은 여전히 후속 작업.
+
 
 **아이디어**: Codex CLI와 Gemini CLI를 MCP(Model Context Protocol) 서버로 래핑. 기존 `Skill("codex:rescue", ...)`는 Claude Code 전용이지만, MCP 서버는 Cursor, Windsurf, Continue, 심지어 Codex/Gemini 서로서로 어느 MCP 클라이언트에서도 도구로 호출 가능.
 
@@ -57,21 +66,29 @@
 
 ---
 
-### 방향 3 — 장시간 Deep Research 모드 (Gemini Pro 기반)
+### 방향 3 — 장시간 Deep Research 모드 (Gemini Pro 기반) ⭐ **B 패턴 채택 / Step 4b 완료 + Step 5 진행 중 (2026-04-09)**
 
-**흐름**: 한 줄 리서치 질문 → 다중 라운드 자율 탐색 루프 → 중간 가설 생성 → 추가 검색 쿼리 자가 생성 → 반복 → 최종 보고서. 30분~수 시간
+> 인프라 베이스라인: [`../examples/deep-research-template.md`](../examples/deep-research-template.md) (복붙 템플릿) · 4 프롬프트: [`../examples/prompts/research-{scope,skeptic,judge,final}.md`](../examples/prompts/)
+> 실증 세션 로그: [`../examples/deep-research.md`](../examples/deep-research.md) (Session 1~3, Step 4a/b 결정, Step 5 진행 상태 전부 여기에)
 
-**장점**:
-- 시장 트렌드 한복판. OpenAI Deep Research, Perplexity Deep Research 등이 유료 서비스로 경쟁 중. 로컬 자작은 차별화
-- 기존 인프라에 "continuation loop"만 추가하면 됨
-- vault 저장과 결합 시 지식 베이스 자동 증강 가능
+**흐름**: 한 줄 리서치 질문 → Claude(scope) → Round N { Gemini(Proposer) ×3 병렬 → Codex(Skeptic) → Claude(Judge) } → 수렴 → 최종 보고서 → vault 승인 게이트
 
-**단점**:
-- 비용 통제 필요 (Gemini Pro 장시간 호출). 중단/재개 로직 복잡
-- Gemini CLI의 웹 검색 도구 안정성·속도에 의존
-- 방향 2 없이 만들면 다른 에이전트(Codex 등)와 연계가 어려움
+**Step 4a (B 패턴 실증)** — 완료:
+- Session 1 (long-context benchmarks, arxiv-heavy, coverage 25%) · Session 2 (agent frameworks, blog/github-heavy, capacity exhaustion abort) · Session 3 (long-context benchmarks 재현, arxiv-heavy, coverage 42%)
+- Done 기준 6/7 충족. 미충족: "자연 종료 관측 1회" (Session 3 R2 에서 capacity exhaustion 으로 abort)
 
-**ROI**: 특정 유스케이스에 한해 매우 높음
+**Step 4b (분기 결정)** — 완료 (2026-04-09):
+- **B (Proposer + Skeptic + Judge) 패턴 채택**. C (multi-round agentic tree) 는 현 단계 불필요 — branch 발산은 scope 프롬프트 수준에서 해결됨
+- **3 필수 정책**: (a) Skeptic URL verification 필수, (b) sequential Gemini launch 25s gap (Session 2 #11 position effect 회피), (c) arxiv-heavy + 오전 시간대 + capacity 여유 확인 후 재현성 검증 범위
+- 근거: Session 1/3 교차 검증 — diversified branch + Skeptic 0% false positive + Attack 1b heuristic 7 이 fabricated URL 4건 실전 탐지
+
+**Step 5 (마무리)** — 진행 중:
+- 5-A 템플릿 개정 (Session 3 교훈 반영): 완료
+- 5-B 자연 종료 관측 (Session 3 R2/R3 재시도): 진행 중 (Gemini pro capacity 회복 대기)
+- 5-C vault end-to-end 승인 게이트: 완료
+- 5-D blog/github heavy 재검증: 후속 세션 분리
+
+**관련 MCP 인프라**: [`mcp-servers.md`](./mcp-servers.md) §9 (output validation), §10 (capacity), §11 (position), §12 (content-less confabulation) — Deep Research 실증이 발굴한 MCP 하부 개선사항들
 
 ---
 

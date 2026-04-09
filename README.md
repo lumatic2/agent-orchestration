@@ -44,6 +44,21 @@ context/                Project-specific context files
 pipeline/               Research pipeline (Python)
 ```
 
+## MCP Servers (방향 2)
+
+Codex CLI와 Gemini CLI를 MCP 서버로 래핑해서 Claude Code / Cursor / Windsurf 등 모든 MCP 클라이언트에서 "에이전트를 도구로" 호출할 수 있게 만든 프로토타입.
+
+```bash
+claude mcp add codex-mcp  -- node C:/Users/1/Projects/agent-orchestration/mcp-servers/codex-mcp/src/index.mjs
+claude mcp add gemini-mcp -- node C:/Users/1/Projects/agent-orchestration/mcp-servers/gemini-mcp/src/index.mjs
+```
+
+등록 후 재시작하면 `mcp__codex-mcp__codex_task` / `mcp__gemini-mcp__gemini_task` 형태로 노출된다.
+
+- 구현: [`mcp-servers/`](./mcp-servers/)
+- 아키텍처·도구 스키마·후속 개선: [`docs/mcp-servers.md`](./docs/mcp-servers.md)
+- 기존 `codex:rescue` / `gemini:rescue` Skill 플러그인과 공존 (동일 companion job store 공유)
+
 ## Multi-Device
 
 This repo syncs via git. Run `sync.sh` after pulling on each device.

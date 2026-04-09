@@ -47,6 +47,7 @@ constraints:
   parallel_gemini: 3
   gemini_model: "pro"      # Deep Research 는 기본 pro
   gemini_timeout_ms: 900000
+  pre_check_required: true # **필수** — Round 1 직전 gemini_run 으로 pro 경량 probe 1회. MODEL_CAPACITY_EXHAUSTED 면 abort + 재시도 스케줄링 (Session 3 R2 abort 2026-04-09 교훈).
 
 slug: "<kebab-case-slug — 파일명/디렉토리명 용, 30자 이내>"
 ```
@@ -103,3 +104,4 @@ Round 1 후 Judge 단계에서 "체크리스트가 질문과 안 맞음" 이 명
 - [ ] out_of_scope 가 최소 1개 이상 (발산 제어)
 - [ ] slug 가 파일명으로 쓸 수 있는가
 - [ ] constraints 가 플랜 기본값에서 벗어났다면 그 이유가 질문 안에 있는가
+- [ ] **Gemini pro capacity pre-check 통과 (Round 1 직전 필수)** — scope 승인 후 Round 1 발사 전에 `gemini_run(model="pro", prompt="<10토큰 probe>")` 1회 실행, `MODEL_CAPACITY_EXHAUSTED` 없으면 진행, 있으면 abort + 사용자에게 재시도 시점 보고 (2026-04-09 Session 3 R2 교훈 — 오전 arxiv-heavy 에서도 pro capacity 소진 발생)
