@@ -66,7 +66,7 @@
 
 ---
 
-### 방향 3 — 장시간 Deep Research 모드 (Gemini Pro 기반) ⭐ **B 패턴 채택 / Step 4b 완료 + Step 5 진행 중 (2026-04-09)**
+### 방향 3 — 장시간 Deep Research 모드 (Gemini Pro 기반) ⭐ **B 패턴 채택 / Step 5-B 완료, 5-D 진행 중 (2026-04-10)**
 
 > 인프라 베이스라인: [`../examples/deep-research-template.md`](../examples/deep-research-template.md) (복붙 템플릿) · 4 프롬프트: [`../examples/prompts/research-{scope,skeptic,judge,final}.md`](../examples/prompts/)
 > 실증 세션 로그: [`../examples/deep-research.md`](../examples/deep-research.md) (Session 1~3, Step 4a/b 결정, Step 5 진행 상태 전부 여기에)
@@ -75,18 +75,18 @@
 
 **Step 4a (B 패턴 실증)** — 완료:
 - Session 1 (long-context benchmarks, arxiv-heavy, coverage 25%) · Session 2 (agent frameworks, blog/github-heavy, capacity exhaustion abort) · Session 3 (long-context benchmarks 재현, arxiv-heavy, coverage 42%)
-- Done 기준 6/7 충족. 미충족: "자연 종료 관측 1회" (Session 3 R2 에서 capacity exhaustion 으로 abort)
+- Done 기준 7/7 충족 (Session 3 R2 완주로 coverage-full + wall-clock 자연 종료 관측)
 
 **Step 4b (분기 결정)** — 완료 (2026-04-09):
 - **B (Proposer + Skeptic + Judge) 패턴 채택**. C (multi-round agentic tree) 는 현 단계 불필요 — branch 발산은 scope 프롬프트 수준에서 해결됨
 - **3 필수 정책**: (a) Skeptic URL verification 필수, (b) sequential Gemini launch 25s gap (Session 2 #11 position effect 회피), (c) arxiv-heavy + 오전 시간대 + capacity 여유 확인 후 재현성 검증 범위
 - 근거: Session 1/3 교차 검증 — diversified branch + Skeptic 0% false positive + Attack 1b heuristic 7 이 fabricated URL 4건 실전 탐지
 
-**Step 5 (마무리)** — 진행 중:
+**Step 5 (마무리)** — 5-D 잔여:
 - 5-A 템플릿 개정 (Session 3 교훈 반영): 완료
-- 5-B 자연 종료 관측 (Session 3 R2/R3 재시도): 진행 중 (Gemini pro capacity 회복 대기)
+- 5-B 자연 종료 관측: **완료** (Session 3 R2 — coverage-full 83.3% + wall-clock 36min, Done 7/7)
 - 5-C vault end-to-end 승인 게이트: 완료
-- 5-D blog/github heavy 재검증: 후속 세션 분리
+- 5-D blog/github heavy 재검증: **진행 중** (Session 4 예정, Gemini pro capacity 불안정으로 대기)
 
 **관련 MCP 인프라**: [`mcp-servers.md`](./mcp-servers.md) §9 (output validation), §10 (capacity), §11 (position), §12 (content-less confabulation) — Deep Research 실증이 발굴한 MCP 하부 개선사항들
 
