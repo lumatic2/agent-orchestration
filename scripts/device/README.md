@@ -57,19 +57,39 @@ chmod +x ~/bin/codex
   - Codex: `os.tmpdir()/codex-companion/*/state.json` 의 `jobs[]` 중 terminal status
   - Gemini: `~/.claude/plugins/cache/claude-gemini-plugin/gemini/1.0.0/jobs/g-*.json` + `.done` sentinel
 - 부팅 시 기존 terminal 잡 모두 prime (재기동 스팸 방지)
-- Notify: 터미널 벨(detached 라 보통 no-op) + Node `https` 로 Telegram API 직접 호출
-  - bot token / chat_id 는 `~/.claude/telegram-notify.sh` 에서 regex 로 parsing 해 재사용
-  - 실패는 `~/.claude/hooks/job-watcher.log` 에만 조용히 기록 (fail-safe)
+- 잡 완료 시 두 채널로 전파:
+  1. **Telegram** — Node `https` 로 직접 API 호출 (한국어 포맷: 프로젝트/작업/모델/effort/소요시간 포함)
+     - bot token / chat_id 는 `~/.claude/telegram-notify.sh` 에서 regex 로 parsing 해 재사용
+     - 실패는 `~/.claude/hooks/job-watcher.log` 에만 조용히 기록 (fail-safe)
+  2. **Queue 파일** (`~/.claude/hooks/job-watcher-queue.jsonl`) — 각 완료 이벤트를 JSONL 로 append.
+     `UserPromptSubmit` hook 이 이 큐를 읽어 **Claude 컨텍스트에 `<job-watcher-updates>`
+     블록으로 inject** 한다. 즉 Claude 도 다음 사용자 턴에 완료를 인지함.
+
+## job-watcher-inject.py
+
+`UserPromptSubmit` hook 에 등록해 Claude 가 백그라운드 잡 완료를 인지하게 하는 브리지.
+
+**동작**:
+- `~/.claude/hooks/job-watcher-queue.jsonl` 에서 byte-offset cursor (`~/.claude/hooks/.job-watcher-inject.cursor`) 이후의 새 엔트리만 읽음
+- 있으면 `<job-watcher-updates>` 블록으로 stdout 에 출력 → Claude Code 가 user prompt 에 추가 컨텍스트로 주입
+- 없으면 no-op (exit 0, empty stdout)
+- 어떤 에러도 사용자 프롬프트를 막지 않도록 전부 try/except 로 감쌈 — 실패는 watcher log 에만 기록
+- Windows 주의: stdout 을 UTF-8 로 reconfigure 해야 함 (기본 cp949 는 이모지/한글 인코딩 실패)
 
 **설치 방법** (Windows):
 
 ```bash
 # 1. 배포
 cp ~/projects/agent-orchestration/scripts/device/job-watcher.mjs ~/.claude/hooks/job-watcher.mjs
+cp ~/projects/agent-orchestration/scripts/device/job-watcher-inject.py ~/.claude/hooks/job-watcher-inject.py
 
-# 2. settings.json 에 SessionStart hook 추가 (이미 있으면 skip)
-#    "hooks": { "SessionStart": [{ "hooks": [{ "type": "command",
-#      "command": "node ~/.claude/hooks/job-watcher.mjs --detach" }] }] }
+# 2. settings.json 에 hook 2개 추가 (이미 있으면 skip)
+#    "hooks": {
+#      "SessionStart": [{ "hooks": [{ "type": "command",
+#        "command": "node ~/.claude/hooks/job-watcher.mjs --detach" }] }],
+#      "UserPromptSubmit": [{ "hooks": [{ "type": "command",
+#        "command": "python3 ~/.claude/hooks/job-watcher-inject.py" }] }]
+#    }
 
 # 3. 수동 기동 테스트
 node ~/.claude/hooks/job-watcher.mjs --detach

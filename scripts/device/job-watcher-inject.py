@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""UserPromptSubmit hook — inject unread job-watcher completions into Claude context.
+
+Reads ~/.claude/hooks/job-watcher-queue.jsonl from a byte-offset cursor,
+emits a <system-reminder> block with any new entries, and advances the cursor.
+Silent (no output) when there is nothing new.
+
+Failures are swallowed — this hook must never block a user prompt.
+"""
+import json
+import os
+import sys
+from pathlib import Path
+
+# Windows default stdout is cp949 (on KR locales) which cannot encode
+# emoji/CJK chars. Force UTF-8 so emission never fails on characters.
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
+HOOK_DIR = Path.home() / ".claude" / "hooks"
+QUEUE = HOOK_DIR / "job-watcher-queue.jsonl"
+CURSOR = HOOK_DIR / ".job-watcher-inject.cursor"
+
+
+def main() -> int:
+    try:
+        if not QUEUE.exists():
+            return 0
+        size = QUEUE.stat().st_size
+        try:
+            offset = int(CURSOR.read_text().strip()) if CURSOR.exists() else 0
+        except Exception:
+            offset = 0
+        # If the queue was truncated/rotated, reset cursor.
+        if offset > size:
+            offset = 0
+        if offset >= size:
+            return 0
+        with QUEUE.open("rb") as fh:
+            fh.seek(offset)
+            chunk = fh.read().decode("utf-8", errors="replace")
+        new_offset = size
+        entries = []
+        for line in chunk.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        # Always advance cursor, even if parsing produced nothing useful.
+        try:
+            CURSOR.write_text(str(new_offset))
+        except Exception:
+            pass
+        if not entries:
+            return 0
+
+        # Emit a system-reminder block. Claude Code forwards hook stdout as
+        # additional prompt context, so this becomes visible to the assistant.
+        lines = ["<job-watcher-updates>"]
+        lines.append(
+            f"다음은 백그라운드 codex/gemini 잡 완료 알림 {len(entries)}건입니다 "
+            "(마지막으로 본 시점 이후). 사용자에게 굳이 다시 알릴 필요는 없지만, "
+            "관련 후속 작업 판단에 반영하세요."
+        )
+        for e in entries:
+            icon = "✅" if e.get("ok") else "❌"
+            kind = e.get("kind", "?")
+            proj = e.get("project") or "(unknown)"
+            model = e.get("model") or "(default)"
+            effort = e.get("effort")
+            model_str = f"{model} (effort: {effort})" if effort else model
+            dur = e.get("duration") or "?"
+            prompt = e.get("prompt") or ""
+            status = e.get("statusKo") or ("완료" if e.get("ok") else "실패")
+            lines.append(
+                f"- {icon} {kind} {e.get('id','?')} {status} | "
+                f"프로젝트: {proj} | 모델: {model_str} | 소요: {dur}"
+                + (f" | 작업: {prompt}" if prompt else "")
+            )
+        lines.append("</job-watcher-updates>")
+        sys.stdout.write("\n".join(lines) + "\n")
+    except Exception as err:
+        # Never block user prompts. Log to watcher log if writable.
+        try:
+            (HOOK_DIR / "job-watcher.log").open("a").write(
+                f"[inject-hook] error: {err}\n"
+            )
+        except Exception:
+            pass
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

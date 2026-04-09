@@ -16,6 +16,7 @@ const SELF = fileURLToPath(import.meta.url);
 const HOOK_DIR = path.join(os.homedir(), ".claude", "hooks");
 const PID_FILE = path.join(HOOK_DIR, ".job-watcher.pid");
 const LOG_FILE = path.join(HOOK_DIR, "job-watcher.log");
+const QUEUE_FILE = path.join(HOOK_DIR, "job-watcher-queue.jsonl");
 const CODEX_ROOT = path.join(os.tmpdir(), "codex-companion");
 const GEMINI_JOBS_DIR = path.join(
   os.homedir(),
@@ -58,7 +59,34 @@ function fmtDuration(startIso, endIso) {
   if (!startIso || !endIso) return "";
   const s = Math.round((new Date(endIso) - new Date(startIso)) / 1000);
   if (!Number.isFinite(s) || s < 0) return "";
-  return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`;
+  if (s < 60) return `${s}초`;
+  const m = Math.floor(s / 60);
+  const rem = s % 60;
+  return rem ? `${m}분 ${rem}초` : `${m}분`;
+}
+
+function firstPromptLine(prompt, maxLen = 80) {
+  if (!prompt) return "";
+  const line = String(prompt).split(/\r?\n/).find((l) => l.trim()) || "";
+  const trimmed = line.trim();
+  return trimmed.length > maxLen ? trimmed.slice(0, maxLen) + "…" : trimmed;
+}
+
+function extractMeta(kind, job) {
+  const ok = job.status === "completed" && (job.exitCode == null || job.exitCode === 0);
+  const statusKo = ok ? "완료" : (job.status === "cancelled" ? "취소" : "실패");
+  const icon = ok ? "✅" : "❌";
+  const dur = fmtDuration(job.startedAt, job.completedAt || job.cancelledAt);
+  let project = "";
+  if (kind === "codex") {
+    const root = job.workspaceRoot || job.request?.cwd || "";
+    project = root ? path.basename(root.replace(/[\\/]+$/, "")) : "";
+  }
+  const req = job.request || {};
+  const model = req.model || job.model || "(default)";
+  const effort = req.effort || null;
+  const prompt = firstPromptLine(req.prompt || job.prompt || "");
+  return { ok, icon, statusKo, dur, project, model, effort, prompt };
 }
 
 let telegramCreds = null;
@@ -103,20 +131,37 @@ function sendTelegram(text) {
 }
 
 function notify(kind, job) {
-  const ok = job.status === "completed" && (job.exitCode == null || job.exitCode === 0);
-  const icon = ok ? "✅" : "❌";
-  const dur = fmtDuration(job.startedAt, job.completedAt || job.cancelledAt);
-  const title = job.title || job.kindLabel || job.model || kind;
-  const msg = `${icon} ${kind} ${job.id} ${job.status}${dur ? ` (${dur})` : ""} — ${title}`;
-  log(`notify ${msg}`);
+  const meta = extractMeta(kind, job);
+  const kindKo = kind === "codex" ? "Codex" : "Gemini";
+  const oneLine = `${meta.icon} ${kind} ${job.id} ${meta.statusKo}${meta.dur ? ` (${meta.dur})` : ""}${meta.project ? ` — ${meta.project}` : ""}`;
+  log(`notify ${oneLine}`);
   try { process.stdout.write("\x07"); } catch { /* ignore */ }
-  const tgText = [
-    `${icon} ${kind[0].toUpperCase() + kind.slice(1)} ${job.status}`,
-    job.id,
-    dur ? `duration: ${dur}` : null,
-    ok ? `→ /${kind}:result ${job.id}` : `→ /${kind}:result ${job.id}`,
-  ].filter(Boolean).join("\n");
-  sendTelegram(tgText);
+
+  // Build rich Telegram message
+  const lines = [`${meta.icon} ${kindKo} ${meta.statusKo}`];
+  if (meta.project) lines.push(`프로젝트: ${meta.project}`);
+  if (meta.prompt) lines.push(`작업: ${meta.prompt}`);
+  const modelLine = meta.effort ? `모델: ${meta.model} (effort: ${meta.effort})` : `모델: ${meta.model}`;
+  lines.push(modelLine);
+  if (meta.dur) lines.push(`소요: ${meta.dur}`);
+  lines.push(`→ /${kind}:result ${job.id}`);
+  sendTelegram(lines.join("\n"));
+
+  // Append structured entry to queue for Claude Code UserPromptSubmit hook
+  const entry = {
+    ts: new Date().toISOString(),
+    kind,
+    id: job.id,
+    ok: meta.ok,
+    statusKo: meta.statusKo,
+    project: meta.project,
+    model: meta.model,
+    effort: meta.effort,
+    prompt: meta.prompt,
+    duration: meta.dur,
+  };
+  try { fs.appendFileSync(QUEUE_FILE, JSON.stringify(entry) + "\n"); }
+  catch (err) { log(`queue append failed: ${err.message}`); }
 }
 
 function scanCodex(prime, seen) {
