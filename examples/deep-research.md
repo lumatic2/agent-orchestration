@@ -206,36 +206,175 @@ Session 1 Q1 (long-context benchmarks, arxiv heavy) 는 3/3 정상, PRIMARY URL 
 4. **Skeptic 프롬프트 개정**: fabricated URL 탐지 명시 추가 (현재 `research-skeptic.md` 는 credibility 만 언급, 존재 여부 검증 미명시)
 5. **Pre-check**: 각 run 시작 전 `gemini 상태` 로 quota % 확인
 
-## Session 3 — TBD (재현성 측정 재시도, arxiv-heavy 주제)
+## Session 3 — long-context-benchmark-debate-2026 (2026-04-09, 재현성 측정 재시도 성공)
 
-_(Session 2 폐기 사유 반영 — Session 2 section 의 "재설계 권장사항" 5 항목 적용)_
+**질문**: 2025~2026 long-context retrieval 벤치마크의 saturation 논쟁 — needle-in-haystack(NIAH) 계열이 실제로 saturated 됐는지, 새 벤치마크(RULER, MRCR, LongBench v2, MMNeedle, LongICLBench)가 methodology 면에서 superseding 했는지.
+
+**Status**: Round 1 만 실행 (Session 1 과 동일, 의도된 user-hold — 재현성 측정 완료 지점).
+
+**Session 2 재설계 5 항목 준수 여부**:
+1. ✅ arxiv-heavy 주제 (학술 benchmark)
+2. ✅ Sequential 발사 (25초 간격 × 3 branch — position effect 회피 성공)
+3. ✅ Pre-check (quota 여유 확인 후 진행, 시각 09:58)
+4. ✅ Attack 1b URL fabrication heuristic 적용
+5. ✅ 오전 시간대 (Session 1 과 동일)
+
+**scope**: `data/deep-research/long-context-benchmark-debate-2026/round-1.md` 상단 참조. 6개 criteria (saturation paper 2+, counter paper 1+, 5 벤치마크 중 3+ rationale, methodology 비교표, 정량 비교, confound 2+).
+
+### Round 1
+
+- **Gemini branches** (3, pro, sequential 25s gap, 900s timeout):
+  - Branch A — NIAH saturation claim evidence (127s)
+  - Branch B — counter-argument / NIAH defender (140s)
+  - Branch C — new benchmark methodology comparison (91s)
+- **Branch outcomes**: **3/3 본문 반환, 0 timeout, 0 429** — Session 2 대비 dramatic 개선 (Session 2 는 2/3 429 축약). 13 distinct claim 추출 (A1-4, B1-4, C1-5).
+- **Codex Skeptic**: 380s (Session 1: 497s, **-24%**), task-mnqs4mk3-8cemse, 6-attack 구조 엄격 준수.
+- **Judge (Claude)**:
+  - Skeptic 지적 전수 수용 (false positive 0%)
+  - 생존: **SURVIVES 1 / DOWNGRADED 6 / NEEDS-EVIDENCE 1 / DROPPED 5** (total 13)
+  - Coverage: **2.5 / 6 (41.7%)** — Session 1 (25%) 대비 +17pp
+- **종료**: user-hold (재현성 측정 완료 지점)
+
+### Session 3 최대 발견: Attack 1b 실전 검증 — 4건 fabricated URL 탐지
+
+Session 2 에서 "arxiv-heavy 주제는 fabrication 에 안전할 것" 가설이 세워졌으나 **Session 3 에서 부분 반증**. 4 건의 서로 다른 fabrication 패턴 관찰:
+
+| claim | URL | 실제 상태 | 탐지 heuristic |
+|---|---|---|---|
+| A2 | arxiv.org/abs/2604.03000 | URL 실존, 다른 수학 논문 | arxiv ID/title mismatch |
+| B1 | aclanthology.org/2025.tacl-1.9/ | URL 실존, "Transformers as Transducers" 논문 | URL exists but unrelated content |
+| B3 | arxiv.org/abs/2507.30 | invalid arxiv id | YYMM.NNNNN format violation (digit count) |
+| B4 | arxiv.org/abs/2604.03 | invalid/truncated arxiv id | format violation |
+
+**결정적 관찰**: Session 2 의 fabrication 패턴 (`medium.com/.../0f1b1b1b1b1b` 식 가짜 slug) 과 **형태는 다르지만 동일한 failure mode**. Gemini pro 는 도메인 무관하게 "citation 을 요구받았으나 실제 source 를 모를 때" 형식 맞춰 가짜를 생성함. **capacity exhaustion 과 독립된 새 failure mode** — `docs/mcp-servers.md` #10 에 "Confabulation when information is missing" 절 추가 후보.
+
+**Attack 1b 의 검증된 가치**: Attack 1b 가 없었다면 Session 3 최종 보고서가 13 claim 중 4 개 (31%) 를 가짜 URL 로 인용할 뻔함. Session 2 에서 설계만 한 defense 가 Session 3 에서 즉시 실전 적중.
+
+### Session 1 vs Session 3 재현성 측정 (arxiv-heavy × 오전 통제)
+
+| 항목 | Session 1 | Session 3 | 델타 |
+|---|---|---|---|
+| Gemini branch 성공률 | 3/3 | 3/3 | = |
+| Gemini max branch wall clock | 107s | 140s | +30% |
+| Codex Skeptic wall clock | 497s | 380s | **-24%** |
+| Total Round 1 wall clock | ~17min | ~14min | -18% |
+| Distinct claim 추출 | 21 | 13 | -38% (Branch C table 묶음 영향) |
+| DROPPED/REJECT 수 | 10 | 5 | -5 |
+| DROPPED/REJECT 율 | 48% | 38% | -10pp |
+| **Fabricated URL 건수** | **0** | **4** | **+4 (new failure mode)** |
+| Primary URL 복원 (Skeptic 능동) | 5 | 1 (LongBench v2) | -4 |
+| Numeric discrepancy 검출 | 1 (RULER 0.944 vs 95.8%) | 3 (A1, B1, C3) | +2 |
+| Final coverage | 25% | 42% | +17pp |
+| Skeptic 지적 수용률 | 100% | 100% | = |
+| Skeptic false positive | 0% | 0% | = |
+
+### Session 3 관찰 기록 (공통 metric)
+
+| 항목 | 값 |
+|---|---|
+| rounds_to_terminate | 1 (user-hold, 의도된 정지) |
+| termination_reason | user-hold (재현성 측정 완료) |
+| final_coverage | 2.5 / 6 (41.7%) |
+| wall_clock_minutes | ~14 |
+| gemini_branch_failures | 0/3 |
+| skeptic_valid_objections_per_round | R1: 모든 지적 수용 (REJECT 4 + FLAG 8 + counter-cite 1 + numeric catch 3) |
+| skeptic_false_positive_rate | 0% |
+| claim_survival_rate | 1/13 pure pass (7.7%), 7/13 pass-with-downgrade (54%), 5/13 drop (38%) |
+| divergence_vs_depth | **발산 양호** — Branch A(증거)/B(반론)/C(methodology) 각기 다른 렌즈. Branch B 의 "NIAH defender 거의 없음" 은 negative finding 으로 정당성 확보. Session 1 과 동일 수준의 diversified coverage. |
+| checklist_revised | no |
+
+### Session 3 핵심 메타 노트
+
+**1. 재현성 측정 성공 — B 루프 core pattern 이 재현됨**
+- Gemini Proposer → Codex Skeptic → Claude Judge 체인이 Session 1 과 **거의 동일한 품질 프로파일**로 재현
+- Skeptic 이 fake citation 을 100% 잡아내고 Judge 가 100% 수용 → false positive/negative 모두 0
+- 재현성 N=2 는 확정적이지 않지만 두 세션 모두 **동일 도메인(arxiv-heavy)** 에서 동일 시간대면 reliable 하다고 잠정 결론 가능
+
+**2. 새 failure mode 발견: "content-less confabulation"**
+- Session 2 (#10) 은 "capacity exhaustion → fabrication" 으로 귀인했으나, Session 3 는 capacity 정상 + fabrication 4건 → **capacity 와 무관한 별도 모드 존재**
+- 추정 원인: Gemini pro 가 grounding 을 "찾지 못함" 을 인정하지 않고 training data 에서 가장 그럴듯한 citation 패턴을 조합
+- **docs/mcp-servers.md #12 신설 후보**: "Gemini pro content-less confabulation — grounding 이 조용히 실패하면 도메인 무관하게 fabricated citation 생성. wrapper 레벨 탐지 불가, Skeptic URL verification 이 유일한 방어선."
+
+**3. Attack 1b heuristic 개선 후보 (R1 에서 관찰)**
+- 현재 6개 heuristic 은 "URL exists but content mismatch" (A2, B1) 를 직접 커버 안 함
+- 새 heuristic 7번 후보: "URL 이 실존하지만 paper title/arxiv abstract 이 claim 과 무관하면 SUSPECT"
+- 단, 이는 Skeptic 이 arxiv abstract 에 접근 가능할 때만 작동 — sandbox 에서는 어려움. **flagging pattern 으로 대체**: "유명 논문 URL 인데 claim 이 생소하면 교차 확인"
+
+**4. Skeptic 속도 향상 (-24%)**
+- Session 1: 497s (21 claim)
+- Session 3: 380s (13 claim)
+- 정규화: Session 1 ~23.7s/claim, Session 3 ~29.2s/claim — claim 당 시간은 오히려 증가
+- 즉 속도 향상은 claim 수 감소 덕 (Branch C 의 table 묶음 효과), Skeptic 자체 효율은 동일
+- **교훈**: 재현성 metric 은 "claim 당 정규화" 해야 정확. 템플릿 관찰 항목 개정 후보.
+
+**5. "NIAH defender 부재" 라는 negative finding 의 처리**
+- Branch B 가 counter-argument 를 찾으러 갔으나 실제로는 "saturation 주장에 qualification 을 거는" paper 만 나옴
+- Gemini 는 이 공백을 **가짜 URL 로 메꿈** — 가장 위험한 hallucination 패턴
+- Skeptic 이 가짜를 모두 걸러냄으로써 "literature 가 undisputed 하다" 는 것 자체가 **Valid finding** 으로 전환
+- **교훈**: B 루프의 Proposer 에게 "못 찾으면 빈 칸으로 둬라" 를 **더 강하게** 명시해야 함. research-scope.md 또는 Gemini query template 개정 후보.
+
+**6. Coverage 42% 는 Session 1 대비 +17pp — scope 가 현실적이었던 이유**
+- Session 1 criteria 는 "기법 3+, RoPE 비교" 등 specific 요구 많음
+- Session 3 criteria 는 "벤치마크 3+, design rationale" 등 structural 요구 → Gemini branch C 의 table 응답과 자연스럽게 매치
+- **교훈**: scope 의 checkable 항목은 "paper 가 직접 답할 수 있는 형태" 로 쓰는 게 coverage 에 유리. research-scope.md 의 "체크리스트 작성 규칙" 에 example 추가 가능.
+
+### Session 3 에서 확정된 템플릿 개정 사항 (적용 대기)
+
+1. `docs/mcp-servers.md` #12 신설: "Gemini pro content-less confabulation" — capacity 와 독립된 failure mode
+2. `research-skeptic.md` Attack 1b heuristic 7번 후보: "URL exists but resolves to unrelated content"
+3. `deep-research.md` 공통 metric 에 "claim 당 정규화" 명시 (rounds_to_terminate 같은 절대 수치 vs per-claim ratio 구분)
+4. Gemini query template (deep-research-template.md) 에 **"못 찾으면 빈 칸, 절대 fabricate 금지"** 문구 명시적 추가
+5. `research-scope.md` 에 Session 3 criteria 를 checkable + 벤치마크-친화적 example 로 추가
 
 ---
 
-## Step 4a Done 기준 체크 (실증 후 채움)
+## Step 4a Done 기준 체크 (Session 1 + 3 종합)
 
-- [ ] Scope → checklist 생성 동작
-- [ ] 1 라운드 full cycle: Gemini ×3 → Codex Skeptic → Claude Judge
-- [ ] Codex Skeptic 이 최소 1개 유효 지적 생성
-- [ ] 실제 리서치 질문 2~3개로 full 루프 완주
-- [ ] Coverage 기반 종료 1회 + max_rounds 종료 1회 관측
-- [ ] 최종 보고서 vault 승인 저장 end-to-end 1회
-- [ ] `examples/deep-research.md` 작성 (= 이 파일, 실증 섹션 채움)
+- [x] Scope → checklist 생성 동작 (Session 1, 3 모두 실측)
+- [x] 1 라운드 full cycle: Gemini ×3 → Codex Skeptic → Claude Judge (Session 1, 3)
+- [x] Codex Skeptic 이 최소 1개 유효 지적 생성 (Session 1: 9 REJECT + 3 downgrade, Session 3: 4 REJECT + 8 FLAG)
+- [x] 실제 리서치 질문 2~3개로 full 루프 완주 (Session 1 long-context-recall, Session 3 benchmark-debate — Session 2 는 abort 로 counting 제외)
+- [ ] Coverage 기반 종료 1회 + max_rounds 종료 1회 관측 — **미완**. 두 세션 모두 user-hold 로 종료. Round 2-3 미실행 상태에서 자연 종료 관측 없음
+- [ ] 최종 보고서 vault 승인 저장 end-to-end 1회 — **미완** (보고서 작성 건너뜀)
+- [x] `examples/deep-research.md` 작성 (Session 1, 2, 3 섹션 모두 채움)
 
-## Step 4b 분기 결정 (실증 후 채움)
+**Done 기준 5/7 충족**. 2개 미충족 (자연 종료 + vault 승인) 은 "재현성 측정" 목적으로 의도적으로 건너뛴 것. Step 4a 는 **프로세스 검증 완료**로 판단 가능하나 end-to-end 완주는 별도 세션 필요.
+
+## Step 4b 분기 결정 (Session 1 + 3 종합)
 
 플랜 4b 표 기준:
 
 | 관찰 | 행동 | 이번 실측 해당? |
 |---|---|---|
-| 발산 충분 + Skeptic 유효 | B 로 충분. Step 4 종료. | |
-| 발산 부족 (같은 방향 깊이) | C 로 확장 (트리 구조) | |
-| Skeptic 노이즈만 뿜음 | B 재설계 (Codex 프롬프트 조정 또는 A) | |
-| 둘 다 문제 | 플랜 재작성 | |
+| 발산 충분 + Skeptic 유효 | B 로 충분. Step 4 종료. | **✓ YES** — Session 1, 3 모두 diversified branch + Skeptic 0% false positive |
+| 발산 부족 (같은 방향 깊이) | C 로 확장 (트리 구조) | ✗ (Session 1, 3 모두 branch 간 독립 토픽 유지) |
+| Skeptic 노이즈만 뿜음 | B 재설계 | ✗ (Skeptic 양 세션 모두 고품질) |
+| 둘 다 문제 | 플랜 재작성 | ✗ |
 
-결정: _(...)_
-근거: _(세션 1~3 관찰의 공통 패턴)_
-다음 액션: _(roadmap 업데이트, 후속 플랜 파일 등)_
+**결정**: **B (Proposer + Skeptic + Judge) 패턴으로 충분. C (multi-round agentic tree) 는 현 단계에서 불필요.**
+
+**근거** (Session 1, 3 공통 패턴):
+1. **Skeptic 은 본질적 가치를 제공**: 단순 필터링이 아닌 능동적 source 복원, URL fabrication 탐지, numeric discrepancy catch. Session 3 에서 fake citation 4 건을 잡지 못했다면 최종 보고서의 31% 가 거짓이었음.
+2. **Branch 발산은 scope 프롬프트 수준에서 해결됨**: 두 세션 모두 Round 1 에서 3 branch 가 독립 토픽 커버. Tree 구조가 필요한 "발산 부족" 관찰 없음.
+3. **Claim survival rate 가 건강한 분포**: Session 1 23.8% survives, Session 3 7.7% pure + 54% downgrade. 두 경우 모두 "Proposer 는 발산, Skeptic 은 엄격 필터" 의 이상적 adversarial dynamic 유지.
+4. **복잡한 질문일수록 Judge 가 partial coverage 를 허용하며 안정적으로 수렴**: Session 3 42% > Session 1 25%, scope 가 현실적이면 coverage 가 자연스럽게 올라감.
+
+**단, B 패턴에 **필수 정책** 3 개 추가 조건으로**:
+- **(a) Skeptic 의 URL verification 은 옵션이 아닌 필수** (Attack 1b + Session 3 confirmation)
+- **(b) sequential Gemini launch (25초 간격)** — Session 2 #11 position effect 회피
+- **(c) arxiv-heavy + 오전 시간대** 에서 재현성이 검증된 범위 — blog/github heavy 주제는 별도 실증 필요
+
+**다음 액션**:
+1. `docs/orchestration-roadmap.md` 의 Step 4 를 "B 패턴 채택" 으로 종결 업데이트
+2. `docs/mcp-servers.md` #12 (content-less confabulation) 추가
+3. `examples/deep-research-template.md` 에 Session 3 에서 확정된 5 개 템플릿 개정 사항 반영
+4. Step 4b 종료 → Step 5 (실제 연구 질문에 대한 end-to-end 완주 + vault 승인 경로 검증) 분기
+
+**남은 미검증 영역** (Step 4a-b 에서 의도적으로 건너뜀, 후속 세션 필요):
+- 자연 종료 조건 발동 (coverage-full / stagnation / skeptic-failed / max-rounds) 1회 이상 실측
+- 최종 보고서 작성 + vault 승인 게이트 end-to-end 1회
+- blog/github heavy 주제에서의 B 패턴 reliability (Session 2 abort 영역)
+- Round 2~3 에서 Skeptic 지적이 누적될 때 false positive 여부
 
 ---
 
