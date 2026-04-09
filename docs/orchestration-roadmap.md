@@ -111,6 +111,48 @@
 - 방향 1 (적대적 리뷰): Claude가 Codex MCP 호출 → Codex 결과를 Gemini MCP에 넘겨 리뷰 요청 — 별도 스크립트 없이 Claude의 tool calling으로 자연 체이닝
 - 방향 3 (Deep Research): Gemini MCP를 받아 Claude가 "continuation loop"를 직접 돌리거나, 별도 Deep Research 에이전트가 Gemini MCP + 웹 MCP를 조합해서 사용
 
+## Step 5 결정: Plugin(Skill) ↔ MCP 공존 유지 (2026-04-10)
+
+> 실행 순서 §5 "기존 Skill 플러그인과의 관계 정리" 완료.
+
+### 세 레이어의 역할 구분
+
+```
+Plugin (배포 패키지)
+  └─ Skill/Command/Hook/Agent (Claude Code 전용 고수준 인터페이스)
+       └─ companion 스크립트 (공통 런타임)
+MCP Server (범용 저수준 인터페이스)
+       └─ 같은 companion 스크립트 호출
+```
+
+| 레이어 | 정체 | 쓸 수 있는 곳 | 제공하는 것 |
+|---|---|---|---|
+| **Plugin** | 배포 패키지 (`enabledPlugins`로 활성화) | Claude Code 전용 | skills + commands + hooks + scripts + agents 묶음 |
+| **Skill** | Plugin 안의 개별 기능 (`/codex:rescue` 등) | Claude Code 전용 | 프롬프트 가이드 + 에러 핸들링 + 결과 포맷팅 |
+| **MCP Server** | 우리가 만든 프로토콜 어댑터 (`codex-mcp` 등) | 아무 MCP 클라이언트 (Cursor, Windsurf, Codex, Gemini...) | 순수 도구 인터페이스 (JSON-RPC) |
+
+### 겹치는 기능과 결정
+
+| 기능 | Skill | MCP | 겹침 |
+|---|---|---|---|
+| 작업 위임 | `codex:rescue`, `gemini:rescue/research` | `codex_run/task`, `gemini_run/task` | ✅ 동일 job queue |
+| 상태/결과/취소 | `codex:status/result/cancel`, `gemini:*` | `codex_status/result/cancel`, `gemini_*` | ✅ 동일 job queue |
+| 코드 리뷰 | `codex:review`, `gemini:review` | ❌ 없음 | Skill 전용 |
+| 적대적 리뷰 | `codex:adversarial-review` | ❌ 없음 | Skill 전용 |
+| 설정/가이드 | `codex:setup`, 내부 prompting skills | ❌ 없음 | Skill 전용 |
+
+**결정: 공존 유지.**
+
+- Skill은 Claude Code 안에서 풍부한 UX(프롬프트 컨텍스트, 에러 가이드, 포맷팅)를 제공하는 고수준 래퍼
+- MCP는 같은 companion/job store를 외부 클라이언트에 노출하는 저수준 어댑터
+- 같은 job store를 공유하므로 충돌 없음 — Skill로 시작한 job을 MCP로 조회 가능, 역도 성립
+- review/adversarial-review 등 Skill 전용 기능은 MCP 쪽에 당장 추가 불필요 (Cursor 검증 시 재평가)
+
+### 후속 과제
+
+- [ ] §6 Cursor/Windsurf 실사용 검증 시 review 도구 MCP 노출 필요성 재평가
+- [ ] Stitch MCP 서버 상태 확인 및 등록 (현재 미등록)
+
 ## 의도적으로 배제한 경로
 
 - **LangGraph / CrewAI / AutoGen**: Python 프레임워크 기반. 현재 Bash + CLI + MCP 구조와 임피던스 미스매치. 도입 시 기존 sync.sh/Skill 인프라를 거의 버려야 함
