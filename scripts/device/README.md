@@ -43,3 +43,46 @@ chmod +x ~/bin/codex
 - Mac Air (luma2): 미설치 — `/opt/homebrew/bin/codex`가 brew 설치라 래퍼 불필요.
   brew 경로가 PATH 최상단이라 바이패스 플래그를 원하면 zsh alias 사용이 더 간단
 - Windows (1): 미설치 — Codex 사용 시 사용자가 필요에 따라 직접 플래그 전달
+
+## job-watcher.mjs
+
+`Skill("codex:rescue", "--background ...")` / `Skill("gemini:rescue", "--background ...")` 로
+띄운 장시간 잡의 완료를 Claude Code harness 바깥에서 감지해 **텔레그램 DM**으로 알리는
+독립 백그라운드 watcher. 설계 근거: `~/.claude/plans/codex-gemini-job-watcher.md`.
+
+**동작**:
+- `SessionStart` hook 에서 `node ~/.claude/hooks/job-watcher.mjs --detach` 실행
+- PID 파일(`~/.claude/hooks/.job-watcher.pid`)로 중복 방지 — 이미 살아 있으면 skip
+- 1.5s 폴링으로 감지:
+  - Codex: `os.tmpdir()/codex-companion/*/state.json` 의 `jobs[]` 중 terminal status
+  - Gemini: `~/.claude/plugins/cache/claude-gemini-plugin/gemini/1.0.0/jobs/g-*.json` + `.done` sentinel
+- 부팅 시 기존 terminal 잡 모두 prime (재기동 스팸 방지)
+- Notify: 터미널 벨(detached 라 보통 no-op) + Node `https` 로 Telegram API 직접 호출
+  - bot token / chat_id 는 `~/.claude/telegram-notify.sh` 에서 regex 로 parsing 해 재사용
+  - 실패는 `~/.claude/hooks/job-watcher.log` 에만 조용히 기록 (fail-safe)
+
+**설치 방법** (Windows):
+
+```bash
+# 1. 배포
+cp ~/projects/agent-orchestration/scripts/device/job-watcher.mjs ~/.claude/hooks/job-watcher.mjs
+
+# 2. settings.json 에 SessionStart hook 추가 (이미 있으면 skip)
+#    "hooks": { "SessionStart": [{ "hooks": [{ "type": "command",
+#      "command": "node ~/.claude/hooks/job-watcher.mjs --detach" }] }] }
+
+# 3. 수동 기동 테스트
+node ~/.claude/hooks/job-watcher.mjs --detach
+cat ~/.claude/hooks/job-watcher.log  # primed seen=N 라인 확인
+```
+
+**canonical 위치**: 이 repo 의 `scripts/device/job-watcher.mjs`. 수정 시 반드시 repo 에서
+편집하고 `cp` 로 `~/.claude/hooks/` 에 배포. `~/.claude/` 는 git repo 가 아니므로
+직접 편집은 일회성 긴급 패치만 허용.
+
+**현재 상태**:
+- Windows (1): 설치됨 — 2026-04-09 Phase 1~3 완료. Codex 완전 동작, Gemini 는
+  companion job 파일이 실제로 생성되는 경로에서만 감지됨 (미해결 이슈는 plan 파일 참조)
+- M4 (luma3): 미설치 — codex-companion 경로는 `os.tmpdir()` 로 이식성 있지만 텔레그램
+  스크립트 경로와 PATH 구조가 다를 수 있으니 설치 시 검증 필요
+- Mac Air (luma2): 미설치
