@@ -70,6 +70,31 @@ For every cited URL in the material, apply these heuristics. Flag any hit:
 6. **Mass tertiary fallback** — if more than 60% of cited URLs are Medium,
    Substack, personal blogs, Reddit, or unsourced tweets, suspect that the
    Proposer ran out of real sources and padded with generic opinion content.
+7. **URL exists but resolves to unrelated content** (added 2026-04-09 after
+   Session 3 — see `docs/mcp-servers.md` #12). This is the content-less
+   confabulation mode: the URL syntactically exists (real arxiv id, real
+   aclanthology slug) but the paper behind it is on a completely different
+   topic. Heuristics for detecting this without fetching:
+   - **arxiv id / title mismatch** — if the claim references an arxiv id
+     AND the surrounding summary mentions a title that does not match the
+     claim topic, SUSPECT. Example from Session 3: `arxiv.org/abs/2604.03000`
+     cited for a long-context benchmark claim, but the id belongs to a math
+     paper.
+   - **arxiv id format violation** — arxiv ids follow `YYMM.NNNNN` with
+     4-5 digits after the dot. Any truncated form (`2507.30`, `2604.03`) is
+     invalid and the claim must be dropped.
+   - **Famous venue + obscure claim** — if a URL points to a well-known
+     venue (ACL, NeurIPS, arxiv) but the claim is a very niche or negative
+     finding ("no paper defends X"), treat as SUSPECT — this is where
+     confabulation concentrates (Session 3 Branch B pattern).
+   - **Too-convenient arxiv ids** — sequential or suspiciously round ids
+     (e.g., `2604.03`, `2507.30`, `2501.00001`) across multiple claims in
+     the same branch is a synthesis tell.
+
+   When SUSPECT under heuristic 7, the Skeptic cannot confirm without a
+   fetch, so the verdict is "SUSPECT — unrelated content likely". The Judge
+   will treat it as UNSUPPORTED and drop the claim unless the next round
+   replaces the citation with a verified one.
 
 If you cannot fetch URLs from this sandbox, DO NOT guess. Mark them
 `SUSPECT — needs manual verification` and list them in the new output section
@@ -201,6 +226,19 @@ Session 2 Branch C retry 에서 Gemini pro 가 `MODEL_CAPACITY_EXHAUSTED` 를 �
 MCP wrapper (`gemini-exec.mjs` #9 패치 적용) 는 이것을 감지하지 **못함** — Gemini CLI 가 retry 후 stdout 을 깨끗이 정리하고 종료하므로 wrapper 레벨에는 signature 가 남지 않는다. **Skeptic URL verification 이 유일한 방어선**. Attack 1b 를 의무화한 이유.
 
 자세한 실증 로그: `examples/deep-research.md` Session 2 섹션, `docs/mcp-servers.md` #10.
+
+## Attack 1b heuristic 7 추가 근거 (4a Session 3 실증, 2026-04-09)
+
+Session 3 는 arxiv-heavy 주제 (long-context benchmark debate) + capacity 정상 상태에서도 4 건의 fabricated URL 을 관찰했다 — `docs/mcp-servers.md` #12 신설의 근거. #10 (capacity exhaustion) 과 독립된 failure mode:
+
+- **A2**: `arxiv.org/abs/2604.03000` 실존하지만 수학 논문 — claim 과 무관 (content mismatch)
+- **B1**: `aclanthology.org/2025.tacl-1.9/` 실존하지만 "Transformers as Transducers" — claim 과 무관
+- **B3**: `arxiv.org/abs/2507.30` — invalid arxiv id (format violation)
+- **B4**: `arxiv.org/abs/2604.03` — invalid/truncated arxiv id
+
+heuristic 1~6 은 이 중 B3/B4 만 간접적으로 커버 (heuristic 1 의 "slug pattern anomalies" 로 잡히는 경우), A2/B1 은 **완전히 못 잡음**. heuristic 7 을 별도로 명시한 이유.
+
+**특히 주의**: Branch B 처럼 "negative finding (존재하지 않는 literature)" 을 요구받을 때 confabulation 이 집중됨. "X 를 옹호하는 counter-paper 를 찾아라" → 실제로 없음 → Gemini 가 공백을 가짜 famous-venue citation 으로 메꿈. Skeptic 은 이 패턴을 **의심 기본값** 으로 둘 것.
 
 ## 기대 산출
 

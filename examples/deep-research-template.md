@@ -97,6 +97,22 @@ Round 1 쿼리 생성 규칙:
 Required source types: primary papers, vendor docs, benchmark repos, case studies.
 Do NOT rely on blog posts or marketing material. Cite source URL and year.
 Time range: <scope.intent.when>
+
+CRITICAL — Anti-fabrication policy (added 2026-04-09 after Session 2/3):
+If you cannot find a real source for a claim, LEAVE IT BLANK. Do NOT invent
+URLs. Do NOT synthesize arxiv ids. Do NOT cite famous venues (arxiv, ACL,
+NeurIPS, aclanthology) from memory — only cite them if you actually
+retrieved them in this search. If the answer to a sub-question is "no
+such paper exists" or "literature is silent on this", report EXACTLY that.
+A negative finding is a valid finding. A fabricated citation is a
+critical failure that will be caught by the Skeptic and will drop the
+entire claim.
+
+Known failure modes to AVOID:
+- arxiv id format violations (e.g. `2507.30` instead of `2507.30000`)
+- citing a real arxiv/aclanthology URL whose paper is on an unrelated topic
+- Medium/Substack URLs with repeated-character slugs (`0f1b1b1b1b1b`)
+- filling gaps in "counter-argument" requests with synthesized citations
 ```
 
 #### 1b. Diff 수집 불필요 (리서치라서)

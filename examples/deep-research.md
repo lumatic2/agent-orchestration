@@ -29,17 +29,31 @@ Claude(scope + judge)
 | 항목 | 정의 | 왜 중요 |
 |---|---|---|
 | rounds_to_terminate | 종료까지 라운드 수 | `max_rounds` 상수 튜닝 근거 |
-| termination_reason | coverage-full / stagnation / max-rounds / skeptic-failed / wall-clock | 종료 조건 중 무엇이 실제로 발동하는지 |
+| termination_reason | coverage-full / stagnation / max-rounds / skeptic-failed / wall-clock / user-hold | 종료 조건 중 무엇이 실제로 발동하는지 |
 | final_coverage | filled / total | checklist 가 현실적인지 |
 | wall_clock_minutes | 실측 | 30분 기본값·60분 하드캡 적정성 |
 | gemini_branch_failures | 실패 branch / 총 branch | pro 안정성 |
-| skeptic_valid_objections_per_round | 라운드별 수용된 지적 수 | Skeptic 프롬프트 효율 |
+| gemini_fabricated_urls | fabricated / total cited URLs (Attack 1b 탐지) | #10 #12 모니터링 — blog/arxiv heavy 비교 |
+| skeptic_valid_objections_per_round | 라운드별 수용된 지적 수 (**absolute**) | Skeptic 프롬프트 효율 |
+| skeptic_objections_per_claim | 라운드별 수용 지적 / round claim 수 (**normalized**) | claim 수 편차 보정한 진짜 효율 |
+| skeptic_seconds_per_claim | Skeptic wall clock / round claim 수 (**normalized**) | Skeptic 비용 — 절대 초가 아님 |
 | skeptic_false_positive_rate | 전체 지적 중 기각 비율 | Judge 필터 강도 |
 | claim_survival_rate | SURVIVES / 총 claim | Gemini 품질 × Skeptic 공격력 |
 | divergence_vs_depth | 발산(새 방향)  vs 심화(같은 방향 깊이) 주관 평가 | 4b — C 확장 결정 핵심 |
 | checklist_revised | Round 1 이후 재작성 여부 | scope 프롬프트 품질 |
 
 마지막 항목 `divergence_vs_depth` 는 주관 평가지만 **4b 분기 결정의 핵심 신호**. 세션마다 명시적으로 한 문단 기록.
+
+### 정규화 원칙 (2026-04-09 Session 3 추가)
+
+**절대값과 claim 당 정규화를 반드시 구분해서 기록한다.** Session 3 에서 "Skeptic wall clock -24%" (497s → 380s) 를 효율 향상으로 오독할 뻔했으나, 실제로는 **claim 수가 21 → 13 으로 38% 감소**했기 때문이었다. per-claim 으로 정규화하면 23.7s/claim → 29.2s/claim 로 **오히려 느려졌다**.
+
+절대값만 기록하는 metric 은 세션 간 비교 불가능하다. 아래 두 가지 metric 은 반드시 정규화된 형태로 함께 기록:
+
+- **Skeptic 비용**: `skeptic_seconds_per_claim = skeptic_wall_clock / round_claim_count`
+- **Skeptic 효율**: `skeptic_objections_per_claim = skeptic_valid_objections / round_claim_count`
+
+`gemini_branch_failures` 처럼 총 수가 3 으로 고정된 metric 은 정규화 불필요. `claim_survival_rate` 는 이미 비율이므로 정규화 개념 동일.
 
 ## Session 1 — long-context-100k-recall-2026 (2026-04-09)
 
@@ -318,13 +332,59 @@ Session 2 에서 "arxiv-heavy 주제는 fabrication 에 안전할 것" 가설이
 - Session 3 criteria 는 "벤치마크 3+, design rationale" 등 structural 요구 → Gemini branch C 의 table 응답과 자연스럽게 매치
 - **교훈**: scope 의 checkable 항목은 "paper 가 직접 답할 수 있는 형태" 로 쓰는 게 coverage 에 유리. research-scope.md 의 "체크리스트 작성 규칙" 에 example 추가 가능.
 
-### Session 3 에서 확정된 템플릿 개정 사항 (적용 대기)
+### Session 3 Round 2 시도 및 Abort (2026-04-09 10:40, Step 5-B)
 
-1. `docs/mcp-servers.md` #12 신설: "Gemini pro content-less confabulation" — capacity 와 독립된 failure mode
-2. `research-skeptic.md` Attack 1b heuristic 7번 후보: "URL exists but resolves to unrelated content"
-3. `deep-research.md` 공통 metric 에 "claim 당 정규화" 명시 (rounds_to_terminate 같은 절대 수치 vs per-claim ratio 구분)
-4. Gemini query template (deep-research-template.md) 에 **"못 찾으면 빈 칸, 절대 fabricate 금지"** 문구 명시적 추가
-5. `research-scope.md` 에 Session 3 criteria 를 checkable + 벤치마크-친화적 example 로 추가
+Step 5-B ("자연 종료 1회 관측") 를 위해 Session 3 Round 2 이어가기를 시도, **Gemini capacity exhaustion 으로 즉시 abort**. 이 abort 자체가 새 실증 데이터.
+
+**실행 로그**:
+- 10:40 KST, sequential launch (첫 branch)
+- jobId g-ad5ac40b, pro, elapsed ~302s (pollIntervalMs 폴링 기준)
+- warnings[trailing-error]: pro + flash 모두 `MODEL_CAPACITY_EXHAUSTED`, `web_fetch` 도 `'prompt' must contain at least one valid URL` 실패
+- output: 3 papers 반환 (training-data fallback) — arxiv 2504.04150, 2504.04713 (Round 1 c-r1-004 와 **중복**), 2505.18148. Grounding 실패 상태에서 Gemini 가 composed 한 confabulation.
+
+**MCP #9 패치 첫 production 검증 ✅**:
+- `output` 필드에는 clean 본문만 포함, trailing error dump 는 `warnings[]` 로 분리됨
+- 이전 Session 1/2 에서는 본문 + error dump 가 혼재했으나 이번엔 wrapper 가 정상 분리
+- `warnings[0].type = "trailing-error"`, `signature = "Attempt 1 failed with status"`, `dump` 에 full 429 stacktrace
+- Session 1 Round 1 branch 1·2 trailing error 처리 이슈가 완전 해결됨을 확인
+
+**#10 + #12 동시 발현 케이스**:
+- #10 (capacity exhaustion → fabrication): 429 실측됨 → CLI retry → training data fallback
+- #12 (content-less confabulation): capacity 여부와 무관한 grounding 공백 — 본 케이스에서는 #10 이 #12 의 트리거
+- 둘의 관계: **#12 는 grounding 실패의 general case, #10 은 그 중 capacity-driven 하위 케이스**. Session 3 R1 의 4 건 fabrication 은 "원인 불명의 #12", R2 abort 의 3 건 confabulation 은 "429-driven 의 #12" 로 재분류 가능.
+
+**시간대 가설 약화**:
+- Step 4b 결정의 필수 정책 (c): "arxiv-heavy × 오전 검증됨" 을 근거로 했으나, R2 는 **정확히 같은 조건 (arxiv-heavy × 오전 10:40 × sequential launch)** 에서 capacity exhaustion 발생
+- 즉 재현성은 시간대/도메인만의 함수가 아니라 **Google capacity 의 하루 단위 fluctuation** 이 주요 변수
+- Step 4b 필수 정책 (c) 를 "arxiv-heavy × 오전 × capacity 여유 확인 후" 로 수정 권장 (pre-check 강화)
+
+**R2 abort 의사결정**:
+- 옵션 B (degraded 데이터로 Skeptic 돌려 루프 방어 관찰) 는 재현성 metric 오염 → 기각
+- 옵션 C (abort + Step 5-C 로 전환) 채택 — Session 3 R1 기반 vault end-to-end 검증이 더 싸고, 자연 종료 관측은 별도 세션으로 이월
+- Step 4a Done 기준 6/7 까지 커버 가능 (자연 종료 1회는 미완 유지)
+
+**공통 metric 업데이트 (R2 abort 반영)**:
+
+| 항목 | Session 3 R1 | R2 시도 | 비고 |
+|---|---|---|---|
+| rounds_attempted | 1 | 0 (abort) | — |
+| termination_reason (R2) | — | **capacity-exhaustion-abort** (종료 조건 목록 밖, **추가 후보**) | |
+| gemini_branch_failures | 0/3 | 1/1 (429) | sequential 첫 branch 에서 즉시 429 |
+| gemini_fabricated_urls | 4 | 3 (training data fallback 전원) | — |
+
+**템플릿 개정 후보 (Step 5-B abort 발) — Step 5 후반 처리 대기**:
+1. `research-scope.md` constraints 에 **pre-check 강화**: `gemini 상태` 로 quota/capacity 확인을 plan 단계가 아닌 **Round 1 직전 필수 단계** 로 격상
+2. `research-judge.md` termination_reason enum 에 `capacity-exhaustion-abort` 추가 (user-hold 와 별개 — 사용자 합의 없이 autoloop 에서 발생)
+3. `deep-research-template.md` Fallback 섹션에 "Round 시작 전 capacity-exhaustion 발견 시 즉시 abort + 재시도 스케줄링" 명시
+4. Session 3 R1 의 "Step 4b 시간대 × 도메인 결정" 필수 정책 (c) 수정: "capacity 여유 확인 후" 단서 추가
+
+### Session 3 에서 확정된 템플릿 개정 사항 (2026-04-09 적용 완료, Step 5-A)
+
+1. ✅ `docs/mcp-servers.md` #12 신설: "Gemini pro content-less confabulation" — capacity 와 독립된 failure mode, Session 3 4건 실증 테이블 포함
+2. ✅ `examples/prompts/research-skeptic.md` Attack 1b heuristic 7 추가: "URL exists but resolves to unrelated content" — arxiv id 형식 검증 + content mismatch 패턴 + Branch B 같은 negative-finding 집중 경고
+3. ✅ `examples/deep-research.md` 공통 metric 에 `skeptic_seconds_per_claim` / `skeptic_objections_per_claim` / `gemini_fabricated_urls` 추가 + "정규화 원칙" 섹션 신설
+4. ✅ `examples/deep-research-template.md` Gemini query 공통부에 Anti-fabrication policy 블록 강화 ("못 찾으면 빈 칸, negative finding 도 valid finding")
+5. ✅ `examples/prompts/research-scope.md` 체크리스트 작성 규칙 6번 (Structural criterion 우선) + Session 1/3 좋은/나쁜 example 추가
 
 ---
 

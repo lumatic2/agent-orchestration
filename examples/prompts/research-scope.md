@@ -58,6 +58,40 @@ slug: "<kebab-case-slug — 파일명/디렉토리명 용, 30자 이내>"
 3. **독립성**: 항목끼리 중복되면 Coverage % 가 왜곡됨.
 4. **현실성**: "모든 논문 인용" 같은 항목은 달성 불가 → 루프가 영원히 안 멈춤.
 5. **항목 수 3~7**: 3 미만은 너무 느슨, 7 초과는 너무 엄격.
+6. **Structural criterion 우선** (2026-04-09 Session 3 교훈): "specific fact 를 찾아라" 보다 "X 개 후보를 구조적으로 비교하라" 형태가 Gemini Proposer 의 table-style 응답과 매치가 잘 됨. Coverage 가 자연스럽게 올라간다.
+   - Session 1 specific-fact 스타일 (25% coverage): "100k+ 에서 recall 유지하는 기법 3+개 이름+논문"
+   - Session 3 structural 스타일 (42% coverage): "5 벤치마크 중 3+개의 methodology rationale + 비교표"
+   - **차이**: specific-fact 는 Proposer 가 "못 찾으면 빈 칸" 이 되지만, structural 은 Proposer 가 발견한 N 개를 나열만 해도 partial credit 가능.
+
+### Example — 좋은 checklist (Session 3 스타일, 벤치마크-친화적)
+
+```yaml
+question: "2025-2026 long-context retrieval 벤치마크의 saturation 논쟁 현황"
+
+success_criteria:
+  # 1. Structural: N 개 후보 나열 (Gemini table 응답과 매치)
+  - "saturation 주장 paper 2+ 개 (제목, 저자, 발표년도, 핵심 claim)"
+  - "saturation 반대 또는 qualification paper 1+ 개 OR 'no counter-paper found' negative finding"
+  # 2. Structural: 비교 rubric
+  - "RULER / MRCR / LongBench v2 / MMNeedle / LongICLBench 중 3+ 개의 methodology rationale"
+  # 3. Structural: 차원 간 비교표
+  - "위 벤치마크들의 정량 비교표 (task type, 길이 범위, 평가 metric 각 1 셀 이상)"
+  # 4. Structural: confound 나열
+  - "saturation 주장의 confound 2+ 개 (예: training data leak, prompt template effect)"
+  # 5. 상위 결정용 요약
+  - "NIAH 계열이 실제로 superseded 됐는지 Judge 가 1-line verdict 로 요약 가능"
+```
+
+### Example — 나쁜 checklist (specific-fact 스타일, 종료 어려움)
+
+```yaml
+success_criteria:
+  - "RULER 에서 Gemini 1.5 Pro 의 128K recall 점수"         # 단일 숫자 의존
+  - "100k+ 에서 recall 유지 기법의 구현 세부사항"            # Gemini 가 vendor docs 없으면 못 채움
+  - "RoPE vs non-RoPE 방식의 empirical 비교"                 # 있을 수도, 없을 수도 — binary 판정 어려움
+```
+
+두 example 모두 실제 Session 1/3 에서 실행한 checklist 다. 전자는 Session 3 에서 coverage 42%, 후자는 Session 1 에서 coverage 25% 로 끝났다. 같은 라운드 수, 같은 Proposer 품질이었지만 **scope 가 Proposer 능력과 매치되는가** 가 coverage 를 17pp 바꿨다.
 
 ## 체크리스트 수정 라운드 (1회 허용)
 
