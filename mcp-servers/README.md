@@ -44,8 +44,8 @@ mcp-servers/
 ### Claude Code
 
 ```bash
-claude mcp add codex-mcp -- node C:/Users/1/Projects/agent-orchestration/mcp-servers/codex-mcp/src/index.mjs
-claude mcp add gemini-mcp -- node C:/Users/1/Projects/agent-orchestration/mcp-servers/gemini-mcp/src/index.mjs
+claude mcp add codex-mcp -- node C:/Users/yusun/projects/agent-orchestration/mcp-servers/codex-mcp/src/index.mjs
+claude mcp add gemini-mcp -- node C:/Users/yusun/projects/agent-orchestration/mcp-servers/gemini-mcp/src/index.mjs
 ```
 
 등록 후 Claude Code 재시작. `mcp__codex-mcp__codex_task` / `mcp__gemini-mcp__gemini_task` 형태로 도구 노출.
@@ -59,11 +59,11 @@ claude mcp add gemini-mcp -- node C:/Users/1/Projects/agent-orchestration/mcp-se
   "mcpServers": {
     "codex-mcp": {
       "command": "node",
-      "args": ["C:/Users/1/Projects/agent-orchestration/mcp-servers/codex-mcp/src/index.mjs"]
+      "args": ["C:/Users/yusun/projects/agent-orchestration/mcp-servers/codex-mcp/src/index.mjs"]
     },
     "gemini-mcp": {
       "command": "node",
-      "args": ["C:/Users/1/Projects/agent-orchestration/mcp-servers/gemini-mcp/src/index.mjs"]
+      "args": ["C:/Users/yusun/projects/agent-orchestration/mcp-servers/gemini-mcp/src/index.mjs"]
     }
   }
 }

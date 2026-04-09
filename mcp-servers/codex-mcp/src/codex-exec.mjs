@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 const DEFAULT_TIMEOUT_MS = 60_000;
-const COMPANION_ROOT = 'C:/Users/1/.claude/plugins/cache/openai-codex/codex';
+const COMPANION_ROOT = path.join(process.env.HOME || process.env.USERPROFILE, '.claude/plugins/cache/openai-codex/codex');
 const COMPANION_RELATIVE_PATH = 'scripts/codex-companion.mjs';
 
 // ORCH_MCP_DEPTH cycle guard (docs/mcp-servers.md #6).

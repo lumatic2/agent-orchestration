@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 const FOREGROUND_TIMEOUT_MS = 15 * 60_000;
-const COMPANION_ROOT = 'C:/Users/1/.claude/plugins/cache/claude-gemini-plugin/gemini';
+const COMPANION_ROOT = path.join(process.env.HOME || process.env.USERPROFILE, '.claude/plugins/cache/claude-gemini-plugin/gemini');
 const COMPANION_RELATIVE_PATH = 'scripts/gemini-companion.mjs';
 
 // ORCH_MCP_DEPTH cycle guard (docs/mcp-servers.md #6).
