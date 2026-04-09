@@ -150,7 +150,8 @@ MCP Server (범용 저수준 인터페이스)
 
 ### 후속 과제
 
-- [ ] §6 Cursor/Windsurf 실사용 검증 시 review 도구 MCP 노출 필요성 재평가
+- [x] §6 Cursor 실사용 검증 완료 (2026-04-10) — codex-mcp 5 tools + gemini-mcp 5 tools 정상 로드, codex_run/gemini_run 실제 호출 성공
+- [ ] §6 review 도구 MCP 노출 필요성 재평가 (Cursor 실사용 중 판단)
 - [ ] Stitch MCP 서버 상태 확인 및 등록 (현재 미등록)
 
 ## 의도적으로 배제한 경로
