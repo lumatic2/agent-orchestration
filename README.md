@@ -59,6 +59,10 @@ claude mcp add gemini-mcp -- node C:/Users/1/Projects/agent-orchestration/mcp-se
 - 아키텍처·도구 스키마·후속 개선: [`docs/mcp-servers.md`](./docs/mcp-servers.md)
 - 기존 `codex:rescue` / `gemini:rescue` Skill 플러그인과 공존 (동일 companion job store 공유)
 
+## Roadmap
+
+- **OpenClaw integration** — browser automation agent, currently maintained as a separate project. Planned integration as an MCP tool once stable.
+
 ## Multi-Device
 
 This repo syncs via git. Run `sync.sh` after pulling on each device.

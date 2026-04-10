@@ -186,7 +186,7 @@ fallback:
 
   openclaw_m4:
     plan: "OpenClaw (Mac mini M4, always-on)"
-    host: "Mac mini M4 (luma3, 100.100.79.12)"
+    host: "Mac mini M4 (always-on server)"
     gateway: "ws://127.0.0.1:18789 (loopback)"
     nodes: "2 (CLI darwin + macOS app)"
     note: "Windows/MacAir에서는 SSH m4로 원격 실행. canvas.eval 방식 고정 (canvas.present 빈화면 이슈)."

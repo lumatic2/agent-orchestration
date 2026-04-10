@@ -30,8 +30,8 @@ mkdir -p "$DATA_DIR" "$LOG_DIR"
   exit 1
 }
 
-export PATH="/Users/luma3/.nvm/versions/node/v24.14.0/bin:$PATH"
-GEMINI_BIN_DEFAULT="/Users/luma3/.nvm/versions/node/v24.14.0/bin/gemini"
+export PATH="$HOME/.nvm/versions/node/v24.14.0/bin:$PATH"
+GEMINI_BIN_DEFAULT="$HOME/.nvm/versions/node/v24.14.0/bin/gemini"
 if [[ -x "${GEMINI_BIN:-$GEMINI_BIN_DEFAULT}" ]]; then
   GEMINI_CMD="${GEMINI_BIN:-$GEMINI_BIN_DEFAULT}"
 else

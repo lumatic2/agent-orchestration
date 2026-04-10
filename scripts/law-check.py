@@ -31,7 +31,7 @@ except ImportError:
     import yaml
 
 # ── 경로 설정 (Windows / M1 자동 감지) ───────────────────────────────────────
-_BASE         = Path("/Users/luma3/projects/agent-orchestration") if True else Path("C:/Users/1/Desktop")
+_BASE         = Path.home() / "projects/agent-orchestration"
 REGISTRY_PATH = _BASE / "law_registry.yaml"
 ENV_PATH      = _BASE / "content-automation/.env"
 PDF_INPUT_DIR = _BASE / "pdf-input"

@@ -146,7 +146,7 @@
 
 ## Knowledge Vault
 
-- **Location**: `luma3@m4:~/vault/` (MCP: `obsidian-vault`)
+- **Location**: `m4:~/vault/` (MCP: `obsidian-vault`)
 - **Entry point**: `00-System/VAULT_INDEX.md` — 에이전트가 vault 작업 전 반드시 읽을 것
 - **쓰기 권한**: **MCP `obsidian-vault` 또는 M4 직접** — 다른 기기에서 쓸 때는 MCP 사용
   - 로컬 vault clone 금지 (혼동 방지 — Windows vault는 삭제됨)
@@ -160,7 +160,7 @@
 - **Canonical 원본**: `~/projects/custom-skills/` (lumatic2/custom-skills git repo) — 유일한 편집 위치
 - **배포 타겟**: `~/.claude/skills/` — `setup.sh`가 덮어씀. git repo 아님. 직접 편집은 긴급 패치만.
 - **토글 보관소**: `~/.claude/skills-disabled/` — 기기별 OFF 스킬 저장소. version control 대상 아님.
-- **대상 기기**: Mac Air (luma2), M4 (luma3), Windows (1)
+- **대상 기기**: Mac Air, M4 Mac, Windows
 
 **동기화 워크플로**:
 1. `~/projects/custom-skills/`에서 편집/생성
