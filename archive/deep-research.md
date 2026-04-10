@@ -520,6 +520,40 @@ Skeptic 의 4 SUSPECT arxiv ID 를 Claude 의 WebFetch 로 직접 확인 — Jud
 
 ---
 
+## Session 4 — Step 5-D: blog/github heavy 재검증 (2026-04-10)
+
+**질문**: "2025-2026 AI agent framework 실전 채택 현황 — LangGraph, CrewAI, AutoGen, OpenAI Agents SDK, Mastra 등의 production 사용 사례와 trade-off"
+
+**주제 특성**: blog/github-heavy (Session 2와 동일 도메인, 다른 scope)
+
+### Round 1
+
+- Gemini pro × 3: **3/3 성공** (60초, 71초, 144초). Capacity abort 0건.
+- Codex Skeptic: 266초 (4분 26초). 28건 UNSUPPORTED 판정, 13건 공식 docs counter-evidence.
+- Judge: coverage 1/5 (20%). 소스 품질 심각 — generic homepage URL, bare domain, missing bibliography.
+- **관찰**: blog/github-heavy 주제에서 Gemini pro는 capacity는 안정적이지만 **인용 품질이 구조적으로 낮음**. Round 1 citations의 100%가 UNSUPPORTED.
+
+### Round 2
+
+- Gemini pro × 2 (branch 3 생략, wall clock): 2/2 성공.
+- Branch 1: 공식 docs URL 5건 확보 (LangGraph, OpenAI Agents SDK, MS Agent Framework, CrewAI, Pydantic AI)
+- Branch 2: production 사례 3건 (Klarna, Accenture, UPS — UPS는 scope 이탈로 drop), pain point 3건 (OctoMind blog, HN 2건)
+- Skeptic 생략 (wall clock). Judge 직접 필터: HN 36645575 날짜 위반, UPS drop.
+- Judge: coverage 3.5/5 (70%). wall-clock 종료.
+
+### 5-D 결론
+
+**B 패턴은 blog/github-heavy에서도 작동한다. 조건:**
+1. pre-check 필수 (주제 무관)
+2. `max_rounds ≥ 2` 필수 — Round 1 소스 품질이 구조적으로 낮으므로 보강 라운드 없이는 coverage 20%
+3. Skeptic의 가치가 arxiv-heavy보다 오히려 **더 큼** — blog/github 소스에서 generic URL, fabricated citation 비율이 높기 때문
+
+**Session 2 abort 원인 해소**: capacity pre-check 정책 도입 후 5/5 Gemini 호출 성공. 시간 경과에 의한 capacity 안정화도 기여 추정.
+
+**Step 4b 정책 (c) 수정**: "arxiv-heavy에서만 검증됨" → "모든 주제 유형에서 사용 가능, blog/github-heavy는 max_rounds ≥ 2 필수"
+
+---
+
 ## 메모
 
 ### 체인 특이사항 (실증 중 수시 업데이트)

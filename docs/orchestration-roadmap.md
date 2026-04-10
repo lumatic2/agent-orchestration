@@ -66,7 +66,7 @@
 
 ---
 
-### 방향 3 — 장시간 Deep Research 모드 (Gemini Pro 기반) ⭐ **B 패턴 채택 / Step 5-B 완료, 5-D 진행 중 (2026-04-10)**
+### 방향 3 — 장시간 Deep Research 모드 (Gemini Pro 기반) ⭐ **B 패턴 채택 / Step 5 완료 (2026-04-10)**
 
 > 인프라 베이스라인: [`../examples/deep-research-template.md`](../examples/deep-research-template.md) (복붙 템플릿) · 4 프롬프트: [`../examples/prompts/research-{scope,skeptic,judge,final}.md`](../examples/prompts/)
 > 실증 세션 로그: [`../examples/deep-research.md`](../examples/deep-research.md) (Session 1~3, Step 4a/b 결정, Step 5 진행 상태 전부 여기에)
@@ -86,7 +86,7 @@
 - 5-A 템플릿 개정 (Session 3 교훈 반영): 완료
 - 5-B 자연 종료 관측: **완료** (Session 3 R2 — coverage-full 83.3% + wall-clock 36min, Done 7/7)
 - 5-C vault end-to-end 승인 게이트: 완료
-- 5-D blog/github heavy 재검증: **진행 중** (Session 4 예정, Gemini pro capacity 불안정으로 대기)
+- 5-D blog/github heavy 재검증: **완료** (Session 4, 2026-04-10) — Gemini pro 5/5 성공 (capacity abort 0), coverage 70% (wall-clock 종료). blog/github-heavy에서 B 패턴 작동 확인. 단 Round 1 소스 품질이 구조적으로 낮으므로 `max_rounds ≥ 2` 필수.
 
 **관련 MCP 인프라**: [`mcp-servers.md`](./mcp-servers.md) §9 (output validation), §10 (capacity), §11 (position), §12 (content-less confabulation) — Deep Research 실증이 발굴한 MCP 하부 개선사항들
 
@@ -151,7 +151,7 @@ MCP Server (범용 저수준 인터페이스)
 ### 후속 과제
 
 - [x] §6 Cursor 실사용 검증 완료 (2026-04-10) — codex-mcp 5 tools + gemini-mcp 5 tools 정상 로드, codex_run/gemini_run 실제 호출 성공
-- [ ] §6 review 도구 MCP 노출 필요성 재평가 (Cursor 실사용 중 판단)
+- [x] §6 review 도구 MCP 노출 불필요 결정 (2026-04-10) — Claude Code Skill 전용으로 충분, MCP 추가 안 함
 - [x] Stitch MCP 서버 등록 완료 (2026-04-10) — `auto-stitch-gc5y6t` GCP 프로젝트 연동, Claude Code + Cursor 양쪽 등록
 
 ## 의도적으로 배제한 경로
