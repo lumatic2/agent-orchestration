@@ -2,67 +2,84 @@
 
 Multi-agent orchestration system. Claude Code = orchestrator, Codex + Gemini = workers.
 
+## How It Works
+
+```
+User → Claude Code (orchestrator)
+           ├── Codex    — implementation, refactoring, code review
+           └── Gemini   — research, web search, long-context analysis
+```
+
+Tasks are decomposed, routed by complexity and domain, delegated to the right worker, and cross-reviewed before returning results.
+
 ## Quick Start
 
 ```bash
-# 1. Check agent status
+# Check that all agent configs are in sync
 bash scripts/sync.sh --check
 
-# 2. Deploy configs to all agents
+# Deploy shared config to all agents
 bash scripts/sync.sh
-
-# 3. Dispatch a task to Codex
-bash scripts/orchestrate.sh codex "Refactor src/auth/ to use JWT"
-
-# 4. Dispatch research to Gemini
-bash scripts/orchestrate.sh gemini "Compare React vs Svelte for this project"
 ```
+
+Workers are called via MCP tools (`mcp__codex-mcp__codex_task`, `mcp__gemini-mcp__gemini_task`) or the built-in Skill system from Claude Code.
 
 ## Structure
 
 ```
-agent_config.yaml       Config hub (models, flags, paths)
-SHARED_PRINCIPLES.md    Behavioral rules (all agents)
-ROUTING_TABLE.md        Task → agent → model mapping
+agent_config.yaml       Model tiers, routing flags, complexity thresholds
+SHARED_PRINCIPLES.md    Behavioral rules shared across all agents
+ROUTING_TABLE.md        Task → agent → model decision table
 
 adapters/
   claude_global.md      ~/CLAUDE.md source (deployed by sync.sh)
   claude.md             Orchestrator rules
-  codex.md              Codex AGENTS.md (worker)
-  gemini.md             Gemini GEMINI.md (worker)
+  codex.md              Codex worker config (AGENTS.md)
+  gemini.md             Gemini worker config
 
-scripts/                30 shell scripts
-  orchestrate.sh        Dispatch tasks with fallback
-  sync.sh               Deploy shared files to agent configs
+mcp-servers/
+  codex-mcp/            MCP server wrapping Codex CLI
+  gemini-mcp/           MCP server wrapping Gemini CLI
+
+scripts/
+  sync.sh               Deploy shared config to all agents
   guard.sh              Safety hook (blocks destructive commands)
-  *-news.sh, etc.       Cron automation (9 scripts on M4)
+  env.sh                Cross-platform path setup
 
-skills/                 24 slash commands (source of truth)
-  → deployed to ~/.claude/commands/ manually
-
-context/                Project-specific context files
-pipeline/               Research pipeline (Python)
+examples/
+  adversarial-review-template.md   Multi-agent review pattern
+  deep-research-template.md        Long-form research pipeline
+  prompts/                         Reusable prompt templates
 ```
 
-## MCP Servers (방향 2)
+## MCP Servers
 
-Codex CLI와 Gemini CLI를 MCP 서버로 래핑해서 Claude Code / Cursor / Windsurf 등 모든 MCP 클라이언트에서 "에이전트를 도구로" 호출할 수 있게 만든 프로토타입.
+Codex CLI and Gemini CLI wrapped as MCP servers — callable as tools from Claude Code, Cursor, or any MCP client.
 
 ```bash
-claude mcp add codex-mcp  -- node C:/Users/1/Projects/agent-orchestration/mcp-servers/codex-mcp/src/index.mjs
-claude mcp add gemini-mcp -- node C:/Users/1/Projects/agent-orchestration/mcp-servers/gemini-mcp/src/index.mjs
+# Register (adjust path to your local clone)
+claude mcp add codex-mcp -- node /path/to/agent-orchestration/mcp-servers/codex-mcp/src/index.mjs
+claude mcp add gemini-mcp -- node /path/to/agent-orchestration/mcp-servers/gemini-mcp/src/index.mjs
 ```
 
-등록 후 재시작하면 `mcp__codex-mcp__codex_task` / `mcp__gemini-mcp__gemini_task` 형태로 노출된다.
+After restart, tools are exposed as `mcp__codex-mcp__codex_task` / `mcp__gemini-mcp__gemini_task`.
 
-- 구현: [`mcp-servers/`](./mcp-servers/)
-- 아키텍처·도구 스키마·후속 개선: [`docs/mcp-servers.md`](./docs/mcp-servers.md)
-- 기존 `codex:rescue` / `gemini:rescue` Skill 플러그인과 공존 (동일 companion job store 공유)
+- Implementation: [`mcp-servers/`](./mcp-servers/)
+- Architecture and tool schema: [`docs/mcp-servers.md`](./docs/mcp-servers.md)
+
+## Routing
+
+See [`ROUTING_TABLE.md`](./ROUTING_TABLE.md) for the full task → agent → model decision table.
+
+Key rules:
+- Codex for anything that writes or modifies files
+- Gemini for research, web search, documents longer than context window
+- Claude stays as orchestrator — delegates, reviews, decides
 
 ## Roadmap
 
-- **OpenClaw integration** — browser automation agent, currently maintained as a separate project. Planned integration as an MCP tool once stable.
+- **OpenClaw integration** — browser automation agent, planned as an MCP tool once stable.
 
 ## Multi-Device
 
-This repo syncs via git. Run `sync.sh` after pulling on each device.
+Syncs via git. Run `bash scripts/sync.sh` after pulling on each device.
