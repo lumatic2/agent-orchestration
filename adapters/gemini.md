@@ -68,6 +68,25 @@ Orchestrator가 "Codex에게 넘길 리서치"라고 명시하면 이 모드로 
 - Flash가 기본. Pro는 하루 100회 제한.
 - 한 번의 요청에 최대한 많은 정보를 담아 왕복 횟수를 줄인다.
 
+## Memory — 리서치 결과 저장 규칙
+
+`memory-mcp` MCP 서버가 등록되어 있으면, **리서치 완료 직후 반드시** `memory_store`를 호출해 결과를 저장한다.
+
+**저장 규칙**:
+1. **type**: 항상 `"research"`
+2. **tags**: **한국어 키워드 + 영어 키워드 반드시 병행** (검색 호환성)
+   - 예: `["AI 에이전트", "AI agent", "벤치마크", "benchmark", "2026"]`
+3. **source**: `"gemini-YYYY-MM-DD"` 형식
+4. **content**: 결과 전체가 아닌 **핵심 요약 + 결론 + 주요 수치** (2000자 이내)
+
+**저장 전 중복 확인**: `memory_recall`로 동일 주제 기존 메모리 확인 → 있으면 `memory_update`로 갱신, 없으면 신규 저장.
+
+```
+memory_recall(query="[조사 주제 핵심 키워드]", type="research", limit=3)
+→ 0건: memory_store(...)
+→ 1건+: 내용 비교 후 최신 정보가 있으면 memory_update(id=..., content=갱신내용)
+```
+
 ---
 
 <!-- BEGIN SHARED_PRINCIPLES -->

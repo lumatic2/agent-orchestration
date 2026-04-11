@@ -86,6 +86,21 @@
 
 **보고**: Codex와 동일 패턴. "Gemini 위임 시작/완료 (모델/소요시간)". 결과 300자 미만이면 "응답 비정상 — 재시도 필요" 알림.
 
+### Memory (에이전트 공유 메모리)
+
+`memory-mcp` MCP 서버 (`mcp__memory-mcp__*` 도구군).
+
+**Gemini 리서치 위임 전 — 캐시 먼저 확인**:
+```
+mcp__memory-mcp__memory_recall(query="[주제 키워드]", type="research", limit=3)
+```
+- 1건+ 히트 + 최신 정보 불필요: 캐시 반환, Gemini 호출 생략
+- 0건 또는 오래된 정보: Gemini 위임 진행
+
+**Gemini 결과 수신 후 — 재사용 가능한 리서치면 저장**:
+- Gemini가 자동 저장하지 않은 경우 Claude가 대신 저장
+- tags에 한국어 + 영어 키워드 **반드시 병행**
+
 ### OpenClaw 위임
 
 **용도**: Claude Code가 직접 못 하는 작업 전담
