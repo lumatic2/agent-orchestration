@@ -29,7 +29,8 @@
 | 코드 작성/수정 50줄+ 또는 4파일+ | Codex 위임 (write 모드) |
 | 코드 분석/조사/리뷰 (수정 없음) | Codex 위임 (read-only 모드) |
 | 복잡 리서치 (4+ 소스, 트렌드, 50p+ doc) | Gemini 위임 |
-| Browser/GUI/canvas/JS SPA | `/browse` 스킬 |
+| Browser/GUI/canvas/JS SPA (빠른 조회) | `/browse` 스킬 |
+| Telegram 발송·수신 / JS 렌더링 + M4 실행 | OpenClaw 위임 |
 | 단순 리서치 (≤3 검색, 단일 주제) | Claude 직접 WebSearch/WebFetch |
 | 단순 편집 (1-3파일, <50줄) | 직접 수행 |
 
@@ -84,6 +85,34 @@
 - 기술 문서 분석/논문/장문 처리/여러 소스 종합/트렌드 비교 (3개+ 대상): `--model pro` (gemini-3.1-pro-preview)
 
 **보고**: Codex와 동일 패턴. "Gemini 위임 시작/완료 (모델/소요시간)". 결과 300자 미만이면 "응답 비정상 — 재시도 필요" 알림.
+
+### OpenClaw 위임
+
+**용도**: Claude Code가 직접 못 하는 작업 전담
+- Telegram 채팅방으로 결과 발송·수신
+- JS 렌더링 페이지 크롤링·스크린샷 (M4 Chromium)
+- M4 환경에서 실행이 필요한 작업
+
+※ `/browse` 스킬(Windows gstack)과 구분: 빠른 단일 조회는 `/browse`, 결과를 Telegram으로 전달하거나 복잡한 자동화는 OpenClaw
+
+**호출 방법 (SSH)**:
+```bash
+ssh luma3@luma3ui-Macmini.local \
+  'PATH=/Users/luma3/.nvm/versions/node/v24.14.0/bin:$PATH \
+   openclaw agent --agent main --message "작업 지시" \
+   --deliver --reply-channel telegram --reply-to <chat_id> \
+   --reply-account content-bot'
+```
+
+**cron 관리**: `/openclaw` 스킬
+**MCP 직접 발송**: `mcp__openclaw-mcp__messages_send`
+
+**Examples**:
+- JS 렌더링 페이지 데이터 추출 → SSH openclaw agent + `--deliver`
+- Telegram으로 리포트 전송 → `mcp__openclaw-mcp__messages_send`
+- cron 즉시 실행·수정 → `/openclaw` 스킬
+
+---
 
 ### 금지 사항
 
