@@ -12,16 +12,12 @@ compatibility:
   claude_min: "1.0.0"
 
 # --- Model Tiers ---
+# 에이전트 = 런타임. Codex CLI 하나로 모든 GPT 모델 실행 (-m 플래그로 선택).
 models:
   codex:
     ultra: "gpt-5.4"              # Architecture analysis, large codebase, complex agentic workflows (1M ctx)
-    heavy: "gpt-5.3-codex"        # Complex coding, refactoring, debugging
+    heavy: "gpt-5.3-codex"        # Complex coding, refactoring, debugging (default)
     light: "gpt-5.3-codex-spark"  # Quick edits, formatting, boilerplate
-    mini: "gpt-5-codex-mini"      # Cheap, simple file transforms
-  chatgpt:                         # Non-coding tasks via codex CLI (-m flag)
-    heavy: "gpt-5.2"              # Document writing, summarization, analysis
-    default: "gpt-5.1"            # Data processing, translation, general tasks
-    light: "gpt-5"                # Bulk translation, simple transforms
   gemini:
     heavy: "gemini-2.5-pro"        # Deep analysis (max 100/day on Pro plan)
     default: "gemini-2.5-flash"    # Web search, research requiring live data
@@ -37,14 +33,9 @@ models:
 # --- Reasoning Levels ---
 reasoning:
   codex:
-    heavy: "xhigh"         # MEDIUM/HIGH/ULTRA: max cost OK
-    light: "low"           # LOW complexity: minimal cost
-    mini: "medium"
-  chatgpt:
-    ultra: "xhigh"         # gpt-5.4
-    heavy: "high"
-    default: "medium"
-    light: "low"
+    ultra: "xhigh"         # gpt-5.4: max reasoning
+    heavy: "high"          # gpt-5.3-codex: default
+    light: "low"           # gpt-5.3-codex-spark: minimal cost
   gemini:
     # Gemini handles thinking internally; tier determines depth
     heavy: "auto"               # gemini-3-auto decides
@@ -65,28 +56,24 @@ complexity_tiers:
   low:
     signals: "1-2 files, <10 lines, simple edit or lookup, no reasoning required"
     codex:   { tier: light,  reasoning: low }
-    chatgpt: { tier: default, reasoning: low }
     gemini:  { tier: light }
     claude:  { model: haiku,  effort: low }
 
   medium:
     signals: "3-5 files, new feature, standard coding, clear requirements"
-    codex:   { tier: heavy,  reasoning: medium }
-    chatgpt: { tier: heavy,  reasoning: medium }
+    codex:   { tier: heavy,  reasoning: heavy }
     gemini:  { tier: default }
     claude:  { model: sonnet, effort: medium }
 
   high:
     signals: "5+ files, complex bug with unclear root cause, non-trivial refactoring, cross-system changes"
-    codex:   { tier: heavy,  reasoning: high }
-    chatgpt: { tier: ultra,  reasoning: high }
+    codex:   { tier: heavy,  reasoning: heavy }
     gemini:  { tier: default }
     claude:  { model: sonnet, effort: high }
 
   ultra:
     signals: "Full codebase analysis, architecture decisions, novel design, multi-system orchestration"
-    codex:   { tier: ultra,  reasoning: xhigh }
-    chatgpt: { tier: ultra,  reasoning: xhigh }
+    codex:   { tier: ultra,  reasoning: ultra }
     gemini:  { tier: heavy }
     claude:  { model: opus,  effort: high }
 
@@ -120,10 +107,12 @@ limits:
     haiku_per_window: 2700
     note: "Sonnet은 판단만. 구현/분석은 전부 Codex/Gemini."
 
-  chatgpt_pro:
-    plan: "ChatGPT Pro ($200/mo)"
-    codex_heavy: "gpt-5.3-codex"
-    note: "코딩/분석 전부 여기로."
+  codex:
+    plan: "ChatGPT Pro ($200/mo) — Codex CLI로 실행"
+    ultra: "gpt-5.4"
+    heavy: "gpt-5.3-codex"
+    light: "gpt-5.3-codex-spark"
+    note: "코딩/분석 전부 여기로. Codex CLI가 -m 플래그로 모델 선택."
 
   gemini_pro:
     plan: "Gemini CLI (Gemini Code Assist Standard)"
@@ -147,39 +136,32 @@ ua:
 # --- Fallback Chains ---
 fallback:
   code_generation:
-    - agent: codex
-      model_key: heavy
-    - agent: chatgpt
-      model_key: heavy
+    - { agent: codex, model_key: heavy }
+    - { agent: codex, model_key: ultra }   # heavy 실패 시 ultra로 에스컬레이션
     - action: queue_and_wait
 
   research:
     # Gemini hang 시 timeout 규칙: 3분 무응답 → 1회 재시도 → Codex read-only fallback
     # Codex fallback은 웹 검색 불가 — 코드/기술 분석, 로컬 파일 기반 조사만 적합
     light:
-      - { agent: gemini, model_key: light, timeout_min: 3 }
-      - { agent: codex,  model_key: light, mode: read-only }  # Gemini hang fallback
-      - { agent: chatgpt, model_key: light }
+      - { agent: gemini, model_key: light,   timeout_min: 3 }
+      - { agent: codex,  model_key: light,   mode: read-only }
       - { agent: claude, model_key: light }
       - action: queue_and_wait
     default:
       - { agent: gemini, model_key: default, timeout_min: 3 }
-      - { agent: codex,  model_key: heavy, mode: read-only }  # Gemini hang fallback
-      - { agent: chatgpt, model_key: default }
+      - { agent: codex,  model_key: heavy,   mode: read-only }
       - { agent: claude, model_key: light }
       - action: queue_and_wait
     heavy:
-      - { agent: gemini, model_key: heavy, timeout_min: 3 }
-      - { agent: codex,  model_key: ultra, mode: read-only }  # Gemini hang fallback
-      - { agent: chatgpt, model_key: heavy }
+      - { agent: gemini, model_key: heavy,   timeout_min: 3 }
+      - { agent: codex,  model_key: ultra,   mode: read-only }
       - { agent: claude, model_key: mid }
       - action: queue_and_wait
 
   general:                           # Non-coding tasks (writing, data, translation)
-    - agent: codex
-      model_key: chatgpt.heavy       # o3
-    - agent: gemini
-      model_key: default
+    - { agent: codex,  model_key: ultra }
+    - { agent: gemini, model_key: default }
     - action: queue_and_wait
 
   orchestration:
