@@ -154,18 +154,23 @@ fallback:
     - action: queue_and_wait
 
   research:
+    # Gemini hang 시 timeout 규칙: 3분 무응답 → 1회 재시도 → Codex read-only fallback
+    # Codex fallback은 웹 검색 불가 — 코드/기술 분석, 로컬 파일 기반 조사만 적합
     light:
-      - { agent: gemini, model_key: light }
+      - { agent: gemini, model_key: light, timeout_min: 3 }
+      - { agent: codex,  model_key: light, mode: read-only }  # Gemini hang fallback
       - { agent: chatgpt, model_key: light }
       - { agent: claude, model_key: light }
       - action: queue_and_wait
     default:
-      - { agent: gemini, model_key: default }
+      - { agent: gemini, model_key: default, timeout_min: 3 }
+      - { agent: codex,  model_key: heavy, mode: read-only }  # Gemini hang fallback
       - { agent: chatgpt, model_key: default }
       - { agent: claude, model_key: light }
       - action: queue_and_wait
     heavy:
-      - { agent: gemini, model_key: heavy }
+      - { agent: gemini, model_key: heavy, timeout_min: 3 }
+      - { agent: codex,  model_key: ultra, mode: read-only }  # Gemini hang fallback
       - { agent: chatgpt, model_key: heavy }
       - { agent: claude, model_key: mid }
       - action: queue_and_wait

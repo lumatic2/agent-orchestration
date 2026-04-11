@@ -86,6 +86,11 @@
 
 **보고**: Codex와 동일 패턴. "Gemini 위임 시작/완료 (모델/소요시간)". 결과 300자 미만이면 "응답 비정상 — 재시도 필요" 알림.
 
+**Timeout & Fallback**:
+- background 알림이 **3분 내** 오지 않으면 → 1회 재시도
+- 재시도도 무응답이면 → **Codex read-only 모드**로 재위임: `Skill("codex:rescue", args="--background \"[동일 리서치 태스크]\"")`
+- Codex는 웹 검색 불가 → "웹 검색 불필요한 범위"만 위임 (코드/기술 분석, 로컬 파일 기반 조사)
+
 ### Memory (에이전트 공유 메모리)
 
 `memory-mcp` MCP 서버 (`mcp__memory-mcp__*` 도구군).
