@@ -1,7 +1,7 @@
 # AI Orchestration Roadmap — Big Picture
 
 > agent-orchestration의 다음 진화 방향. 현재 상태, 업그레이드 공간, 선정된 경로.
-> 작성: 2026-04-08
+> 작성: 2026-04-08 | 2세대 로드맵 추가: 2026-04-11
 
 ## 현재 상태 (2026-04-08 기준)
 
@@ -169,3 +169,117 @@ MCP Server (범용 저수준 인터페이스)
 - Anthropic MCP 공식 레지스트리에서 "agent-as-tool" 사례
 
 → 다음 세션에서 타겟 리서치 + 프로토타입 시작
+
+---
+
+## 2세대 로드맵 (2026-04-11 ~)
+
+> 1세대(방향 1~3)가 완료된 이후, 더 고급진 오케스트레이션으로 진화하는 4개 Phase.
+> 전제: MCP 3-에이전트 인프라, A2A 양방향 검증, adversarial chain, deep research 모두 완료된 상태.
+
+### 현재의 구조적 공백
+
+| 한계 | 증상 |
+|---|---|
+| 세션 간 기억 없음 | 같은 리서치를 Gemini가 매번 처음부터 수행 |
+| 실행이 항상 순차적 | 병렬 gather 요청을 Claude가 머릿속으로만 처리 |
+| 라우팅이 정적 Markdown | 실적 데이터가 쌓여도 라우팅 규칙이 바뀌지 않음 |
+| 사용자가 매번 트리거 | git push, 이상 신호 등 이벤트에 에이전트가 반응 못 함 |
+
+---
+
+### Phase A — 공유 메모리 레이어 (Agent Memory Layer) 🚧 **진행 중**
+
+> 가장 큰 구조적 공백 해소. 모든 후속 Phase의 기반.
+
+**목표**: `memory-mcp` MCP 서버 구축 — 에이전트들이 세션을 넘어 지식을 공유
+
+**설계**:
+- SQLite + 임베딩(sqlite-vec 또는 chromadb) 기반 로컬 벡터 저장소
+- MCP 도구 4종: `memory_store`, `memory_recall`, `memory_list`, `memory_delete`
+- 메모리 유형: `research` (리서치 요약), `decision` (라우팅 결정 근거), `code_pattern` (코드 패턴), `fact` (검증된 사실)
+- 저장 경로: `mcp-servers/memory-mcp/`
+- 동일한 `data/` 폴더 접근 — Codex/Gemini job store와 공존
+
+**기대 효과**:
+- Gemini가 deep research 결과를 저장 → 다음 관련 질문 시 재사용
+- adversarial review에서 과거 패턴 참조 ("이 타입의 버그는 전에도 나왔음")
+- Claude가 라우팅 결정 근거를 축적 → Phase C 자가 진화의 원재료
+
+**완료 기준**:
+- [ ] `memory-mcp` MCP 서버 스캐폴딩 (Node.js, codex-mcp 패턴 동일)
+- [ ] SQLite + 임베딩 도구 4종 구현
+- [ ] Claude Code에 등록 + 스모크 테스트
+- [ ] `memory_store` / `memory_recall` 실전 호출 1회 확인
+
+---
+
+### Phase B — 워크플로 DAG 엔진 (Structured Parallel Execution)
+
+> Claude 머릿속의 라우팅을 선언형 YAML로 외부화 → 진짜 병렬 실행 실현
+
+**목표**: YAML 워크플로 정의 → Python 실행기가 DAG 해석 → 병렬 에이전트 호출
+
+**설계 예시**:
+```yaml
+task: "competitive analysis"
+dag:
+  scope:   { agent: claude, output: spec }
+  gather1: { agent: gemini, input: spec, topic: "player A", parallel_group: gather }
+  gather2: { agent: gemini, input: spec, topic: "player B", parallel_group: gather }
+  gather3: { agent: gemini, input: spec, topic: "player C", parallel_group: gather }
+  skeptic: { agent: codex,  input: [gather1, gather2, gather3], depends_on: gather }
+  judge:   { agent: claude, input: skeptic }
+```
+
+- 실행기: `pipeline/dag_runner.py` (경량 Python, 외부 의존성 최소화)
+- Mermaid 다이어그램 자동 생성 → 진행 상태 시각화
+- 기존 deep-research-template.md의 B 패턴을 DAG로 공식화
+
+**전제 조건**: Phase A 완료 (노드 간 결과 전달을 메모리 레이어로)
+
+---
+
+### Phase C — 자가 진화 라우팅 (Adaptive Routing)
+
+> ROUTING_TABLE.md를 데이터 기반으로 자동 보정
+
+**목표**: 실적 데이터 축적 → 라우팅 드리프트 감지 → 제안 PR 자동 생성
+
+**설계**:
+- 각 작업 완료 시 메타데이터 태깅: `{ task_type, agent, model, quality_score, latency_s }`
+- 주기적 집계 스크립트 (`scripts/routing-audit.sh`)
+- 임계치 초과 시 ROUTING_TABLE.md 수정 PR 자동 생성 (사람 승인 필수 유지)
+
+**전제 조건**: Phase A 완료 (메타데이터 저장소로 memory-mcp 활용)
+
+---
+
+### Phase D — 이벤트 기반 자율 루프 (Reactive Orchestration)
+
+> 사용자 트리거 없이 에이전트가 이벤트에 반응
+
+**목표**: file/webhook 이벤트 → 에이전트 자동 실행 → 결과 알림
+
+**유스케이스**:
+- `git push` → adversarial review 자동 실행
+- 투자봇 이상 신호 감지 → Gemini 분석 → Telegram 알림
+- 새 데이터 파일 감지 → 자동 파이프라인 실행
+
+**설계**:
+- 기존 `job-watcher` 위에 event subscription 레이어 추가
+- 이벤트 유형: `file_change`, `git_push`, `cron`, `webhook`
+- 에이전트 응답 로직을 `config/event-rules.yaml`에 선언
+
+**전제 조건**: Phase B 완료 (DAG 엔진으로 에이전트 실행 표준화)
+
+---
+
+### 실행 순서 요약
+
+```
+Phase A: memory-mcp       ← 지금 시작. 2~3일. 즉시 체감 효과 + 후속 Phase 기반
+Phase B: DAG 엔진         ← Phase A 완료 후. 1주. 병렬 orchestration 실현
+Phase C: 자가 진화 라우팅 ← Phase A 완료 후. 데이터 쌓이면 자연스럽게
+Phase D: 이벤트 루프      ← Phase A+B 완료 후. 가장 높은 자율성
+```
