@@ -346,16 +346,24 @@ Phase C: Verified Ledger       ← memory-mcp 신뢰도 모델
 
 ## 다음 세션 시작점 (우선순위순)
 
-### 1. `/codex:review` 엔드투엔드 실증 테스트 ⭐
+### 1. `/codex:review` 엔드투엔드 실증 테스트 ⭐ **완료 (2026-04-12)**
 
-이번 세션에서 Verification-First의 **Gemini 반쪽**(1차 WebSearch → Gemini 검증)만 실증. **Codex 반쪽**(코드 변경 → review 제안 → 사용자 승인 → `/codex:review --background` → 결과 반영)은 미검증.
+**시나리오**: `scripts/device/job-watcher-inject.py` 결함 4종 (cursor pre-advance로 엔트리 손실 / stat-read race / non-atomic cursor write / log file handle leak) 을 Claude가 직접 수정 → `/codex:review --background` 백그라운드 실행 → 결과 반영 → 커밋.
 
-**제안 시나리오**: 이 repo의 작은 스크립트 결함 1개를 골라 Claude가 직접 수정 → "Codex review 제안드릴까요?" 발화 → 실제 /codex:review 실행 → 의미 있는 지적이 나오는지 관찰.
+**실측 결과**:
+- Review 실행 시간: ~3분 (백그라운드). 이전 세션에서 "1시간 이상 미진행"으로 보였던 현상은 Windows pwsh.exe tool-call latency + sandbox `Command declined` 후 재시도 흐름이 로그에서 정체처럼 보였던 것으로 판단.
+- **Codex가 Claude 놓친 regression 탐지**: 내 1차 수정이 `fh.read(size - offset)` + `new_offset = offset + len(raw)` 조합으로 at-least-once 보장을 깨뜨림. writer append가 stat/read 윈도우를 가로지르면 partial trailing line 이 `JSONDecodeError` 분기에서 조용히 버려지고 cursor 만 advance → 알림 영구 손실. 원본 코드는 `read()` to-EOF + `new_offset = size` 로 중복은 있어도 손실은 없었음.
+- 방향 맞는 defensive fix 즉시 적용: `raw.rfind(b"\n")`로 마지막 완전 라인 경계까지만 advance, trailing partial은 다음 실행 이월.
 
-**검증 포인트**:
-- Claude가 proactively 제안하는 판단이 실제 트리거되는지
-- `/codex:review --background` 작동 + 결과가 Claude 컨텍스트로 회귀하는 경로
-- 리뷰 품질이 verification-first의 가치를 입증하는지
+**검증 결론**:
+- Claude proactive 제안 → 사용자 승인 → background 실행 → 결과 반영 루프 **작동 확인**
+- Verification-First의 핵심 가치 실전 입증: **Claude 1차 edit가 원본보다 나쁜 regression을 도입할 수 있고**, 독립 모델 교차검증 없이는 merge 후에나 드러났을 문제였음
+- Codex review 품질 기준치 통과 — 이 유형의 race condition은 diff-only 관점에서 잡기 어려운 blind spot
+- 커밋: `9027b33 fix(hook): job-watcher inject — at-least-once delivery 보존`
+
+**운영 메모**:
+- `Command declined` (exit -1) 은 sandbox의 정상 동작. Codex가 대안 명령으로 재시도하므로 review 전체가 막히지 않음
+- Background 실행 시 진행 로그는 `.output` 파일에 실시간 기록 — `Read` 로 peek 가능
 
 ### 2. Codex plugin audit (Gemini와 대칭 질문)
 
