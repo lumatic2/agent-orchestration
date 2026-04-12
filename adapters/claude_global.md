@@ -97,10 +97,14 @@ ssh luma3@luma3ui-Macmini.local \
 
 ---
 
-## 새 프로젝트 관례
+## 프로젝트 관례
 
 - **위치**: `~/projects/{이름}/` — 명시 없으면 항상 여기
 - **초기화**: `/prd {이름}` 스킬
+- **필수 파일**: 모든 프로젝트 폴더에 아래 두 파일을 둔다
+  - `CLAUDE.md` — 프로젝트 기술 스택, 컨벤션, Claude에게 주는 지시
+  - `ROADMAP.md` — 마일스톤, 진행 상태, 다음 할 일. 체크리스트 형식
+- **세션 시작 규칙**: 프로젝트 폴더에서 세션이 시작되면 `ROADMAP.md`를 읽고 현재 진행 상황을 파악한 뒤 작업에 착수한다. (각 프로젝트 CLAUDE.md에도 이 규칙을 명시할 것)
 
 ---
 
@@ -117,9 +121,15 @@ ssh luma3@luma3ui-Macmini.local \
 
 ---
 
-## Knowledge Vault
+## 외부 도구 역할 분리
 
-- **위치**: `m4:~/vault/` (MCP: `obsidian-vault`). 작업 전 `00-System/VAULT_INDEX.md` 읽을 것.
-- **쓰기**: MCP 또는 M4 직접. 로컬 clone 금지.
+### Obsidian Vault — 개인 지식 저장소 (나만 봄)
+- **위치**: `m4:~/vault/` (MCP: `obsidian-vault`)
+- **용도**: 리서치 원본, 세션 로그, 아이디어 메모, 학습 노트
 - **경로**: 리서치→`10-knowledge/` / 전문가→`20-experts/` / 프로젝트→`30-projects/` / 임시→`00-inbox/` / 로그→`40-log/YYYY-MM-DD.md`
-- **Frontmatter 필수**: type, domain, source, date, status
+- **쓰기**: MCP 또는 M4 직접. 로컬 clone 금지. Frontmatter 필수 (type, domain, source, date, status)
+
+### Notion — 외부 공유용 대시보드 (남에게 보여줌)
+- **용도**: 포트폴리오, 프로젝트 소개, 정리된 문서, 팀/외부 공유 자료
+- **MCP**: `notion-mcp` (설정 필요)
+- **원칙**: publish-ready 콘텐츠만. 작업 중인 초안은 프로젝트 폴더 또는 vault에
