@@ -221,72 +221,76 @@ MCP Server (범용 저수준 인터페이스)
 
 ---
 
-### Phase B — 워크플로 DAG 엔진 (Structured Parallel Execution)
+## 패러다임 전환 (2026-04-12) — Verification-First
 
-> Claude 머릿속의 라우팅을 선언형 YAML로 외부화 → 진짜 병렬 실행 실현
+> 오늘 세션 중 근본 재검토: "위임 = 병목"이라는 관찰에서 파라다임 재정의.
 
-**목표**: YAML 워크플로 정의 → Python 실행기가 DAG 해석 → 병렬 에이전트 호출
+**기존 가정**: Claude = planner, Codex/Gemini = workers (노동 분산)
+**새 가정**: Claude = 주 실행자, Codex/Gemini = **교차검증 오라클** (할루시네이션 감소 목적만)
 
-**설계 예시**:
-```yaml
-task: "competitive analysis"
-dag:
-  scope:   { agent: claude, output: spec }
-  gather1: { agent: gemini, input: spec, topic: "player A", parallel_group: gather }
-  gather2: { agent: gemini, input: spec, topic: "player B", parallel_group: gather }
-  gather3: { agent: gemini, input: spec, topic: "player C", parallel_group: gather }
-  skeptic: { agent: codex,  input: [gather1, gather2, gather3], depends_on: gather }
-  judge:   { agent: claude, input: skeptic }
-```
+Opus 4.6 1M context로 거의 모든 일상 작업 직접 가능. 플랜 구독으로 토큰 제약 느슨. delegation의 원래 이유(능력·비용)가 무의미해짐. **남는 가치 = 다른 모델의 독립 관점**.
 
-- 실행기: `pipeline/dag_runner.py` (경량 Python, 외부 의존성 최소화)
-- Mermaid 다이어그램 자동 생성 → 진행 상태 시각화
-- 기존 deep-research-template.md의 B 패턴을 DAG로 공식화
-
-**전제 조건**: Phase A 완료 (노드 간 결과 전달을 메모리 레이어로)
+**결과**: 아래 B/C/D Phase 대폭 재조정.
 
 ---
 
-### Phase C — 자가 진화 라우팅 (Adaptive Routing)
+### Phase B (구버전) — DAG 엔진 ❌ **취소 (2026-04-12)**
 
-> ROUTING_TABLE.md를 데이터 기반으로 자동 보정
+> 병렬 워커 orchestration 전제. Verification-first 모델에선 병렬화할 워커가 거의 없음 (Claude 혼자 대부분 실행). 경량 YAML DAG보다 Claude 머릿속 순차 흐름이 더 빠르고 간단.
 
-**목표**: 실적 데이터 축적 → 라우팅 드리프트 감지 → 제안 PR 자동 생성
-
-**설계**:
-- 각 작업 완료 시 메타데이터 태깅: `{ task_type, agent, model, quality_score, latency_s }`
-- 주기적 집계 스크립트 (`scripts/routing-audit.sh`)
-- 임계치 초과 시 ROUTING_TABLE.md 수정 PR 자동 생성 (사람 승인 필수 유지)
-
-**전제 조건**: Phase A 완료 (메타데이터 저장소로 memory-mcp 활용)
+**잔존 가치**: Deep Research의 B 패턴(Proposer×N + Skeptic + Judge) 같은 구조적 병렬은 여전히 의미 있으나 빈도가 낮아 별도 Phase로 유지할 가치 없음. 필요 시 1회성 Python 스크립트로 처리.
 
 ---
 
-### Phase D — 이벤트 기반 자율 루프 (Reactive Orchestration)
+### Phase C (구버전) — 자가 진화 라우팅 ❌ **취소 (2026-04-12)**
 
-> 사용자 트리거 없이 에이전트가 이벤트에 반응
+> 라우팅할 워커가 거의 없으므로 라우팅 드리프트도 거의 없음. 결정 매트릭스가 단순해져 정적 문서(`claude_global.md`)로 충분.
 
-**목표**: file/webhook 이벤트 → 에이전트 자동 실행 → 결과 알림
+---
+
+### Phase B (신규) — 이벤트 기반 리뷰 루프 (Reactive Verification)
+
+> 구 Phase D에서 승격. Verification-first와 궁합 최상.
+
+**목표**: 사용자 트리거 없이 이벤트에 반응해 **리뷰/검증**을 자동 수행.
 
 **유스케이스**:
-- `git push` → adversarial review 자동 실행
-- 투자봇 이상 신호 감지 → Gemini 분석 → Telegram 알림
-- 새 데이터 파일 감지 → 자동 파이프라인 실행
+- `git push` → `/codex:review` 자동 실행 → 결과 알림
+- 대규모 diff 감지 → `/codex:adversarial-review` 자동 제안
+- 투자봇 이상 신호 → Gemini fact-check → Telegram 알림
 
 **설계**:
 - 기존 `job-watcher` 위에 event subscription 레이어 추가
 - 이벤트 유형: `file_change`, `git_push`, `cron`, `webhook`
-- 에이전트 응답 로직을 `config/event-rules.yaml`에 선언
+- 응답 로직을 `config/event-rules.yaml`에 선언
+- **사용자 제안 + 승인** 모델 유지 (전 자동 트리거 금지)
 
-**전제 조건**: Phase B 완료 (DAG 엔진으로 에이전트 실행 표준화)
+**전제 조건**: 없음 (Phase A memory-mcp만 있으면 됨)
 
 ---
 
-### 실행 순서 요약
+### Phase C (신규) — Verified Knowledge Ledger
+
+> Phase A memory-mcp의 역할 재정의 + 신뢰도 모델 추가.
+
+**목표**: 메모리를 "단순 캐시"에서 "교차검증된 사실 ledger"로 격상.
+
+**설계**:
+- `verified_by` 태그 표준화 (`claude+codex`, `claude+gemini`, `claude+codex+gemini`)
+- `confidence_level` 필드 추가 (single/dual/triple-verified)
+- `memory_recall` 시 검증 수준 상위부터 반환
+- Claude가 고중요 주장을 할 때 자동으로 verified ledger 참조
+
+**전제 조건**: Phase A (완료)
+
+---
+
+### 실행 순서 요약 (재조정)
 
 ```
-Phase A: memory-mcp       ← 지금 시작. 2~3일. 즉시 체감 효과 + 후속 Phase 기반
-Phase B: DAG 엔진         ← Phase A 완료 후. 1주. 병렬 orchestration 실현
-Phase C: 자가 진화 라우팅 ← Phase A 완료 후. 데이터 쌓이면 자연스럽게
-Phase D: 이벤트 루프      ← Phase A+B 완료 후. 가장 높은 자율성
+Phase A: memory-mcp           ✅ 완료 (2026-04-11)
+Phase B: Reactive Verification ← 이벤트 기반 자동 리뷰/검증
+Phase C: Verified Ledger       ← memory-mcp 신뢰도 모델
 ```
+
+**축소 근거**: 오케스트레이션 시스템의 복잡도는 verification 품질에 직접 기여하지 않음. 단순한 구조 + 강력한 검증 primitives = 목표.

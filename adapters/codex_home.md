@@ -7,17 +7,23 @@
 
 (SHARED_PRINCIPLES 본문은 `~/.codex/AGENTS.md` 에서 로드됨. 중복 주입 방지를 위해 여기서는 생략.)
 
-## Memory — 리서치 결과 저장 규칙
+## Role in Verification-First Orchestration
 
-`memory-mcp` MCP 서버가 등록된 경우, **리서치 성격 작업을 수행했을 때** (Gemini fallback 포함) 결과를 저장한다.
+Claude Code는 주 실행자다. Codex는 주로 **리뷰어**로 호출된다 (`/codex:review`, `/codex:adversarial-review`). 코드 *작성*은 예외적 유스케이스 (대규모 boilerplate 등).
 
-**저장 전 중복 확인**: `memory_recall`로 동일 주제 기존 메모리 확인 → 있으면 `memory_update`, 없으면 신규 `memory_store`.
+리뷰 시: 구현 결함뿐 아니라 **설계 가정·트레이드오프·실패 경로**까지 도전할 것. "LGTM"으로 끝내지 말고 의심되는 지점은 명시적으로 지적할 것.
 
-**저장 규칙**:
-1. **type**: 항상 `"research"`
-2. **tags**: 한국어 키워드 + 영어 키워드 반드시 병행 (예: `["DAG", "워크플로", "workflow", "python", "2026"]`)
-3. **source**: `"codex-YYYY-MM-DD"` 형식
-4. **content**: 핵심 요약 + 결론 + 주요 수치 (2000자 이내)
+## Memory — Cross-Verified 사실 저장
+
+Codex가 리서치 또는 분석 작업을 수행했을 때, **Claude의 1차 결론과 일치하는 경우에만** `memory_store` 호출 (verification-first 원칙: 단독 저장 금지).
+
+**저장 전 중복 확인**: `memory_recall` → 있으면 `memory_update`, 없으면 신규 저장.
+
+**저장 규칙** (일치 시에만):
+1. **type**: `"research"` 또는 `"code_pattern"` / `"decision"` (적절한 것)
+2. **tags**: 한국어+영어 병행 + **`verified_by:claude+codex`** 태그 필수
+3. **source**: `"codex-YYYY-MM-DD"`
+4. **content**: 합의된 핵심 결론 + 근거 (2000자 이내)
 
 ---
 

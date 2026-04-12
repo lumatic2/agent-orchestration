@@ -2,72 +2,68 @@
 <!-- ⚠️ 원본 파일: adapters/claude_global.md (agent-orchestration 레포)
      ~/CLAUDE.md 는 sync.sh가 여기서 복사한 배포본 — 직접 편집 금지 -->
 
-## Self-Execution Guard
+## 오케스트레이션 원칙: Verification-First
 
-작업 시작 전 아래 규칙을 적용한다:
+Claude(나)가 **주 실행자**다. 코드 편집·WebSearch·파일 분석·계획 수립은 직접 수행.
+**위임은 노동 offloading이 아니라 교차검증 목적**으로만 사용한다:
+- 독립 모델의 관점으로 할루시네이션 감소
+- 설계/가정 도전 (adversarial review)
+- Google 인덱스 기반 사실 검증 (Gemini)
 
-| Condition | Action |
+**자동 트리거 금지**. 위임 필요 판단 시 사용자에게 **제안만** 하고 승인 대기. 모든 위임은 **background + 실패 허용**. 워커 실패는 task 중단이 아니라 "독립 관점 못 얻음"일 뿐 — 내 1차 답은 이미 있다.
+
+### 위임 결정 매트릭스
+
+| 상황 | 액션 |
 |---|---|
-| 코드 작성/수정 50줄+ 또는 4파일+ | Codex 위임 (write 모드) |
-| 코드 분석/조사/리뷰 (수정 없음) | Codex 위임 (read-only 모드) |
-| 복잡 리서치 (4+ 소스, 트렌드, 50p+ doc) | Gemini 위임 |
-| Browser/GUI/canvas/JS SPA (빠른 조회) | `/browse` 스킬 |
-| Telegram 발송·수신 / JS 렌더링 + M4 실행 | OpenClaw 위임 |
-| 단순 리서치 (≤3 검색, 단일 주제) | Claude 직접 WebSearch/WebFetch |
-| 단순 편집 (1-3파일, <50줄) | 직접 수행 |
+| 단순 편집·포매팅·1-2 파일 수정 | 직접 수행 |
+| 일상 리서치 (뉴스·문서·비교) | 직접 `WebSearch` / `WebFetch` |
+| 코드 변경 ≥ 50줄 or ≥ 3 파일 | Claude가 작성 → "`/codex:review` 제안드릴까요?" |
+| 보안·DB·금융 관련 코드 | 작성 후 `/codex:review` 제안 (강권장) |
+| "이 결정 안전해?" "설계 맞나?" 판단 | `/codex:adversarial-review` 제안 |
+| 최신성 필수 사실 (버전·가격·뉴스) | WebSearch 1차 → 의심 시 Gemini fact-check 제안 |
+| 2M 초과 단일 문서 | `Skill("gemini:rescue", args="--background --model pro \"...\"")` |
+| 대규모 boilerplate 생성 (예외적) | `Skill("codex:rescue", args="--background --write ...")` |
+| Telegram / JS 렌더링 / M4 실행 | OpenClaw (아래) |
+| Browser/GUI/SPA 빠른 조회 | `/browse` 스킬 |
 
-### Codex 위임
+### Codex 호출 (주 유스케이스: 리뷰)
 
-**호출**: `Skill("codex:rescue", args="...")` — `codex exec` 직접 호출 금지.
+- **표준 리뷰**: `/codex:review --background` 사용자 제안
+- **Adversarial (설계/가정 도전)**: `/codex:adversarial-review --background` 사용자 제안
+- **Bulk 작성 (예외적)**: `Skill("codex:rescue", args="--background --write \"절대경로 + 작업\"")`
+- **코드 분석 (예외적)**: `Skill("codex:rescue", args="--background \"분석 대상\"")`
 
-**플래그**:
-- 코드 작성/수정: `--background --write "task"`
-- 코드 분석/조사: `--background "task"`
-- Follow-up: 위 플래그에 `--resume` 추가
-- 단순/포맷팅: `--background --write --model spark --effort low "task"`
+**브리프 규칙** (rescue 모드 한정):
+- 절대 경로 명시. cwd 추측 금지
+- 복잡 작업: `Context Budget - MUST: [...] / DO NOT: [...] / Done: [검증 커맨드]`
+- Codex는 cwd 내부만 수정 가능. 외부면 사용자에게 알림
 
-**작업 설명 규칙**:
-- 절대 경로 명시. Codex의 cwd 추측에 의존 금지.
-- 경로 제약: Codex는 현재 cwd 내부만 수정 가능. 외부면 사용자에게 알림.
-- 복잡한 작업: `Context Budget - MUST: [필수 파일] / DO NOT: [제외 파일]`, `Done: [검증 커맨드]`
+### Gemini 호출 (Fact-Check Oracle, 선택적)
 
-**검증** (코드 작성/수정 한정):
-- `git diff --stat` → 100줄 미만: `git diff` 전체 / 100~500줄: 핵심 hunk / 500줄+: 사용자에게 알림
-- 이상 발견 시 즉시 알림 (자동 수정 금지)
+**기본값은 호출 안 함**. Claude 직접 WebSearch가 1차. Gemini는 독립 검증용.
 
-### Gemini 위임
+- **사실 검증**: `Bash("gemini -p \"독립적으로 답해: ...\"", timeout: 90000)` — 실패 허용
+- **2M 초과 문서 or 심층**: `Skill("gemini:rescue", args="--background --model pro \"...\"")`
+- 실패 시 **재시도 금지**. "Gemini 불안정, 1차 답으로 진행" 사용자에게 알림
 
-**호출**: `Skill("gemini:rescue", args="--background ...")` — `gemini -p` 직접 호출 금지.
-
-**플래그**:
-- 기본: `--background "task"`
-- 심층/대용량: `--background --model pro "task"`
-
-**Timeout & Fallback**:
-- timeout (exit 2) 또는 오류 (exit 1) 발생 시: 즉시 사용자에게 "Gemini 불안정" 알림
-- **재시도 금지**: 동일 Gemini 태스크 즉시 재시도 금지 (연쇄 hang 위험)
-- 분기:
-  - **웹 검색 불필요** (긴 문서 요약, 코드 분석, 추론 작업): `Skill("codex:rescue", args="--background \"동일 태스크\"")` 로 전환
-  - **웹 검색 필수** (최신 트렌드·뉴스·레퍼런스 수집 등): Codex로 넘기지 말 것. Codex는 웹 검색 능력 없음. 사용자에게 "재시도 / 수동 처리 / 취소" 중 선택 요청.
-
-### Memory (에이전트 공유 메모리)
+### Memory (Verified 사실 ledger)
 
 `memory-mcp` 도구군 (`mcp__memory-mcp__*`).
 
-- **위임 전**: `memory_recall(query, type="research")` 캐시 확인 → 히트 시 Gemini/Codex 위임 생략
-- **결과 수신 후**: Gemini 또는 Codex(fallback) 가 저장 안 한 경우 Claude가 `memory_store` 호출. tags에 한국어+영어 병행.
+- **저장 기준**: **교차검증된 사실만**. Claude 단독 WebSearch 결과는 저장 금지 (검증 안 됨). 세션 내 메모리로 충분
+- **호출 전**: `memory_recall(query)` → 히트 시 재조사 생략
+- **저장 시**: tags에 한국어+영어 병행 + `verified_by:claude+codex` 또는 `verified_by:claude+gemini` 태그 필수
 
 ### OpenClaw 위임
 
-Telegram 발송·수신, JS 렌더링 크롤링, M4 환경 실행 전담. `/browse`(빠른 단일 조회)와 구분.
+Telegram 발송·수신, JS 렌더링 크롤링, M4 환경 실행 전담.
 
-**SSH 호출**:
 ```bash
 ssh luma3@luma3ui-Macmini.local \
   'PATH=/Users/luma3/.nvm/versions/node/v24.14.0/bin:$PATH \
    openclaw agent --agent main --message "작업 지시" \
-   --deliver --reply-channel telegram --reply-to <chat_id> \
-   --reply-account content-bot'
+   --deliver --reply-channel telegram --reply-to <chat_id> --reply-account content-bot'
 ```
 
 **cron 관리**: `/openclaw` 스킬 | **MCP 직접 발송**: `mcp__openclaw-mcp__messages_send`
@@ -77,15 +73,16 @@ ssh luma3@luma3ui-Macmini.local \
 ### 금지 사항
 
 - `Agent(subagent_type=codex-coder|gemini-researcher)` 직접 사용 금지
+- 사용자 승인 없이 Codex/Gemini에 자동 위임 금지 (대기 시간·토큰 낭비)
 - vault 저장: 사용자 명시 요청 시만 `mcp__obsidian-vault__write_note`
 
 ### Examples
 
-- 새 기능 구현 → `Skill("codex:rescue", args="--background --write \"경로 + 작업\"")`
-- 단순 포맷 → `Skill("codex:rescue", args="--background --write --model spark --effort low \"...\"")`
-- 파일 분석 → `Skill("codex:rescue", args="--background \"경로 분석: ...\"")`
-- AI 트렌드 리서치 → `Skill("gemini:rescue", args="--background \"...\"")`
-- 논문 100p → `Skill("gemini:rescue", args="--background --model pro \"...\"")`
+- 버그 수정 (10줄) → Claude 직접
+- 리팩토링 (150줄 × 5파일) → Claude 직접 작성 → "Codex review 제안드릴까요?"
+- "이 마이그레이션 안전해?" → Claude 1차 분석 → "Codex adversarial review 제안할까요?"
+- AI 트렌드 조사 → Claude WebSearch 1차 → 고중요 사실만 Gemini fact-check 제안
+- 논문 100p 요약 → `Skill("gemini:rescue", args="--background --model pro \"...\"")` (용량상 유일한 길)
 - 빗썸 시세 → `/browse` 스킬
 
 ---
