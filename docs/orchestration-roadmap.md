@@ -344,6 +344,40 @@ Phase C: Verified Ledger       ← memory-mcp 신뢰도 모델
 
 ---
 
+## 후속 세션 (2026-04-12, 동일 날짜 2회차)
+
+> 위 "세션 마감" 이후 같은 날 이어진 세션. 1~2순위 로드맵 항목 실증 완주.
+
+### 완료 항목
+
+**1순위 `/codex:review` 엔드투엔드 실증 ✅**
+- `scripts/device/job-watcher-inject.py`의 결함 4종을 Claude가 직접 수정
+- `/codex:review --background` 실측 작동 (이전 "1시간 hang" 가설 기각, 실제 ~3분)
+- Codex가 Claude 1차 edit의 at-least-once 위반 regression 탐지 → defensive fix 반영
+- `~/.claude/hooks/job-watcher-inject.py` **배포 완료** (repo → 설치 경로 수동 copy, smoke test 통과)
+
+**2순위 Codex plugin audit ✅**
+- 결론: **유지**. app-server-protocol / 구조화 review schema / stop-review-gate hook / job store / persistent thread 등 `codex exec`로 재현 불가능한 10종 기능에 의존. Gemini plugin과 비대칭.
+
+### 이 세션 커밋 시퀀스 (origin/master 대비 7 commits ahead)
+
+```
+58aa7b1 docs(roadmap): Codex plugin audit — 유지 결론 기록
+eb82d01 docs(roadmap): /codex:review 엔드투엔드 실증 결과 기록
+9027b33 fix(hook): job-watcher inject — at-least-once delivery 보존
+a500594 docs(roadmap): 세션 마감 상태 + 다음 세션 시작점 기록
+7209725 chore(orchestration): Gemini plugin 의존도 제거 + WebSearch 해제
+110dd56 refactor(orchestration): Verification-First 패러다임 전환
+0caa7bc chore: 플러그인 캐시 패치 확장 + 레거시 SCP 플로우 제거
+```
+
+### 이 세션 이후 상태
+
+- **이 repo는 1~2일간 적극 작업 없음**. 3순위 (운용 관측) 는 다른 프로젝트에서 평소처럼 Claude Code 쓰면서 수동 수집하는 passive phase.
+- `origin/master` 대비 7 commits ahead — push 여부는 다음 능동 작업 시점에 판단 (지금 push 해도 무방, 관측 결과 반영 patch를 같이 묶어서 push 해도 OK).
+
+---
+
 ## 다음 세션 시작점 (우선순위순)
 
 ### 1. `/codex:review` 엔드투엔드 실증 테스트 ⭐ **완료 (2026-04-12)**
@@ -397,13 +431,19 @@ Phase C: Verified Ledger       ← memory-mcp 신뢰도 모델
 - 이전 세션 hang 가설은 기각. background 실행 후 3~5분 peek cadence가 실측 기준.
 - plugin 제거 검토 안 함 — 향후 review 출력의 JSON schema 파싱 자동화 (verified ledger 연계) 여지까지 고려하면 **유지 쪽이 오히려 투자 가치**.
 
-### 3. 실제 운용 관측 (1~2일)
+### 3. 실제 운용 관측 (1~2일) ⏳ **현재 단계 (2026-04-12 ~)**
 
-새 규칙이 실제 워크플로에서 어떻게 체감되는지:
-- Claude 단독 처리 비율 로깅
-- Codex review 제안 빈도와 사용자 수락률
-- Gemini fact-check 필요성 체감
-- CLAUDE.md 규칙 미세 보정 후보 수집
+새 규칙이 실제 워크플로에서 어떻게 체감되는지. 이 기간 동안 이 repo에는 **적극적으로 손댈 필요 없음** — 다른 프로젝트에서 Claude Code를 평소처럼 쓰면서 마찰 지점을 수동 수집.
+
+**관측 대상**:
+- Claude 단독 처리 비율 (위임 없이 끝난 요청 비율 체감)
+- Codex review 제안 빈도와 사용자 수락률 — 제안이 과소/과다한지
+- Gemini fact-check 필요성 체감 — direct `gemini -p` 호출이 실제로 얼마나 일어나는지
+- CLAUDE.md 규칙 미세 보정 후보 수집 (예: "이 상황도 review 제안 대상이었는데 Claude가 안 제안함")
+
+**관측 종료 기준**: 1~2일 체감 충분 or 의미 있는 보정 후보 3개 이상 수집
+
+**관측 끝나면**: 후보를 정리해서 `adapters/claude_global.md` 패치 → `sync.sh`로 배포 → 그 다음 5번 Phase B 착수
 
 ### 4. Plugin cache 물리 삭제 (optional, 저우선)
 
