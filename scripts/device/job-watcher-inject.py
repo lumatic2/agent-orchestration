@@ -24,6 +24,22 @@ QUEUE = HOOK_DIR / "job-watcher-queue.jsonl"
 CURSOR = HOOK_DIR / ".job-watcher-inject.cursor"
 
 
+def _log_error(msg: str) -> None:
+    try:
+        with (HOOK_DIR / "job-watcher.log").open("a", encoding="utf-8") as fh:
+            fh.write(f"[inject-hook] {msg}\n")
+    except Exception:
+        pass
+
+
+def _write_cursor_atomic(offset: int) -> None:
+    # Write via temp file + os.replace so a crash mid-write cannot leave
+    # a truncated cursor file that we'd misread as offset 0 on next run.
+    tmp = CURSOR.parent / (CURSOR.name + ".tmp")
+    tmp.write_text(str(offset))
+    os.replace(tmp, CURSOR)
+
+
 def main() -> int:
     try:
         if not QUEUE.exists():
@@ -40,8 +56,20 @@ def main() -> int:
             return 0
         with QUEUE.open("rb") as fh:
             fh.seek(offset)
-            chunk = fh.read().decode("utf-8", errors="replace")
-        new_offset = size
+            # Bound the read to the size we stat'd. If the queue grew
+            # between stat() and read(), leave the extra bytes for the
+            # next invocation instead of reading past our advance point.
+            raw = fh.read(size - offset)
+        # Only advance past complete, newline-terminated records. If a
+        # writer's append straddles our stat/read window, the trailing
+        # partial line stays in the queue for the next invocation rather
+        # than being silently dropped by the JSONDecodeError branch below.
+        last_nl = raw.rfind(b"\n")
+        if last_nl < 0:
+            return 0
+        complete = raw[: last_nl + 1]
+        new_offset = offset + len(complete)
+        chunk = complete.decode("utf-8", errors="replace")
         entries = []
         for line in chunk.splitlines():
             line = line.strip()
@@ -51,12 +79,12 @@ def main() -> int:
                 entries.append(json.loads(line))
             except json.JSONDecodeError:
                 continue
-        # Always advance cursor, even if parsing produced nothing useful.
-        try:
-            CURSOR.write_text(str(new_offset))
-        except Exception:
-            pass
         if not entries:
+            # Empty batch is safe to skip forward — no delivery to protect.
+            try:
+                _write_cursor_atomic(new_offset)
+            except Exception as err:
+                _log_error(f"cursor write failed (empty batch): {err}")
             return 0
 
         # Emit a system-reminder block. Claude Code forwards hook stdout as
@@ -83,15 +111,20 @@ def main() -> int:
                 + (f" | 작업: {prompt}" if prompt else "")
             )
         lines.append("</job-watcher-updates>")
-        sys.stdout.write("\n".join(lines) + "\n")
-    except Exception as err:
-        # Never block user prompts. Log to watcher log if writable.
+        payload = "\n".join(lines) + "\n"
+        # Emit FIRST, then advance cursor. If stdout write raises, the
+        # outer except catches it and the cursor stays put — next run
+        # redelivers the batch rather than silently dropping it.
+        sys.stdout.write(payload)
+        sys.stdout.flush()
         try:
-            (HOOK_DIR / "job-watcher.log").open("a").write(
-                f"[inject-hook] error: {err}\n"
-            )
-        except Exception:
-            pass
+            _write_cursor_atomic(new_offset)
+        except Exception as err:
+            # Emission already succeeded; a cursor failure here means the
+            # next run will re-emit this batch. Duplicate > drop.
+            _log_error(f"cursor write failed after emit: {err}")
+    except Exception as err:
+        _log_error(f"error: {err}")
     return 0
 
 
