@@ -365,11 +365,37 @@ Phase C: Verified Ledger       ← memory-mcp 신뢰도 모델
 - `Command declined` (exit -1) 은 sandbox의 정상 동작. Codex가 대안 명령으로 재시도하므로 review 전체가 막히지 않음
 - Background 실행 시 진행 로그는 `.output` 파일에 실시간 기록 — `Read` 로 peek 가능
 
-### 2. Codex plugin audit (Gemini와 대칭 질문)
+### 2. Codex plugin audit (Gemini와 대칭 질문) ✅ **완료 (2026-04-12)**
 
 "Codex plugin이 `codex exec` direct 호출 대비 뭘 더 주나?" — Gemini plugin 제거와 같은 질문.
 
-**가설**: Codex는 `/codex:review`, `/codex:adversarial-review`의 **Claude Code 전용 UX** 때문에 유지. Gemini와 달리 제거 결론이 **다를 가능성**이 큼. 하지만 실측해서 확인할 가치 있음.
+**결론: 유지.** Gemini와 결론이 달라지는 이유는 plugin이 `codex exec` CLI로 재현 불가능한 하부 기능에 의존하기 때문.
+
+**`codex exec` 단독으로는 할 수 없고 plugin이 제공하는 것**:
+
+1. **app-server-protocol 직접 호출** (`lib/app-server.mjs`, `broker-endpoint.mjs`) — `codex exec`가 노출하지 않는 Codex의 lower-level 턴 제어 API 사용. `runAppServerTurn` / `runAppServerReview` / `interruptAppServerTurn` 이 여기에 의존.
+2. **구조화된 리뷰 출력** (`schemas/review-output.schema.json`) — `verdict`/`findings[severity,title,body,file,line_start/end,confidence,recommendation]`/`next_steps` JSON 스키마 강제. `codex exec`는 free-form text만 돌려줌 → 재현하려면 별도 prompt+parser 레이어 필요.
+3. **Stop-review-gate hook** (`hooks/hooks.json` + `stop-review-gate-hook.mjs`, 900s timeout) — 매 Claude 턴 직전 자동 리뷰. plugin hook 통합 없이는 구현 불가.
+4. **Job store** (`lib/state.mjs`, `tracked-jobs.mjs`, `job-control.mjs`) — `/codex:status` / `/codex:result` / `/codex:cancel` 이 조회하는 persistent job DB. `codex exec`는 ephemeral.
+5. **Persistent task threads** (`buildPersistentTaskThreadName`, `findLatestTaskThread`) — `--resume-last` / `--resume` / `--fresh` 세션 연속성.
+6. **Git-aware review context 수집** (`lib/git.mjs`: `collectReviewContext`, `resolveReviewTarget`) — working-tree vs branch diff 자동 감지, pre-flight repo 체크. 직접 구현하려면 shell wrapping 필요.
+7. **모델/effort 라우팅** — `--model spark` alias, `--effort {none|minimal|low|medium|high|xhigh}` 검증, `MODEL_ALIASES` 맵.
+8. **Setup/auth 관리** — `getCodexAuthStatus`, `getCodexAvailability`, `/codex:setup --enable-review-gate`.
+9. **Rendering 레이어** (`lib/render.mjs`) — `renderReviewResult`, `renderStoredJobResult`, `renderCancelReport` 등 Claude Code 컨텍스트 최적화된 출력 포맷.
+10. **Skill 메타데이터** (`skills/codex-cli-runtime`, `codex-result-handling`, `gpt-5-4-prompting`) — Claude가 companion 호출 시 참조하는 내부 프롬프트 가이드.
+
+**Gemini plugin과의 비대칭**:
+- Gemini plugin은 주로 세션 관리 wrapper에 가까워서 `gemini -p` direct call + `Bash` orchestration으로 90%+ 대체됨 → 제거
+- Codex plugin은 `codex exec`의 상위 layer가 아니라 **parallel API (app-server-protocol)** 를 쓴다. `exec`로는 stop-gate hook, structured findings, job store, resume 모두 재현 불가 → **제거 시 실제 기능 손실**
+
+**관측된 약점**:
+- **Windows pwsh.exe fan-out latency**. tool call마다 `pwsh.exe -Command '...'` subprocess가 뜨면서 전체 review가 3분+ 걸림. Linux/macOS 대비 측정적으로 느림.
+- sandbox가 일부 명령 (`Get-ChildItem -Recurse`, multiline Python one-liner) 을 `Command declined` (exit -1) 로 차단 → Codex가 대안 명령으로 재시도. 정상 동작이지만 로그만 봤을 때 hang처럼 보일 수 있음 (이전 세션의 "1시간 미진행" 착시의 원인).
+
+**권고**:
+- `/codex:review`, `/codex:adversarial-review` 는 **기본 background 호출**. foreground는 1~2 파일 한정일 때만.
+- 이전 세션 hang 가설은 기각. background 실행 후 3~5분 peek cadence가 실측 기준.
+- plugin 제거 검토 안 함 — 향후 review 출력의 JSON schema 파싱 자동화 (verified ledger 연계) 여지까지 고려하면 **유지 쪽이 오히려 투자 가치**.
 
 ### 3. 실제 운용 관측 (1~2일)
 
