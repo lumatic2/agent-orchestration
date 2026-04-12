@@ -294,3 +294,102 @@ Phase C: Verified Ledger       ← memory-mcp 신뢰도 모델
 ```
 
 **축소 근거**: 오케스트레이션 시스템의 복잡도는 verification 품질에 직접 기여하지 않음. 단순한 구조 + 강력한 검증 primitives = 목표.
+
+---
+
+## 현재 상태 (2026-04-12 세션 마감)
+
+### 완료된 정비 항목
+
+**인프라 포트 수정**:
+- `scripts/sync.sh:29` 등 5개 파일의 `/c/Users/1` → `$HOME` 하드코딩 제거
+- `~/.gemini/settings.json`의 `codex-mcp` 경로 수정
+- 이전 기기 유저명이 남아 있어 이 기기에서 adapter 배포가 4/9 이후 동작 안 하던 상태 해소
+
+**Gemini 안정화**:
+- `gemini-companion.mjs`의 `TIMEOUT_MS = 5 * 1000 // TEST` 테스트값 leak → 3분 복원
+- DEP0190 경고 억제, `--search` 허수 플래그 제거
+- 이후 `claude-gemini-plugin` 자체 비활성화 (`enabledPlugins: false`)
+
+**Verification-First 패러다임 전환**:
+- `adapters/claude_global.md` 오케스트레이션 섹션 전면 재작성
+- Claude = 주 실행자, Codex = 상시 리뷰어, Gemini = fact-check oracle
+- 자동 위임 트리거 금지, 사용자 제안·승인 모델
+- 모든 위임 background + 실패 허용
+- WebSearch hook block 해제 (Claude 직접 리서치가 1차)
+- Gemini 호출 전부 direct bash로 통일 (`Bash("gemini -p ...")`)
+- `scripts/device/patch-gemini-companion.sh` 삭제
+
+**2세대 Phase 재조정**:
+- Phase B (DAG 엔진) ❌ 취소 — 병렬 워커 거의 없음
+- Phase C (자가 진화 라우팅) ❌ 취소 — 라우팅할 게 없음
+- Phase D (이벤트 루프) → 신규 **Phase B (Reactive Verification)** 로 승격
+- 신규 **Phase C (Verified Ledger)** — memory-mcp 신뢰도 모델
+
+### 실증 검증 (이 세션 내)
+
+- Node.js LTS 버전 질의로 Verification-First 실전 테스트
+- Claude WebSearch 1차 답이 **실제로 틀렸음** (Active LTS 22 → 실제 24)
+- Direct `gemini -p` 18초 fact-check로 **오류 탐지 성공**
+- 플러그인 없이도 fact-check 유스케이스 90%+ 대체 가능 확인
+
+### 커밋 시퀀스 (origin/master 대비 4 commits ahead)
+
+```
+7209725 chore(orchestration): Gemini plugin 의존도 제거 + WebSearch 해제
+110dd56 refactor(orchestration): Verification-First 패러다임 전환
+0caa7bc chore: 플러그인 캐시 패치 확장 + 레거시 SCP 플로우 제거
+9ffc9ae fix: Gemini→Codex fallback chain 안정화 + Windows 경로 이식성
+```
+
+---
+
+## 다음 세션 시작점 (우선순위순)
+
+### 1. `/codex:review` 엔드투엔드 실증 테스트 ⭐
+
+이번 세션에서 Verification-First의 **Gemini 반쪽**(1차 WebSearch → Gemini 검증)만 실증. **Codex 반쪽**(코드 변경 → review 제안 → 사용자 승인 → `/codex:review --background` → 결과 반영)은 미검증.
+
+**제안 시나리오**: 이 repo의 작은 스크립트 결함 1개를 골라 Claude가 직접 수정 → "Codex review 제안드릴까요?" 발화 → 실제 /codex:review 실행 → 의미 있는 지적이 나오는지 관찰.
+
+**검증 포인트**:
+- Claude가 proactively 제안하는 판단이 실제 트리거되는지
+- `/codex:review --background` 작동 + 결과가 Claude 컨텍스트로 회귀하는 경로
+- 리뷰 품질이 verification-first의 가치를 입증하는지
+
+### 2. Codex plugin audit (Gemini와 대칭 질문)
+
+"Codex plugin이 `codex exec` direct 호출 대비 뭘 더 주나?" — Gemini plugin 제거와 같은 질문.
+
+**가설**: Codex는 `/codex:review`, `/codex:adversarial-review`의 **Claude Code 전용 UX** 때문에 유지. Gemini와 달리 제거 결론이 **다를 가능성**이 큼. 하지만 실측해서 확인할 가치 있음.
+
+### 3. 실제 운용 관측 (1~2일)
+
+새 규칙이 실제 워크플로에서 어떻게 체감되는지:
+- Claude 단독 처리 비율 로깅
+- Codex review 제안 빈도와 사용자 수락률
+- Gemini fact-check 필요성 체감
+- CLAUDE.md 규칙 미세 보정 후보 수집
+
+### 4. Plugin cache 물리 삭제 (optional, 저우선)
+
+`~/.claude/plugins/cache/claude-gemini-plugin/` 디렉토리 자체는 남아 있음. 1-2주 관찰 후 재활성화 안 할 확신 서면 `rm -rf`.
+
+### 5. Phase B (Reactive Verification) 착수 — 1~3번 완료 후
+
+`git push` → 자동 `/codex:review` 제안 트리거. `job-watcher` 확장.
+**전제**: 관측 데이터 없이 자동화부터 만들면 잘못된 트리거 기준 고정 위험 → 반드시 1~3번 뒤.
+
+### 6. Phase C (Verified Ledger) — Phase B 이후
+
+memory-mcp 스키마에 `verified_by` / `confidence_level` 필드. DB migration + MCP 도구 파라미터 확장.
+
+---
+
+## 남은 기술 부채 (언제든 해결 가능)
+
+- `mcp-servers/gemini-mcp/` 서버 — 별개 컴포넌트. 사용 빈도 재평가 후 유지/제거 판단
+- `mcp-servers/codex-mcp/` 서버 — 동일. A2A 실험용이었으나 실사용 낮음
+- `docs/mcp-servers.md` 문서 — Verification-first 반영 필요
+- `scripts/orchestrate.sh` — CLAUDE.md에 "폐기"로 명시돼 있음. 실제 삭제 가능
+- `README.md` — Verification-First 패러다임 반영
