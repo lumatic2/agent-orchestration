@@ -26,7 +26,7 @@ detect_os() {
   case "$(uname -s)" in
     MINGW*|MSYS*|CYGWIN*)
       OS="windows"
-      BASE_DIR="/c/Users/1"
+      BASE_DIR="$HOME"
       ;;
     Darwin)
       OS="macos"

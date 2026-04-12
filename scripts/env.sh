@@ -26,7 +26,7 @@ export SYS_TMP
 # ── Node.js 모듈 경로 ────────────────────────────────────────
 # Windows: npm global 모듈이 AppData 아래에 위치
 if [[ "$PLATFORM" == "windows" ]]; then
-  _WIN_NPM="/c/Users/1/AppData/Roaming/npm/node_modules"
+  _WIN_NPM="${HOME}/AppData/Roaming/npm/node_modules"
   _FALLBACK="$HOME/Desktop/node_modules"
   _PLAYWRIGHT_PATHS="$(node -e 'console.log(require.resolve.paths("playwright").join(":"))' 2>/dev/null || true)"
   export NODE_PATH="${_WIN_NPM}:${_FALLBACK}:${_PLAYWRIGHT_PATHS}"

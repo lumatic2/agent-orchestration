@@ -87,10 +87,10 @@ flags:
 # --- Paths (auto-detected by sync.sh via OS) ---
 paths:
   windows:
-    base: "/c/Users/1"
-    claude_config: "/c/Users/1/.claude"
-    codex_config: "/c/Users/1/.codex"
-    gemini_config: "/c/Users/1/.gemini"
+    base: "$HOME"
+    claude_config: "$HOME/.claude"
+    codex_config: "$HOME/.codex"
+    gemini_config: "$HOME/.gemini"
   macos:
     base: "$HOME"
     claude_config: "$HOME/.claude"

@@ -27,8 +27,8 @@ SECRETS=(
 _find_gcloud() {
   if command -v gcloud &>/dev/null; then
     echo "gcloud"
-  elif [ -f "/c/Users/1/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud" ]; then
-    echo "/c/Users/1/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud"
+  elif [ -f "${HOME}/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud" ]; then
+    echo "${HOME}/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud"
   elif [ -f "$HOME/google-cloud-sdk/bin/gcloud" ]; then
     echo "$HOME/google-cloud-sdk/bin/gcloud"
   elif [ -f "/usr/lib/google-cloud-sdk/bin/gcloud" ]; then

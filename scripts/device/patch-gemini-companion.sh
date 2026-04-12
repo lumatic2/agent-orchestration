@@ -26,6 +26,12 @@ if [ ! -f "$TARGET" ]; then
   exit 1
 fi
 
+# TIMEOUT_MS 테스트값 복원 (항상 검사 — 플러그인 업데이트 시 테스트값 리그레션 방지)
+if grep -q 'TIMEOUT_MS = 5 \* 1000' "$TARGET"; then
+  sed -i 's|const TIMEOUT_MS = 5 \* 1000;.*|const TIMEOUT_MS = 3 * 60 * 1000;|' "$TARGET"
+  echo "[patch] restored TIMEOUT_MS to 3 minutes"
+fi
+
 # 이미 패치 적용 여부 확인 (buildGeminiArgs 함수가 있으면 이미 패치됨)
 if grep -q 'buildGeminiArgs' "$TARGET"; then
   echo "[patch] already patched: $TARGET"

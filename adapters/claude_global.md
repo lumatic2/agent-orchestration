@@ -43,14 +43,19 @@
 - 기본: `--background "task"`
 - 심층/대용량: `--background --model pro "task"`
 
-**Timeout & Fallback**: 3분 무응답 → 1회 재시도 → Codex read-only 재위임 (웹 검색 불가 범위만).
+**Timeout & Fallback**:
+- timeout (exit 2) 또는 오류 (exit 1) 발생 시: 즉시 사용자에게 "Gemini 불안정" 알림
+- **재시도 금지**: 동일 Gemini 태스크 즉시 재시도 금지 (연쇄 hang 위험)
+- 분기:
+  - **웹 검색 불필요** (긴 문서 요약, 코드 분석, 추론 작업): `Skill("codex:rescue", args="--background \"동일 태스크\"")` 로 전환
+  - **웹 검색 필수** (최신 트렌드·뉴스·레퍼런스 수집 등): Codex로 넘기지 말 것. Codex는 웹 검색 능력 없음. 사용자에게 "재시도 / 수동 처리 / 취소" 중 선택 요청.
 
 ### Memory (에이전트 공유 메모리)
 
 `memory-mcp` 도구군 (`mcp__memory-mcp__*`).
 
-- **Gemini 위임 전**: `memory_recall(query, type="research")` 캐시 확인 → 히트 시 Gemini 생략
-- **결과 수신 후**: Gemini가 저장 안 한 경우 Claude가 `memory_store` 호출. tags에 한국어+영어 병행.
+- **위임 전**: `memory_recall(query, type="research")` 캐시 확인 → 히트 시 Gemini/Codex 위임 생략
+- **결과 수신 후**: Gemini 또는 Codex(fallback) 가 저장 안 한 경우 Claude가 `memory_store` 호출. tags에 한국어+영어 병행.
 
 ### OpenClaw 위임
 

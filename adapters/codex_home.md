@@ -7,6 +7,20 @@
 
 (SHARED_PRINCIPLES 본문은 `~/.codex/AGENTS.md` 에서 로드됨. 중복 주입 방지를 위해 여기서는 생략.)
 
+## Memory — 리서치 결과 저장 규칙
+
+`memory-mcp` MCP 서버가 등록된 경우, **리서치 성격 작업을 수행했을 때** (Gemini fallback 포함) 결과를 저장한다.
+
+**저장 전 중복 확인**: `memory_recall`로 동일 주제 기존 메모리 확인 → 있으면 `memory_update`, 없으면 신규 `memory_store`.
+
+**저장 규칙**:
+1. **type**: 항상 `"research"`
+2. **tags**: 한국어 키워드 + 영어 키워드 반드시 병행 (예: `["DAG", "워크플로", "workflow", "python", "2026"]`)
+3. **source**: `"codex-YYYY-MM-DD"` 형식
+4. **content**: 핵심 요약 + 결론 + 주요 수치 (2000자 이내)
+
+---
+
 ## Response Preference
 
 - Prefer short, step-by-step instructions.
@@ -19,7 +33,7 @@
 
 ## Notion Automation (Local)
 
-- When the user asks to save notes/tasks into Notion, use the local helper script `notion_db.py` deployed to the home directory (Windows: `C:/Users/1/notion_db.py`, Unix: `$HOME/notion_db.py`).
+- When the user asks to save notes/tasks into Notion, use the local helper script `notion_db.py` deployed to the home directory (`~/notion_db.py`).
 - Assume `NOTION_TOKEN` and `NOTION_DATABASE_ID` exist in the environment (never print tokens).
 - Default workflow:
   1. Draft a clean structure (title + sections) from the user's intent.
