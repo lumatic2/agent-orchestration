@@ -188,29 +188,36 @@ MCP Server (범용 저수준 인터페이스)
 
 ---
 
-### Phase A — 공유 메모리 레이어 (Agent Memory Layer) 🚧 **진행 중**
+### Phase A — 공유 메모리 레이어 (Agent Memory Layer) ✅ **완료 (2026-04-11)**
 
 > 가장 큰 구조적 공백 해소. 모든 후속 Phase의 기반.
 
-**목표**: `memory-mcp` MCP 서버 구축 — 에이전트들이 세션을 넘어 지식을 공유
+**구현체**: [`mcp-servers/memory-mcp/`](../mcp-servers/memory-mcp/)
 
-**설계**:
-- SQLite + 임베딩(sqlite-vec 또는 chromadb) 기반 로컬 벡터 저장소
-- MCP 도구 4종: `memory_store`, `memory_recall`, `memory_list`, `memory_delete`
-- 메모리 유형: `research` (리서치 요약), `decision` (라우팅 결정 근거), `code_pattern` (코드 패턴), `fact` (검증된 사실)
-- 저장 경로: `mcp-servers/memory-mcp/`
-- 동일한 `data/` 폴더 접근 — Codex/Gemini job store와 공존
+**완료 내용**:
+- SQLite + FTS5 풀텍스트 검색 기반 (임베딩은 후속 업그레이드)
+- MCP 도구 6종: `memory_store`, `memory_recall`, `memory_list`, `memory_update`, `memory_delete`, `memory_stats`
+- 메모리 유형 5종: `research`, `decision`, `code_pattern`, `fact`, `general`
+- Claude Code + Gemini CLI 양쪽 등록 완료 (`~/.gemini/settings.json`)
+- 저장 경로: `data/memory.db` (gitignore 적용)
 
-**기대 효과**:
-- Gemini가 deep research 결과를 저장 → 다음 관련 질문 시 재사용
-- adversarial review에서 과거 패턴 참조 ("이 타입의 버그는 전에도 나왔음")
-- Claude가 라우팅 결정 근거를 축적 → Phase C 자가 진화의 원재료
+**에이전트 규칙 배포**:
+- Gemini: 리서치 완료 후 자동 `memory_store` (한국어+영어 태그 병행 규칙)
+- Claude: Gemini 위임 전 `memory_recall` 캐시 확인 규칙
 
-**완료 기준**:
-- [ ] `memory-mcp` MCP 서버 스캐폴딩 (Node.js, codex-mcp 패턴 동일)
-- [ ] SQLite + 임베딩 도구 4종 구현
-- [ ] Claude Code에 등록 + 스모크 테스트
-- [ ] `memory_store` / `memory_recall` 실전 호출 1회 확인
+**검증**:
+- store/recall/stats/delete 기능 테스트 완료
+- FTS 한계 확인: 영어↔한국어 교차 검색 안 됨 → 태그 병행으로 보완
+- Gemini 자율 저장 실전 검증은 다음 세션에서 (Gemini 불안정으로 연기)
+
+**잔여**:
+- Gemini `memory_store` 자율 호출 실전 확인
+- 임베딩 기반 의미 검색 업그레이드 (FTS 한계 해소, Phase C 전 권장)
+
+**부수 작업 (같은 세션)**:
+- Gemini timeout 3분 + Codex read-only fallback 규칙 추가
+- `chatgpt` 에이전트 → `codex` 3-tier로 통합 (ultra/heavy/light)
+- `~/CLAUDE.md` 227 → 122줄 정리
 
 ---
 
