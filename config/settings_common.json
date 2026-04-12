@@ -52,15 +52,6 @@
             "command": "bash ~/projects/agent-orchestration/scripts/guard.sh \"$TOOL_INPUT\""
           }
         ]
-      },
-      {
-        "matcher": "WebSearch",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo 'RULE VIOLATION: WebSearch is blocked. Delegate research to Gemini instead: bash ~/projects/agent-orchestration/scripts/orchestrate.sh gemini \"<query>\" <task-name>' >&2 && exit 2"
-          }
-        ]
       }
     ]
   },
