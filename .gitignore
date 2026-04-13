@@ -51,3 +51,6 @@ archive/system-setup.md
 # Local config with personal IDs
 config/notion_pages.conf
 context/statusline.md
+
+# Claude Code worktrees
+.claude/worktrees/
