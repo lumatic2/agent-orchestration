@@ -47,6 +47,33 @@ proj() {
     printf '\n# Claude Code worktrees\n.claude/worktrees/\n' >> "$gi"
   }
 
+  # ── worktree 메타 헬퍼 (jq 기반) ──────────────────────
+  _pm_save_wt_desc() {
+    local proj=$1 name=$2 desc=$3
+    meta=$(jq --arg p "$proj" --arg n "$name" --arg d "$desc" \
+              'if .[$p] == null then .[$p] = {} else . end
+               | if .[$p].wt == null then .[$p].wt = {} else . end
+               | .[$p].wt[$n] = {desc:$d}' <<<"$meta")
+    _pm_save "$meta"
+  }
+
+  _pm_remove_wt_meta() {
+    local proj=$1 name=$2
+    meta=$(jq --arg p "$proj" --arg n "$name" 'del(.[$p].wt[$n])' <<<"$meta")
+    _pm_save "$meta"
+  }
+
+  _pm_rename_wt_meta() {
+    local proj=$1 old=$2 new=$3
+    local old_val
+    old_val=$(jq --arg p "$proj" --arg n "$old" '.[$p].wt[$n] // {}' <<<"$meta")
+    meta=$(jq --arg p "$proj" --arg o "$old" --arg nn "$new" \
+              --argjson v "$old_val" \
+              'del(.[$p].wt[$o]) | .[$p].wt[$nn] = $v' <<<"$meta")
+    _pm_save "$meta"
+  }
+
+  # ── 에이전트 런칭 메뉴 ─────────────────────────────────
   _pm_launch_agent() {
     local target_dir=$1
     local agent_menu="claude    Claude Code"$'\n'
@@ -64,6 +91,13 @@ proj() {
       *)      ;;  # shell — cd만 하고 끝
     esac
   }
+
+  # ── 색상 헬퍼 ──────────────────────────────────────────
+  _pm_green()  { printf '\033[32m%s\033[0m\n' "$*"; }
+  _pm_red()    { printf '\033[31m%s\033[0m\n' "$*"; }
+  _pm_yellow() { printf '\033[33m%s\033[0m' "$*"; }
+  _pm_gray()   { printf '\033[90m%s\033[0m\n' "$*"; }
+  _pm_mag()    { printf '\033[35m%s\033[0m\n' "$*"; }
 
   # ── Step 1: 프로젝트 목록 구성 ─────────────────────────
   local rows=() name pdir sk ago pcat pdesc sorted fzf_input line
@@ -88,25 +122,25 @@ proj() {
     fzf_input+="$line"$'\n'
   done <<<"$sorted"
 
-  fzf_input+="────────────────────────────────────────────"$'\n'
-  fzf_input+="[+new]   새 프로젝트 만들기"$'\n'
-  fzf_input+="[edit]   프로젝트 설명/카테고리 수정"$'\n'
-  fzf_input+="[ren]    프로젝트 이름 변경"$'\n'
-  fzf_input+="[del]    프로젝트 삭제"$'\n'
+  local fzf_header
+  fzf_header=$'  ctrl-n: 새 프로젝트  ctrl-e: 설명수정  ctrl-r: 이름변경  ctrl-d: 삭제\n──────────────────────────────────────────────────────────────'
 
-  local sel
-  sel=$(printf '%s' "$fzf_input" | fzf --layout=reverse --prompt='proj> ' --height=40% --border --no-sort \
-            --header='Select a project') || return 0
+  local fzf_out key sel
+  fzf_out=$(printf '%s' "$fzf_input" | fzf --layout=reverse --prompt='proj> ' --height=40% --border --no-sort \
+            --header="$fzf_header" \
+            --expect='ctrl-n,ctrl-e,ctrl-r,ctrl-d') || return 0
+  key=$(head -1 <<<"$fzf_out")
+  sel=$(sed -n '2p' <<<"$fzf_out")
 
   # ── 프로젝트 관리 액션 ─────────────────────────────────
-  if [[ $sel == '[+new]'* ]]; then
-    printf '  프로젝트 이름: '; read -r pname
+  if [[ $key == 'ctrl-n' ]]; then
+    _pm_yellow '  프로젝트 이름: '; read -r pname
     [[ -z $pname ]] && { echo '  취소됨.'; return; }
     local ppath="$root/$pname"
-    [[ -d $ppath ]] && { echo "  이미 존재: $ppath"; return; }
+    [[ -d $ppath ]] && { _pm_red "  이미 존재: $ppath"; return; }
 
-    printf '  설명 (한글 OK): '; read -r pdesc
-    printf '  카테고리 (AI/Web/MCP/Bot/Game/Tool/Infra/Etc): '; read -r pcat
+    _pm_yellow '  설명 (한글 OK): '; read -r pdesc
+    _pm_yellow '  카테고리 (AI/Web/MCP/Bot/Game/Tool/Infra/Etc): '; read -r pcat
     [[ -z $pcat ]] && pcat='Etc'
 
     mkdir -p "$ppath"
@@ -137,11 +171,11 @@ EOF
               '.[$n] = {cat:$c, desc:$d}' <<<"$meta")
     _pm_save "$meta"
     _pm_touch "$ppath"
-    cd "$ppath" && printf '  -> %s\n' "$ppath"
+    cd "$ppath" && _pm_green "  -> $ppath"
     return
   fi
 
-  if [[ $sel == '[edit]'* ]]; then
+  if [[ $key == 'ctrl-e' ]]; then
     local edit_input=""
     while IFS=$'\t' read -r sk name ago pcat pdesc _; do
       [[ -z $name ]] && continue
@@ -154,19 +188,19 @@ EOF
     local ename; ename=$(awk '{print $1}' <<<"$esel")
     local cur_cat; cur_cat=$(jq -r --arg n "$ename" '.[$n].cat // ""' <<<"$meta")
     local cur_desc; cur_desc=$(jq -r --arg n "$ename" '.[$n].desc // ""' <<<"$meta")
-    printf '  현재: [%s] %s\n' "$cur_cat" "$cur_desc"
-    printf '  설명 (Enter=유지): '; read -r new_desc
+    _pm_gray "  현재: [$cur_cat] $cur_desc"
+    _pm_yellow "  설명 (Enter=유지): "; read -r new_desc
     [[ -z $new_desc ]] && new_desc="$cur_desc"
-    printf '  카테고리 (Enter=유지, 현재=%s): ' "$cur_cat"; read -r new_cat
+    _pm_yellow "  카테고리 (Enter=유지, 현재=$cur_cat): "; read -r new_cat
     [[ -z $new_cat ]] && new_cat="$cur_cat"
     meta=$(jq --arg n "$ename" --arg c "$new_cat" --arg d "$new_desc" \
               '.[$n] = {cat:$c, desc:$d}' <<<"$meta")
     _pm_save "$meta"
-    printf '  저장 완료: [%s] %s\n' "$new_cat" "$new_desc"
+    _pm_green "  저장 완료: [$new_cat] $new_desc"
     return
   fi
 
-  if [[ $sel == '[ren]'* ]]; then
+  if [[ $key == 'ctrl-r' ]]; then
     local ren_input=""
     while IFS=$'\t' read -r sk name _ _ _ _; do
       [[ -z $name ]] && continue
@@ -176,24 +210,24 @@ EOF
     rsel=$(printf '%s' "$ren_input" | fzf --layout=reverse --prompt='rename> ' --height=40% --border --no-sort \
                --header='이름변경할 프로젝트 선택') || return 0
     local rname="${rsel%% *}"
-    printf '  새 이름 (%s): ' "$rname"; read -r new_name
+    _pm_yellow "  새 이름 ($rname): "; read -r new_name
     [[ -z $new_name ]] && { echo '  취소됨.'; return; }
     local new_path="$root/$new_name"
-    [[ -d $new_path ]] && { echo "  이미 존재: $new_path"; return; }
+    [[ -d $new_path ]] && { _pm_red "  이미 존재: $new_path"; return; }
     [[ $PWD == "$root/$rname"* ]] && cd "$root"
     if mv "$root/$rname" "$new_path"; then
       local old_val; old_val=$(jq --arg n "$rname" '.[$n] // {}' <<<"$meta")
       meta=$(jq --arg o "$rname" --arg nn "$new_name" --argjson v "$old_val" \
                 'del(.[$o]) | .[$nn] = $v' <<<"$meta")
       _pm_save "$meta"
-      printf '  변경 완료: %s -> %s\n' "$rname" "$new_name"
+      _pm_green "  변경 완료: $rname -> $new_name"
     else
-      echo '  이름변경 실패'
+      _pm_red '  이름변경 실패'
     fi
     return
   fi
 
-  if [[ $sel == '[del]'* ]]; then
+  if [[ $key == 'ctrl-d' ]]; then
     local del_input=""
     while IFS=$'\t' read -r sk name _ _ _ _; do
       [[ -z $name ]] && continue
@@ -203,13 +237,13 @@ EOF
     dsel=$(printf '%s' "$del_input" | fzf --layout=reverse --prompt='delete> ' --height=40% --border --no-sort \
                --header='삭제할 프로젝트 선택') || return 0
     local dname="${dsel%% *}"
-    printf "  '%s' 을 정말 삭제? 복구 불가 (y/N): " "$dname"; read -r confirm
+    _pm_red "  '$dname' 을 정말 삭제? 복구 불가 (y/N): "; read -r confirm
     if [[ $confirm == [yY] ]]; then
       [[ $PWD == "$root/$dname"* ]] && cd "$root"
       rm -rf "$root/$dname"
       meta=$(jq --arg n "$dname" 'del(.[$n])' <<<"$meta")
       _pm_save "$meta"
-      printf '  삭제 완료: %s\n' "$dname"
+      _pm_green "  삭제 완료: $dname"
     else
       echo '  취소됨.'
     fi
@@ -217,13 +251,14 @@ EOF
   fi
 
   # ── 프로젝트 선택됨 ────────────────────────────────────
+  [[ -z $sel ]] && return 0
   local proj_name; proj_name=$(awk '{print $1}' <<<"$sel")
   local proj_path="$root/$proj_name"
-  [[ -d $proj_path ]] || { printf '경로 없음: %s\n' "$proj_path"; return 1; }
+  [[ -d $proj_path ]] || { _pm_red "경로 없음: $proj_path"; return 1; }
 
   if ! git -C "$proj_path" rev-parse --git-dir &>/dev/null; then
     _pm_touch "$proj_path"
-    cd "$proj_path" && printf '-> %s\n' "$proj_path"
+    cd "$proj_path" && _pm_green "-> $proj_path"
     _pm_launch_agent "$proj_path"
     return
   fi
@@ -261,26 +296,31 @@ EOF
     wt_fzf+="$wline"$'\n'
   done
 
-  wt_fzf+="────────────────────────────────────────────"$'\n'
-  wt_fzf+="[+new]   새 worktree 만들기"$'\n'
+  local wt_header
+  wt_header="  ctrl-n: 새 worktree"
   if (( ${#wt_paths[@]} > 0 )); then
-    wt_fzf+="[edit]   worktree 설명 수정"$'\n'
-    wt_fzf+="[ren]    worktree 이름변경"$'\n'
-    wt_fzf+="[del]    worktree 삭제"$'\n'
+    wt_header+="  ctrl-e: 설명수정  ctrl-r: 이름변경  ctrl-d: 삭제"
   fi
+  wt_header+=$'\n──────────────────────────────────────────────────────────────'
 
-  local wsel
-  wsel=$(printf '%s' "$wt_fzf" | fzf --layout=reverse --prompt="${proj_name}> " --height=40% --border --no-sort \
-             --header="$proj_name") || return 0
+  local wt_expect='ctrl-n'
+  (( ${#wt_paths[@]} > 0 )) && wt_expect='ctrl-n,ctrl-e,ctrl-r,ctrl-d'
 
-  if [[ $wsel == '[main]'* ]]; then
+  local wfzf_out wkey wsel
+  wfzf_out=$(printf '%s' "$wt_fzf" | fzf --layout=reverse --prompt="${proj_name}> " --height=40% --border --no-sort \
+             --header="$wt_header" \
+             --expect="$wt_expect") || return 0
+  wkey=$(head -1 <<<"$wfzf_out")
+  wsel=$(sed -n '2p' <<<"$wfzf_out")
+
+  if [[ -z $wkey && $wsel == '[main]'* ]]; then
     _pm_touch "$proj_path"
-    cd "$proj_path" && printf '-> %s\n' "$proj_path"
+    cd "$proj_path" && _pm_green "-> $proj_path"
     _pm_launch_agent "$proj_path"
     return
   fi
 
-  if [[ $wsel == '[wt]'* ]]; then
+  if [[ -z $wkey && $wsel == '[wt]'* ]]; then
     local wt_sel_name; wt_sel_name=$(awk '{print $2}' <<<"$wsel")
     local wt_target=""
     for ((i=1; i<=${#wt_names[@]}; i++)); do
@@ -288,18 +328,18 @@ EOF
     done
     if [[ -d $wt_target ]]; then
       _pm_touch "$proj_path"
-      cd "$wt_target" && printf '-> %s\n' "$wt_target"
+      cd "$wt_target" && _pm_mag "-> $wt_target"
       _pm_launch_agent "$wt_target"
     else
-      printf '경로 없음: %s\n' "$wt_sel_name"
+      _pm_red "경로 없음: $wt_sel_name"
     fi
     return
   fi
 
-  if [[ $wsel == '[+new]'* ]]; then
-    printf '  Worktree 이름 (예: auth-refactor): '; read -r wt_name
+  if [[ $wkey == 'ctrl-n' ]]; then
+    _pm_yellow '  Worktree 이름 (예: auth-refactor): '; read -r wt_name
     [[ -z $wt_name ]] && { echo '취소됨.'; return; }
-    printf '  설명 (Enter=생략): '; read -r wt_desc
+    _pm_yellow '  설명 (Enter=생략): '; read -r wt_desc
 
     _pm_ensure_wt_ignore "$proj_path"
     local wt_dir="$proj_path/.claude/worktrees/$wt_name"
@@ -316,23 +356,20 @@ EOF
         done < "$inc"
       fi
       if [[ -n $wt_desc ]]; then
-        meta=$(jq --arg p "$proj_name" --arg n "$wt_name" --arg d "$wt_desc" \
-                  'if .[$p] == null then .[$p] = {} else . end
-                   | if .[$p].wt == null then .[$p].wt = {} else . end
-                   | .[$p].wt[$n] = {desc:$d}' <<<"$meta")
-        _pm_save "$meta"
+        _pm_save_wt_desc "$proj_name" "$wt_name" "$wt_desc"
       fi
       _pm_touch "$proj_path"
       cd "$wt_dir"
-      printf '-> Worktree '\''%s'\'' (%s)\n' "$wt_name" "$wt_dir"
+      _pm_mag "-> Worktree '$wt_name' ($wt_dir)"
+      _pm_gray "   claude 를 실행하면 이 브랜치에서 작업합니다"
       _pm_launch_agent "$wt_dir"
     else
-      echo 'Worktree 생성 실패'
+      _pm_red 'Worktree 생성 실패'
     fi
     return
   fi
 
-  if [[ $wsel == '[edit]'* ]]; then
+  if [[ $wkey == 'ctrl-e' ]]; then
     local wedit_input="" wd
     for ((i=1; i<=${#wt_names[@]}; i++)); do
       wn="${wt_names[$i]}"
@@ -345,21 +382,17 @@ EOF
                 --header='설명 수정할 worktree 선택') || return 0
     local wen; wen=$(awk '{print $1}' <<<"$wesel")
     local wcur; wcur=$(jq -r --arg n "$wen" '.[$n].desc // ""' <<<"$wt_meta")
-    [[ -n $wcur ]] && printf '  현재: %s\n' "$wcur"
-    printf '  새 설명 (Enter=유지): '; read -r wnew
+    [[ -n $wcur ]] && _pm_gray "  현재: $wcur"
+    _pm_yellow '  새 설명 (Enter=유지): '; read -r wnew
     [[ -z $wnew ]] && wnew="$wcur"
     if [[ -n $wnew ]]; then
-      meta=$(jq --arg p "$proj_name" --arg n "$wen" --arg d "$wnew" \
-                'if .[$p] == null then .[$p] = {} else . end
-                 | if .[$p].wt == null then .[$p].wt = {} else . end
-                 | .[$p].wt[$n] = {desc:$d}' <<<"$meta")
-      _pm_save "$meta"
-      printf '  저장 완료: %s -> %s\n' "$wen" "$wnew"
+      _pm_save_wt_desc "$proj_name" "$wen" "$wnew"
+      _pm_green "  저장 완료: $wen -> $wnew"
     fi
     return
   fi
 
-  if [[ $wsel == '[ren]'* ]]; then
+  if [[ $wkey == 'ctrl-r' ]]; then
     local wren_input=""
     for ((i=1; i<=${#wt_names[@]}; i++)); do
       wren_input+="${wt_names[$i]}"$'\n'
@@ -368,43 +401,37 @@ EOF
     wrsel=$(printf '%s' "$wren_input" | fzf --layout=reverse --prompt='rename wt> ' --height=40% --border --no-sort \
                 --header='이름변경할 worktree 선택') || return 0
     local wrname="${wrsel%% *}"
-    printf '  새 이름: '; read -r wrnew
+    _pm_yellow '  새 이름: '; read -r wrnew
     [[ -z $wrnew ]] && { echo '  취소됨.'; return; }
     local wold_dir="$proj_path/.claude/worktrees/$wrname"
     local wnew_dir="$proj_path/.claude/worktrees/$wrnew"
     [[ $PWD == "$wold_dir"* ]] && cd "$proj_path"
     if git -C "$proj_path" worktree move "$wold_dir" "$wnew_dir"; then
       git -C "$proj_path" branch -m "$wrname" "$wrnew" 2>/dev/null
-      local wold_val; wold_val=$(jq --arg p "$proj_name" --arg n "$wrname" \
-                                    '.[$p].wt[$n] // {}' <<<"$meta")
-      meta=$(jq --arg p "$proj_name" --arg o "$wrname" --arg nn "$wrnew" \
-                --argjson v "$wold_val" \
-                'del(.[$p].wt[$o]) | .[$p].wt[$nn] = $v' <<<"$meta")
-      _pm_save "$meta"
-      printf '  변경 완료: %s -> %s\n' "$wrname" "$wrnew"
+      _pm_rename_wt_meta "$proj_name" "$wrname" "$wrnew"
+      _pm_green "  변경 완료: $wrname -> $wrnew"
     else
-      echo '  이름변경 실패 (다른 터미널이 해당 폴더에 있을 수 있음)'
+      _pm_red '  이름변경 실패 (다른 터미널이 해당 폴더에 있을 수 있음)'
     fi
     return
   fi
 
-  if [[ $wsel == '[del]'* ]]; then
+  if [[ $wkey == 'ctrl-d' ]]; then
     local wdel_input=""
     for ((i=1; i<=${#wt_names[@]}; i++)); do wdel_input+="${wt_names[$i]}"$'\n'; done
     local wdsel
     wdsel=$(printf '%s' "$wdel_input" | fzf --layout=reverse --prompt='delete wt> ' --height=40% --border --no-sort \
                 --header='삭제할 worktree 선택') || return 0
     local wdname="${wdsel%% *}"
-    printf "  '%s' 삭제? 브랜치는 유지됩니다. (y/N): " "$wdname"; read -r wdconfirm
+    _pm_yellow "  '$wdname' 삭제? 브랜치는 유지됩니다. (y/N): "; read -r wdconfirm
     if [[ $wdconfirm == [yY] ]]; then
       local wdpath="$proj_path/.claude/worktrees/$wdname"
       [[ $PWD == "$wdpath"* ]] && cd "$proj_path"
       if git -C "$proj_path" worktree remove "$wdpath"; then
-        meta=$(jq --arg p "$proj_name" --arg n "$wdname" 'del(.[$p].wt[$n])' <<<"$meta")
-        _pm_save "$meta"
-        printf '  삭제 완료: %s\n' "$wdname"
+        _pm_remove_wt_meta "$proj_name" "$wdname"
+        _pm_green "  삭제 완료: $wdname"
       else
-        echo '  삭제 실패 (--force 필요할 수 있음)'
+        _pm_red '  삭제 실패 (--force 필요할 수 있음)'
       fi
     else
       echo '  취소됨.'
