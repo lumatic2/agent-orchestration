@@ -18,13 +18,15 @@
 - `.claude.json` projects: `C:/Users/1` 키로 google-workspace MCP 등록
 - `~/bin/gws.py`: google-workspace 토글 스크립트
 - PowerShell 7 프로필: `~/OneDrive/문서/PowerShell/Microsoft.PowerShell_profile.ps1`
-  - `proj` 함수 (프로젝트 선택 + worktree 관리)
-  - 백업: `config/powershell_profile.ps1`
+  - `proj` 함수 (프로젝트 선택 + worktree 관리, `Pick-Menu` 커스텀 UI)
+  - 백업/원본: `config/powershell_profile.ps1`
 - Global gitignore: `~/.gitignore_global` → 백업: `config/gitignore_global`
 
 ### Mac 공통 (MacAir / M1 / M4)
 - `settings.json`: nah_guard 없음, guard.sh + WebSearch 차단 있음
 - MCP: `cmd /c` 래퍼 불필요
+- `proj` 함수: `config/proj.zsh` → `~/.zshrc`에서 source
+  - 백업/원본: `config/proj.zsh` (fzf + jq 기반, macOS `stat -f %m`)
 
 ### M1 (`luma2s-Mac-mini.local`)
 - content-automation: `~/Desktop/content-automation/` (Desktop 위치 유지)
