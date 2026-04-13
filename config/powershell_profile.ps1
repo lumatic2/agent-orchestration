@@ -104,9 +104,9 @@ function proj {
         if (-not $pick) { return $false }
         $cmd = ($pick -split '\s+')[0]
         switch ($cmd) {
-            "claude" { claude }
-            "codex"  { codex }
-            "gemini" { gemini }
+            "claude" { Start-Process claude -NoNewWindow -Wait }
+            "codex"  { Start-Process codex  -NoNewWindow -Wait }
+            "gemini" { Start-Process gemini -NoNewWindow -Wait }
             default  { }
         }
     }
