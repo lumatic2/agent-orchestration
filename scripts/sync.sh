@@ -151,6 +151,10 @@ deploy_claude() {
       || echo "[WARN] settings.json hooks 패치 실패"
   fi
 
+  # Deploy statusline.sh
+  cp "$REPO_DIR/config/statusline.sh" "$target_dir/statusline.sh"
+  echo "[OK] statusline.sh → $target_dir/statusline.sh"
+
   # Connection layer scripts already live in scripts/ — no extra deploy needed.
 
   # Sync notion_pages.conf (page ID cache) — copy if src newer or dest missing

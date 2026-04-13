@@ -106,6 +106,11 @@ ssh luma3@luma3ui-Macmini.local \
   - `ROADMAP.md` — 마일스톤, 진행 상태, 다음 할 일. 체크리스트 형식
 - **세션 시작 규칙**: git 루트의 `ROADMAP.md`를 읽고 현재 진행 상황을 파악한 뒤 작업에 착수한다
 - **worktree 참고**: worktree에서 claude를 실행하면 프로젝트 루트의 CLAUDE.md가 자동 공유됨. worktree 전용 메모가 필요하면 `CLAUDE.local.md` 사용 (gitignore 대상)
+- **worktree 라이프사이클**: 임시 작업 공간으로 사용. 작업 완료 후 사용자가 "합치고 정리해줘"라고 하면:
+  1. main worktree에서 `git merge {브랜치명}`
+  2. `git worktree remove .claude/worktrees/{이름}`
+  3. `git branch -d {브랜치명}`
+  - 충돌 시 사용자에게 보고 후 해결. 병렬 워크트리는 서로 다른 파일을 수정하도록 권장
 
 ---
 
