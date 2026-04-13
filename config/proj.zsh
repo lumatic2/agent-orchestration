@@ -153,13 +153,13 @@ proj() {
 
     local fzf_header
     fzf_header="  ctrl+N 새 프로젝트  ctrl+E 설명수정  ctrl+R 이름변경  ctrl+D 삭제"
-    fzf_header+=$'\n'"  ctrl+P 핀 고정/해제  ctrl+X 아카이브 넣기  ctrl+A 아카이브 보기  |  Esc 종료"
+    fzf_header+=$'\n'"  ctrl+P 핀  ctrl+X 아카이브  ctrl+A 아카이브목록  ctrl+S 상태  |  Esc 종료"
     fzf_header+=$'\n────────────────────────────────────────────────────────────────────────────'
 
     local fzf_out key sel
     fzf_out=$(printf '%s' "$fzf_input" | fzf --layout=reverse --prompt='proj> ' --height=40% --border --no-sort \
               --header="$fzf_header" \
-              --expect='ctrl-n,ctrl-e,ctrl-r,ctrl-d,ctrl-p,ctrl-a,ctrl-x') || return 0
+              --expect='ctrl-n,ctrl-e,ctrl-r,ctrl-d,ctrl-p,ctrl-a,ctrl-x,ctrl-s') || return 0
     key=$(head -1 <<<"$fzf_out")
     sel=$(sed -n '2p' <<<"$fzf_out")
 
@@ -179,6 +179,102 @@ proj() {
     [[ $key == 'ctrl-p' ]] && action="pin"
     [[ $key == 'ctrl-x' ]] && action="archive"
     [[ $key == 'ctrl-a' ]] && action="archive-view"
+    [[ $key == 'ctrl-s' ]] && action="status"
+
+    # ── ctrl+S: 프로젝트 상태 ────────────────────────────
+    if [[ $action == "status" ]]; then
+      [[ -z $sel_name ]] && continue
+      local sp="$root/$sel_name"
+      [[ -d $sp ]] || { _pm_red "경로 없음: $sp"; continue; }
+
+      local status_lines=""
+
+      # 프로젝트명 + 설명
+      local sd; sd=$(jq -r --arg n "$sel_name" '.[$n].desc // ""' <<<"$meta")
+      local sc; sc=$(jq -r --arg n "$sel_name" '.[$n].cat // ""' <<<"$meta")
+      status_lines+="  $sel_name"
+      [[ -n $sc ]] && status_lines+="  [$sc]"
+      [[ -n $sd ]] && status_lines+="  $sd"
+      status_lines+=$'\n'
+
+      # git 정보
+      if git -C "$sp" rev-parse --git-dir &>/dev/null; then
+        local sbranch; sbranch=$(git -C "$sp" branch --show-current 2>/dev/null || echo 'HEAD')
+        local smod; smod=$(git -C "$sp" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+        local sstatus="clean"
+        (( smod > 0 )) && sstatus="${smod} modified"
+        local sahead="" sbehind=""
+        sahead=$(git -C "$sp" rev-list --count @{u}..HEAD 2>/dev/null || echo 0)
+        sbehind=$(git -C "$sp" rev-list --count HEAD..@{u} 2>/dev/null || echo 0)
+        local spush=""
+        (( sahead > 0 )) && spush+=" ${sahead} ahead"
+        (( sbehind > 0 )) && spush+=" ${sbehind} behind"
+
+        status_lines+="──────────────────────────────────────────────"$'\n'
+        status_lines+="  branch:  $sbranch"$'\n'
+        status_lines+="  status:  $sstatus${spush}"$'\n'
+
+        # worktree 목록
+        local swt_count=0 swt_lines=""
+        while IFS= read -r wline; do
+          if [[ $wline =~ ^worktree\ (.+)$ ]]; then
+            local swt_path="${match[1]}"
+          elif [[ $wline =~ ^branch\ refs/heads/(.+)$ && -n $swt_path ]]; then
+            local swt_real; swt_real=$(realpath "$swt_path" 2>/dev/null || echo "$swt_path")
+            local sp_real; sp_real=$(realpath "$sp" 2>/dev/null || echo "$sp")
+            if [[ $swt_real != $sp_real ]]; then
+              local swt_name="${swt_path##*/}"
+              local swt_branch="${match[1]}"
+              local swt_mod; swt_mod=$(git -C "$swt_path" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+              local swt_st="clean"; (( swt_mod > 0 )) && swt_st="${swt_mod} mod"
+              local swt_desc; swt_desc=$(jq -r --arg n "$swt_name" '.[$n].desc // ""' \
+                    <<<"$(jq -r --arg p "$sel_name" '.[$p].wt // {}' <<<"$meta")")
+              swt_lines+="    $swt_name ($swt_branch) [$swt_st]"
+              [[ -n $swt_desc ]] && swt_lines+="  $swt_desc"
+              swt_lines+=$'\n'
+              (( swt_count++ ))
+            fi
+            swt_path=""
+          fi
+        done < <(git -C "$sp" worktree list --porcelain 2>/dev/null)
+
+        status_lines+="  worktree: ${swt_count}개"$'\n'
+        [[ -n $swt_lines ]] && status_lines+="$swt_lines"
+      else
+        status_lines+="──────────────────────────────────────────────"$'\n'
+        status_lines+="  (git 저장소 아님)"$'\n'
+      fi
+
+      # ROADMAP 진행률
+      local roadmap="$sp/ROADMAP.md"
+      if [[ -f $roadmap ]]; then
+        local rtotal rdone rpct
+        rtotal=$(grep -cE '^\s*- \[[ x]\]' "$roadmap" 2>/dev/null || echo 0)
+        rdone=$(grep -cE '^\s*- \[x\]' "$roadmap" 2>/dev/null || echo 0)
+        if (( rtotal > 0 )); then
+          rpct=$(( rdone * 100 / rtotal ))
+          local rbar_done=$(( rpct / 5 )) rbar_left=$(( 20 - rpct / 5 ))
+          local rbar=""
+          for ((ri=0; ri<rbar_done; ri++)); do rbar+="█"; done
+          for ((ri=0; ri<rbar_left; ri++)); do rbar+="░"; done
+          status_lines+="──────────────────────────────────────────────"$'\n'
+          status_lines+="  ROADMAP:  ${rbar} ${rdone}/${rtotal} (${rpct}%)"$'\n'
+          # 미완료 항목 (최대 8개)
+          local rcount=0
+          while IFS= read -r rline; do
+            (( rcount >= 8 )) && { status_lines+="    ..."$'\n'; break; }
+            status_lines+="  $rline"$'\n'
+            (( rcount++ ))
+          done < <(grep -E '^\s*- \[ \]' "$roadmap" 2>/dev/null)
+        fi
+      fi
+
+      status_lines+="──────────────────────────────────────────────"$'\n'
+
+      printf '%s' "$status_lines" | fzf --layout=reverse --prompt='' --height=40% --border --no-sort \
+            --header="  $sel_name 상태  |  Esc 뒤로" --disabled
+      continue
+    fi
 
     # ── ctrl+A: 아카이브 화면 ────────────────────────────
     if [[ $action == "archive-view" ]]; then
@@ -318,24 +414,15 @@ EOF
 
     # ── [edit] ───────────────────────────────────────────
     if [[ $action == "edit" ]]; then
-      local edit_input=""
-      while IFS=$'\t' read -r sk name ago pcat pdesc _; do
-        [[ -z $name ]] && continue
-        printf -v line '%-28s [%-6s] %s' "$name" "$pcat" "$pdesc"
-        edit_input+="$line"$'\n'
-      done <<<"$sorted"
-      local esel
-      esel=$(printf '%s' "$edit_input" | fzf --layout=reverse --prompt='edit> ' --height=40% --border --no-sort \
-                 --header='설명/카테고리 수정할 프로젝트 선택') || continue
-      local ename; ename=$(awk '{print $1}' <<<"$esel")
-      local cur_cat; cur_cat=$(jq -r --arg n "$ename" '.[$n].cat // ""' <<<"$meta")
-      local cur_desc; cur_desc=$(jq -r --arg n "$ename" '.[$n].desc // ""' <<<"$meta")
-      _pm_gray "  현재: [$cur_cat] $cur_desc"
+      [[ -z $sel_name ]] && continue
+      local cur_cat; cur_cat=$(jq -r --arg n "$sel_name" '.[$n].cat // ""' <<<"$meta")
+      local cur_desc; cur_desc=$(jq -r --arg n "$sel_name" '.[$n].desc // ""' <<<"$meta")
+      _pm_gray "  [$sel_name] 현재: [$cur_cat] $cur_desc"
       _pm_yellow "  설명 (Enter=유지): "; read -r new_desc
       [[ -z $new_desc ]] && new_desc="$cur_desc"
       _pm_yellow "  카테고리 (Enter=유지, 현재=$cur_cat): "; read -r new_cat
       [[ -z $new_cat ]] && new_cat="$cur_cat"
-      meta=$(jq --arg n "$ename" --arg c "$new_cat" --arg d "$new_desc" \
+      meta=$(jq --arg n "$sel_name" --arg c "$new_cat" --arg d "$new_desc" \
                 '.[$n].cat = $c | .[$n].desc = $d' <<<"$meta")
       _pm_save "$meta"
       _pm_green "  저장 완료: [$new_cat] $new_desc"
@@ -344,26 +431,18 @@ EOF
 
     # ── [ren] ────────────────────────────────────────────
     if [[ $action == "rename" ]]; then
-      local ren_input=""
-      while IFS=$'\t' read -r sk name _ _ _ _; do
-        [[ -z $name ]] && continue
-        ren_input+="$name"$'\n'
-      done <<<"$sorted"
-      local rsel
-      rsel=$(printf '%s' "$ren_input" | fzf --layout=reverse --prompt='rename> ' --height=40% --border --no-sort \
-                 --header='이름변경할 프로젝트 선택') || continue
-      local rname="${rsel%% *}"
-      _pm_yellow "  새 이름 ($rname): "; read -r new_name
+      [[ -z $sel_name ]] && continue
+      _pm_yellow "  새 이름 ($sel_name): "; read -r new_name
       [[ -z $new_name ]] && { echo '  취소됨.'; continue; }
       local new_path="$root/$new_name"
       [[ -d $new_path ]] && { _pm_red "  이미 존재: $new_path"; continue; }
-      [[ $PWD == "$root/$rname"* ]] && cd "$root"
-      if mv "$root/$rname" "$new_path"; then
-        local old_val; old_val=$(jq --arg n "$rname" '.[$n] // {}' <<<"$meta")
-        meta=$(jq --arg o "$rname" --arg nn "$new_name" --argjson v "$old_val" \
+      [[ $PWD == "$root/$sel_name"* ]] && cd "$root"
+      if mv "$root/$sel_name" "$new_path"; then
+        local old_val; old_val=$(jq --arg n "$sel_name" '.[$n] // {}' <<<"$meta")
+        meta=$(jq --arg o "$sel_name" --arg nn "$new_name" --argjson v "$old_val" \
                   'del(.[$o]) | .[$nn] = $v' <<<"$meta")
         _pm_save "$meta"
-        _pm_green "  변경 완료: $rname -> $new_name"
+        _pm_green "  변경 완료: $sel_name -> $new_name"
       else
         _pm_red '  이름변경 실패'
       fi
@@ -372,22 +451,14 @@ EOF
 
     # ── [del] ────────────────────────────────────────────
     if [[ $action == "delete" ]]; then
-      local del_input=""
-      while IFS=$'\t' read -r sk name _ _ _ _; do
-        [[ -z $name ]] && continue
-        del_input+="$name"$'\n'
-      done <<<"$sorted"
-      local dsel
-      dsel=$(printf '%s' "$del_input" | fzf --layout=reverse --prompt='delete> ' --height=40% --border --no-sort \
-                 --header='삭제할 프로젝트 선택') || continue
-      local dname="${dsel%% *}"
-      _pm_red "  '$dname' 을 정말 삭제? 복구 불가 (y/N): "; read -r confirm
+      [[ -z $sel_name ]] && continue
+      _pm_red "  '$sel_name' 을 정말 삭제? 복구 불가 (y/N): "; read -r confirm
       if [[ $confirm == [yY] ]]; then
-        [[ $PWD == "$root/$dname"* ]] && cd "$root"
-        rm -rf "$root/$dname"
-        meta=$(jq --arg n "$dname" 'del(.[$n])' <<<"$meta")
+        [[ $PWD == "$root/$sel_name"* ]] && cd "$root"
+        rm -rf "$root/$sel_name"
+        meta=$(jq --arg n "$sel_name" 'del(.[$n])' <<<"$meta")
         _pm_save "$meta"
-        _pm_green "  삭제 완료: $dname"
+        _pm_green "  삭제 완료: $sel_name"
       else
         echo '  취소됨.'
       fi

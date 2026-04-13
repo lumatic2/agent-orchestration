@@ -165,9 +165,9 @@ function proj {
             $fzfLines.Add("$($p.Name.PadRight(28))$($ago.PadRight(8))$catStr$descStr")
         }
 
-        $fzfHeader = "  ctrl+N 새 프로젝트  ctrl+E 설명수정  ctrl+R 이름변경  ctrl+D 삭제`n  ctrl+P 핀 고정/해제  ctrl+X 아카이브 넣기  ctrl+A 아카이브 보기  |  Esc 종료`n────────────────────────────────────────────────────────────────────────────"
+        $fzfHeader = "  ctrl+N 새 프로젝트  ctrl+E 설명수정  ctrl+R 이름변경  ctrl+D 삭제`n  ctrl+P 핀  ctrl+X 아카이브  ctrl+A 아카이브목록  ctrl+S 상태  |  Esc 종료`n────────────────────────────────────────────────────────────────────────────"
 
-        $fzfOut = ($fzfLines -join "`n") | fzf --layout=reverse --prompt='proj> ' --height=40% --border --no-sort --header="$fzfHeader" --expect='ctrl-n,ctrl-e,ctrl-r,ctrl-d,ctrl-p,ctrl-x,ctrl-a'
+        $fzfOut = ($fzfLines -join "`n") | fzf --layout=reverse --prompt='proj> ' --height=40% --border --no-sort --header="$fzfHeader" --expect='ctrl-n,ctrl-e,ctrl-r,ctrl-d,ctrl-p,ctrl-x,ctrl-a,ctrl-s'
         if (-not $fzfOut) { return }
         $fzfOutLines = $fzfOut -split "`n"
         $key = $fzfOutLines[0]
@@ -192,6 +192,107 @@ function proj {
         if ($key -eq "ctrl-p") { $action = "pin" }
         if ($key -eq "ctrl-x") { $action = "archive" }
         if ($key -eq "ctrl-a") { $action = "archive-view" }
+        if ($key -eq "ctrl-s") { $action = "status" }
+
+        # ── ctrl+S: 프로젝트 상태 ───────────────────────
+        if ($action -eq "status") {
+            if (-not $selName) { continue }
+            $sp = Join-Path $projectsRoot $selName
+            if (-not (Test-Path $sp)) { Write-Host "경로 없음: $sp" -ForegroundColor Red; continue }
+
+            $statusLines = [System.Collections.Generic.List[string]]::new()
+
+            # 프로젝트명 + 설명
+            $sm = Get-Meta $selName $meta
+            $sDesc = if ($sm -and $sm.desc) { $sm.desc } else { "" }
+            $sCat = if ($sm -and $sm.cat) { $sm.cat } else { "" }
+            $titleLine = "  $selName"
+            if ($sCat) { $titleLine += "  [$sCat]" }
+            if ($sDesc) { $titleLine += "  $sDesc" }
+            $statusLines.Add($titleLine)
+
+            # git 정보
+            $isGit = (git -C $sp rev-parse --git-dir 2>$null) -ne $null
+            if ($isGit) {
+                $sBranch = git -C $sp branch --show-current 2>$null
+                if (-not $sBranch) { $sBranch = "HEAD" }
+                $sMod = (git -C $sp status --porcelain 2>$null | Measure-Object -Line).Lines
+                $sStatus = if ($sMod -gt 0) { "$sMod modified" } else { "clean" }
+                $sAhead = 0; $sBehind = 0
+                try {
+                    $sAhead = [int](git -C $sp rev-list --count "@{u}..HEAD" 2>$null)
+                    $sBehind = [int](git -C $sp rev-list --count "HEAD..@{u}" 2>$null)
+                } catch {}
+                $sPush = ""
+                if ($sAhead -gt 0) { $sPush += " ${sAhead} ahead" }
+                if ($sBehind -gt 0) { $sPush += " ${sBehind} behind" }
+
+                $statusLines.Add("──────────────────────────────────────────────")
+                $statusLines.Add("  branch:  $sBranch")
+                $statusLines.Add("  status:  $sStatus$sPush")
+
+                # worktree 목록
+                $sWtList = git -C $sp worktree list --porcelain 2>$null
+                $sWtCount = 0
+                $sWtLines = [System.Collections.Generic.List[string]]::new()
+                $sWtPath = $null
+                foreach ($wline in $sWtList) {
+                    if ($wline -match '^worktree (.+)$') { $sWtPath = $Matches[1] }
+                    if ($wline -match '^branch refs/heads/(.+)$' -and $sWtPath) {
+                        $sNormWt = (Resolve-Path $sWtPath -ErrorAction SilentlyContinue).Path
+                        $sNormSp = (Resolve-Path $sp -ErrorAction SilentlyContinue).Path
+                        if ($sNormWt -ne $sNormSp) {
+                            $sWtName = Split-Path $sWtPath -Leaf
+                            $sWtBranch = $Matches[1]
+                            $sWtMod = (git -C $sWtPath status --porcelain 2>$null | Measure-Object -Line).Lines
+                            $sWtSt = if ($sWtMod -gt 0) { "$sWtMod mod" } else { "clean" }
+                            $sWtDesc = ""
+                            $sWtMeta = if ($sm -and $sm.PSObject.Properties["wt"]) { $sm.wt } else { $null }
+                            if ($sWtMeta -and $sWtMeta.PSObject.Properties[$sWtName]) { $sWtDesc = $sWtMeta.$sWtName.desc }
+                            $wtLine = "    $sWtName ($sWtBranch) [$sWtSt]"
+                            if ($sWtDesc) { $wtLine += "  $sWtDesc" }
+                            $sWtLines.Add($wtLine)
+                            $sWtCount++
+                        }
+                        $sWtPath = $null
+                    }
+                }
+                $statusLines.Add("  worktree: ${sWtCount}개")
+                foreach ($wl in $sWtLines) { $statusLines.Add($wl) }
+            } else {
+                $statusLines.Add("──────────────────────────────────────────────")
+                $statusLines.Add("  (git 저장소 아님)")
+            }
+
+            # ROADMAP 진행률
+            $roadmapPath = Join-Path $sp "ROADMAP.md"
+            if (Test-Path $roadmapPath) {
+                $roadmapContent = Get-Content $roadmapPath -Encoding UTF8
+                $rTotal = ($roadmapContent | Select-String '^\s*- \[[ x]\]').Count
+                $rDone = ($roadmapContent | Select-String '^\s*- \[x\]').Count
+                if ($rTotal -gt 0) {
+                    $rPct = [math]::Floor($rDone * 100 / $rTotal)
+                    $rBarDone = [math]::Floor($rPct / 5)
+                    $rBarLeft = 20 - $rBarDone
+                    $rBar = ("█" * $rBarDone) + ("░" * $rBarLeft)
+                    $statusLines.Add("──────────────────────────────────────────────")
+                    $statusLines.Add("  ROADMAP:  $rBar ${rDone}/${rTotal} (${rPct}%)")
+                    $rCount = 0
+                    foreach ($rl in $roadmapContent) {
+                        if ($rl -match '^\s*- \[ \]') {
+                            if ($rCount -ge 8) { $statusLines.Add("    ..."); break }
+                            $statusLines.Add("  $($rl.Trim())")
+                            $rCount++
+                        }
+                    }
+                }
+            }
+
+            $statusLines.Add("──────────────────────────────────────────────")
+
+            ($statusLines -join "`n") | fzf --layout=reverse --prompt='' --height=40% --border --no-sort --header="  $selName 상태  |  Esc 뒤로" --disabled
+            continue
+        }
 
         # ── ctrl+A: 아카이브 화면 ───────────────────────
         if ($action -eq "archive-view") {
@@ -375,19 +476,12 @@ function proj {
 
         # ── [edit] ───────────────────────────────────────
         if ($action -eq "edit") {
-            $editLines = $projects | ForEach-Object {
-                $catStr = if ($_.Cat) { "[$($_.Cat)]" } else { "[   ]" }
-                "$($_.Name.PadRight(28))$catStr  $($_.Desc)"
-            }
-            $editSel = ($editLines -join "`n") | fzf --layout=reverse --prompt='edit> ' --height=40% --border --no-sort --header='설명/카테고리 수정할 프로젝트 선택'
-            if (-not $editSel) { continue }
+            if (-not $selName) { continue }
+            $curMeta = Get-Meta $selName $meta
+            $curDesc = if ($curMeta -and $curMeta.desc) { $curMeta.desc } else { "" }
+            $curCat  = if ($curMeta -and $curMeta.cat)  { $curMeta.cat  } else { "" }
 
-            $eName = ($editSel -split '\s+')[0]
-            $curMeta = Get-Meta $eName $meta
-            $curDesc = if ($curMeta) { $curMeta.desc } else { "" }
-            $curCat  = if ($curMeta) { $curMeta.cat  } else { "" }
-
-            Write-Host "  현재: [$curCat] $curDesc" -ForegroundColor DarkGray
+            Write-Host "  [$selName] 현재: [$curCat] $curDesc" -ForegroundColor DarkGray
             Write-Host -NoNewline "  설명 (Enter=유지): " -ForegroundColor Yellow
             $newDesc = Read-Host
             if (-not $newDesc) { $newDesc = $curDesc }
@@ -395,12 +489,12 @@ function proj {
             $newCat = Read-Host
             if (-not $newCat) { $newCat = $curCat }
 
-            $em = Get-Meta $eName $meta
+            $em = Get-Meta $selName $meta
             if ($em) {
                 $em | Add-Member -NotePropertyName "cat" -NotePropertyValue $newCat -Force
                 $em | Add-Member -NotePropertyName "desc" -NotePropertyValue $newDesc -Force
             } else {
-                $meta | Add-Member -NotePropertyName $eName -NotePropertyValue ([PSCustomObject]@{ cat=$newCat; desc=$newDesc }) -Force
+                $meta | Add-Member -NotePropertyName $selName -NotePropertyValue ([PSCustomObject]@{ cat=$newCat; desc=$newDesc }) -Force
             }
             Save-Meta $meta
             Write-Host "  저장 완료: [$newCat] $newDesc" -ForegroundColor Green
@@ -409,13 +503,9 @@ function proj {
 
         # ── [ren] ────────────────────────────────────────
         if ($action -eq "rename") {
-            $renLines = $projects | ForEach-Object { $_.Name }
-            $renSel = ($renLines -join "`n") | fzf --layout=reverse --prompt='rename> ' --height=40% --border --no-sort --header='이름변경할 프로젝트 선택'
-            if (-not $renSel) { continue }
-
-            $rName = ($renSel -split '\s+')[0]
-            $target = $projects | Where-Object { $_.Name -eq $rName } | Select-Object -First 1
-            Write-Host -NoNewline "  새 이름 ($rName): " -ForegroundColor Yellow
+            if (-not $selName) { continue }
+            $targetPath = Join-Path $projectsRoot $selName
+            Write-Host -NoNewline "  새 이름 ($selName): " -ForegroundColor Yellow
             $newName = Read-Host
             if (-not $newName) { Write-Host "  취소됨."; continue }
 
@@ -426,19 +516,19 @@ function proj {
             }
 
             $curDir = (Get-Location).Path
-            if ($curDir.StartsWith($target.Path)) {
+            if ($curDir.StartsWith($targetPath)) {
                 Set-Location $projectsRoot
             }
 
-            Rename-Item -Path $target.Path -NewName $newName
+            Rename-Item -Path $targetPath -NewName $newName
             if ($?) {
-                $oldMeta = Get-Meta $rName $meta
+                $oldMeta = Get-Meta $selName $meta
                 if ($oldMeta) {
-                    $meta.PSObject.Properties.Remove($rName)
+                    $meta.PSObject.Properties.Remove($selName)
                     $meta | Add-Member -NotePropertyName $newName -NotePropertyValue $oldMeta -Force
                     Save-Meta $meta
                 }
-                Write-Host "  변경 완료: $rName -> $newName" -ForegroundColor Green
+                Write-Host "  변경 완료: $selName -> $newName" -ForegroundColor Green
             } else {
                 Write-Host "  이름변경 실패. 다른 프로세스가 폴더를 사용 중일 수 있음" -ForegroundColor Red
             }
@@ -447,26 +537,22 @@ function proj {
 
         # ── [del] ────────────────────────────────────────
         if ($action -eq "delete") {
-            $delLines = $projects | ForEach-Object { $_.Name }
-            $delSel = ($delLines -join "`n") | fzf --layout=reverse --prompt='delete> ' --height=40% --border --no-sort --header='삭제할 프로젝트 선택'
-            if (-not $delSel) { continue }
-
-            $dName = ($delSel -split '\s+')[0]
-            $target = $projects | Where-Object { $_.Name -eq $dName } | Select-Object -First 1
-            Write-Host -NoNewline "  '$dName' 을 정말 삭제? 복구 불가 (y/N): " -ForegroundColor Red
+            if (-not $selName) { continue }
+            $targetPath = Join-Path $projectsRoot $selName
+            Write-Host -NoNewline "  '$selName' 을 정말 삭제? 복구 불가 (y/N): " -ForegroundColor Red
             $confirm = Read-Host
             if ($confirm -eq 'y' -or $confirm -eq 'Y') {
                 $curDir = (Get-Location).Path
-                if ($curDir.StartsWith($target.Path)) {
+                if ($curDir.StartsWith($targetPath)) {
                     Set-Location $projectsRoot
                 }
-                Remove-Item -Path $target.Path -Recurse -Force
+                Remove-Item -Path $targetPath -Recurse -Force
                 if ($?) {
-                    if ($meta.PSObject.Properties[$dName]) {
-                        $meta.PSObject.Properties.Remove($dName)
+                    if ($meta.PSObject.Properties[$selName]) {
+                        $meta.PSObject.Properties.Remove($selName)
                         Save-Meta $meta
                     }
-                    Write-Host "  삭제 완료: $dName" -ForegroundColor Green
+                    Write-Host "  삭제 완료: $selName" -ForegroundColor Green
                 } else {
                     Write-Host "  삭제 실패." -ForegroundColor Red
                 }
