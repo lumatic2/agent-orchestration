@@ -101,10 +101,11 @@ ssh luma3@luma3ui-Macmini.local \
 
 - **위치**: `~/projects/{이름}/` — 명시 없으면 항상 여기
 - **초기화**: `/prd {이름}` 스킬
-- **필수 파일**: 모든 프로젝트 폴더에 아래 두 파일을 둔다
-  - `CLAUDE.md` — 프로젝트 기술 스택, 컨벤션, Claude에게 주는 지시
+- **필수 파일** (프로젝트 **루트**에만 둔다 — worktree·하위폴더에 복제 금지):
+  - `CLAUDE.md` — 기술 스택, 컨벤션, Claude에게 주는 지시
   - `ROADMAP.md` — 마일스톤, 진행 상태, 다음 할 일. 체크리스트 형식
-- **세션 시작 규칙**: 프로젝트 폴더에서 세션이 시작되면 `ROADMAP.md`를 읽고 현재 진행 상황을 파악한 뒤 작업에 착수한다. (각 프로젝트 CLAUDE.md에도 이 규칙을 명시할 것)
+- **세션 시작 규칙**: git 루트의 `ROADMAP.md`를 읽고 현재 진행 상황을 파악한 뒤 작업에 착수한다
+- **worktree 참고**: worktree에서 claude를 실행하면 프로젝트 루트의 CLAUDE.md가 자동 공유됨. worktree 전용 메모가 필요하면 `CLAUDE.local.md` 사용 (gitignore 대상)
 
 ---
 
