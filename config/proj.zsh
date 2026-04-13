@@ -49,12 +49,12 @@ proj() {
 
   _pm_launch_agent() {
     local target_dir=$1
-    local agent_menu="shell     셸만 이동"$'\n'
-    command -v claude &>/dev/null && agent_menu+="claude    Claude Code"$'\n'
+    local agent_menu="claude    Claude Code"$'\n'
     command -v codex  &>/dev/null && agent_menu+="codex     Codex CLI"$'\n'
     command -v gemini &>/dev/null && agent_menu+="gemini    Gemini CLI"$'\n'
+    agent_menu+="shell     셸만 이동"$'\n'
     local pick
-    pick=$(printf '%s' "$agent_menu" | fzf --prompt='agent> ' --height=40% --border --no-sort \
+    pick=$(printf '%s' "$agent_menu" | fzf --layout=reverse --prompt='agent> ' --height=40% --border --no-sort \
                --header="$target_dir") || return 0
     local cmd; cmd=$(awk '{print $1}' <<<"$pick")
     case $cmd in
@@ -95,7 +95,7 @@ proj() {
   fzf_input+="[del]    프로젝트 삭제"$'\n'
 
   local sel
-  sel=$(printf '%s' "$fzf_input" | fzf --prompt='proj> ' --height=40% --border --no-sort \
+  sel=$(printf '%s' "$fzf_input" | fzf --layout=reverse --prompt='proj> ' --height=40% --border --no-sort \
             --header='Select a project') || return 0
 
   # ── 프로젝트 관리 액션 ─────────────────────────────────
@@ -149,7 +149,7 @@ EOF
       edit_input+="$line"$'\n'
     done <<<"$sorted"
     local esel
-    esel=$(printf '%s' "$edit_input" | fzf --prompt='edit> ' --height=40% --border --no-sort \
+    esel=$(printf '%s' "$edit_input" | fzf --layout=reverse --prompt='edit> ' --height=40% --border --no-sort \
                --header='설명/카테고리 수정할 프로젝트 선택') || return 0
     local ename; ename=$(awk '{print $1}' <<<"$esel")
     local cur_cat; cur_cat=$(jq -r --arg n "$ename" '.[$n].cat // ""' <<<"$meta")
@@ -173,7 +173,7 @@ EOF
       ren_input+="$name"$'\n'
     done <<<"$sorted"
     local rsel
-    rsel=$(printf '%s' "$ren_input" | fzf --prompt='rename> ' --height=40% --border --no-sort \
+    rsel=$(printf '%s' "$ren_input" | fzf --layout=reverse --prompt='rename> ' --height=40% --border --no-sort \
                --header='이름변경할 프로젝트 선택') || return 0
     local rname="${rsel%% *}"
     printf '  새 이름 (%s): ' "$rname"; read -r new_name
@@ -200,7 +200,7 @@ EOF
       del_input+="$name"$'\n'
     done <<<"$sorted"
     local dsel
-    dsel=$(printf '%s' "$del_input" | fzf --prompt='delete> ' --height=40% --border --no-sort \
+    dsel=$(printf '%s' "$del_input" | fzf --layout=reverse --prompt='delete> ' --height=40% --border --no-sort \
                --header='삭제할 프로젝트 선택') || return 0
     local dname="${dsel%% *}"
     printf "  '%s' 을 정말 삭제? 복구 불가 (y/N): " "$dname"; read -r confirm
@@ -270,7 +270,7 @@ EOF
   fi
 
   local wsel
-  wsel=$(printf '%s' "$wt_fzf" | fzf --prompt="${proj_name}> " --height=40% --border --no-sort \
+  wsel=$(printf '%s' "$wt_fzf" | fzf --layout=reverse --prompt="${proj_name}> " --height=40% --border --no-sort \
              --header="$proj_name") || return 0
 
   if [[ $wsel == '[main]'* ]]; then
@@ -341,7 +341,7 @@ EOF
       wedit_input+="$wline"$'\n'
     done
     local wesel
-    wesel=$(printf '%s' "$wedit_input" | fzf --prompt='edit wt> ' --height=40% --border --no-sort \
+    wesel=$(printf '%s' "$wedit_input" | fzf --layout=reverse --prompt='edit wt> ' --height=40% --border --no-sort \
                 --header='설명 수정할 worktree 선택') || return 0
     local wen; wen=$(awk '{print $1}' <<<"$wesel")
     local wcur; wcur=$(jq -r --arg n "$wen" '.[$n].desc // ""' <<<"$wt_meta")
@@ -365,7 +365,7 @@ EOF
       wren_input+="${wt_names[$i]}"$'\n'
     done
     local wrsel
-    wrsel=$(printf '%s' "$wren_input" | fzf --prompt='rename wt> ' --height=40% --border --no-sort \
+    wrsel=$(printf '%s' "$wren_input" | fzf --layout=reverse --prompt='rename wt> ' --height=40% --border --no-sort \
                 --header='이름변경할 worktree 선택') || return 0
     local wrname="${wrsel%% *}"
     printf '  새 이름: '; read -r wrnew
@@ -392,7 +392,7 @@ EOF
     local wdel_input=""
     for ((i=1; i<=${#wt_names[@]}; i++)); do wdel_input+="${wt_names[$i]}"$'\n'; done
     local wdsel
-    wdsel=$(printf '%s' "$wdel_input" | fzf --prompt='delete wt> ' --height=40% --border --no-sort \
+    wdsel=$(printf '%s' "$wdel_input" | fzf --layout=reverse --prompt='delete wt> ' --height=40% --border --no-sort \
                 --header='삭제할 worktree 선택') || return 0
     local wdname="${wdsel%% *}"
     printf "  '%s' 삭제? 브랜치는 유지됩니다. (y/N): " "$wdname"; read -r wdconfirm
