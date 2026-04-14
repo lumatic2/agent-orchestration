@@ -13,7 +13,8 @@
 #   gemini-dispatch.sh health
 #
 # 모든 task/review 호출은 자동으로 --background 부여.
-# task의 기본 모델: gemini-2.5-pro (stable, non-preview).
+# task의 기본 모델: gemini-2.5-flash (빠름·저비용, 대부분의 교차검증에 충분).
+# 대용량/심층 분석 필요 시 `--model gemini-2.5-pro` 명시.
 # pro/flash alias는 preview를 가리키므로 사용 금지 — 풀 이름 지정 권장.
 
 set -euo pipefail
@@ -31,7 +32,7 @@ if ! command -v gemini >/dev/null 2>&1; then
   exit 2
 fi
 
-DEFAULT_TASK_MODEL="gemini-2.5-pro"
+DEFAULT_TASK_MODEL="gemini-2.5-flash"
 CMD="${1:-}"
 [ -n "$CMD" ] && shift
 
