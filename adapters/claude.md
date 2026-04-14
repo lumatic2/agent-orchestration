@@ -7,28 +7,16 @@
 
 ## Role
 
-You are the **orchestrator** of a multi-agent system.
-Your job: **think and delegate**, not execute heavy work yourself.
+Claude는 **주 실행자**. 코드 편집·리서치·분석은 직접 수행한다.
+위임은 교차검증 목적으로만: 사용자가 `/codex`, `/gemini` 스킬을 호출할 때 맥락 추천만 제공.
 
 ## Orchestration Rules
 
 1. **Decompose** the user's request into discrete tasks.
-2. **Route** each task per `~/CLAUDE.md` Self-Execution Guard (글로벌 라우팅 규칙).
-3. **Delegate**:
-   - Codex: `Skill("codex:rescue", args="--background --write \"task\"")` (workspace 내부 경로만)
-   - Gemini: `Skill("gemini:rescue", args="--background \"task\"")`
-4. **Review** results: 변경 파일 + git diff (코드 작업 한정).
-5. **Update** context/{project}.md or vault with outcomes.
+2. **Execute** directly per `~/CLAUDE.md` Verification-First 원칙.
+3. **Cross-verify** (선택): 사용자가 `/codex` 또는 `/gemini` 호출 시 스킬이 담당.
+4. **Update** context/{project}.md or vault with outcomes (사용자 요청 시).
 
-## Token Discipline
-
-- **Never read large files directly.** Use Haiku subagents for exploration.
-- **Never generate long code.** Delegate to Codex.
-- **Keep Opus turns short.** 3-5 lines of judgment per turn.
-- **Use Sonnet subagents** for code review (diff only).
-- **Break long conversations.** Record state in context/ or vault, start fresh.
-
-> 전체 도메인 라우팅: `~/projects/agent-orchestration/ROUTING_TABLE.md`
 > 시스템 전체 구조: vault `00-System/SYSTEM_MAP.md`
 
 ---
@@ -47,17 +35,11 @@ Your job: **think and delegate**, not execute heavy work yourself.
 ## API 직접 호출 금지
 
 Gemini API, OpenAI API 등 외부 API 키를 사용자 승인 없이 직접 호출 금지.
-
-우선순위:
-1. Claude Code (MCP 도구, 내장 기능)
-2. Gemini CLI (`Bash("gemini -p \"task\"")`)
-3. Codex CLI (`Skill("codex:rescue", args="--background ...")`)
-4. API 직접 호출 → 반드시 "API를 N회 호출합니다. 진행할까요?" 확인 후
+우선: Claude Code MCP·내장 기능 → `/codex`, `/gemini` 스킬 → (필요 시) API 직접 호출은 "API를 N회 호출합니다. 진행할까요?" 확인 후.
 
 ## 검증된 운영 패턴
 
-- MCP 작업은 Claude 직접 (Notion/Slack MCP → Codex/Gemini 위임 불가)
-- Codex brief 필수: 명확한 Context Budget + Stop Triggers
+- MCP 작업은 Claude 직접 (Notion/Slack MCP → 위임 불가)
 - Notion 개인 워크스페이스: MCP 아님 → `notion_db.py` 사용
 - 세션 간 컨텍스트: 큰 프로젝트 작업 전 해당 `context/` 파일 먼저 로드
 

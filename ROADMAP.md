@@ -57,15 +57,14 @@
   - rescue(side-effect 가능)는 1줄 확인 후 실행
   - review/adversarial(read-only)은 즉시 실행
 
-### v2.2 (보류, nice-to-have)
-- [ ] Passive surfacing (Codex #1 부분 반영)
+### v2.2 (완료)
+- [x] Passive surfacing (Codex #1 부분 반영)
   - 고위험 맥락(migration/auth/crypto/security 파일 변경)에서 "/codex 교차검증 가능" 한 줄 정보 제공
-  - Verification-First 유지하며 adoption 약한 보강
-- [ ] `adapters/claude_global.md` 슬림화
-  - 위임 매트릭스·Examples 삭제 → "/codex, /gemini로 호출" 단일 안내
-- [ ] `adapters/CLAUDE.md`, `ROUTING_TABLE.md`의 Heavy-Delegation 잔재 제거
-- [ ] `bash scripts/sync.sh`로 ~/CLAUDE.md, ~/.codex/, ~/.gemini/ 재배포
-- [ ] 불필요 plugin 스킬 `/skill-toggle` 정리 (`codex:codex-cli-runtime`, `codex:gpt-5-4-prompting`, `codex:codex-result-handling`)
+- [x] `adapters/claude_global.md` 슬림화
+  - 위임 매트릭스·Examples 삭제 → "/codex, /gemini 스킬 경유" 단일 안내
+- [x] `adapters/claude.md`, `ROUTING_TABLE.md`의 Heavy-Delegation 잔재 제거
+- [x] `bash scripts/sync.sh`로 ~/CLAUDE.md, ~/.codex/, ~/.gemini/ 재배포 (line budget 모두 통과)
+- [ ] 불필요 plugin 스킬 `/skill-toggle` 정리 (`codex:codex-cli-runtime`, `codex:gpt-5-4-prompting`, `codex:codex-result-handling`) — 사용자 대화형 실행 필요
 
 ### v3 검토 대상 (미래)
 - [ ] Mesh 협업 복원 — 계약 정의 후
