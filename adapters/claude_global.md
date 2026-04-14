@@ -78,6 +78,13 @@ ssh luma3@luma3ui-Macmini.local \
 
 ---
 
+## 사용자 컨텍스트
+
+- **기본 위치**: 서울특별시 종로구 명륜3길 27 (명륜동, 성균관대 인근). 좌표 ≈ lat 37.585 / lng 126.999
+  - 위치 기반 질의("내 주변", "가까운 ○○")의 기준점. 다이소·편의점·영화관 MCP 탐색 시 이 주소 사용
+
+---
+
 ## Windows 로컬 도구
 
 - **파일 검색**: `es "검색어"` — Everything CLI. 예: `es "*.py"` / `es ext:mp4 -sort size-descending`
