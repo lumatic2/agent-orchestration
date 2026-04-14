@@ -120,6 +120,25 @@ ssh luma3@luma3ui-Macmini.local \
 
 ---
 
+## NPM CLI 도구
+
+### ast-grep (sg) — 구조적 코드 검색/치환
+AST 기반 매칭. Grep이 텍스트라면 `sg`는 코드 구조. 문자열·주석의 오탐을 배제.
+- **쓸 때**: 리팩토링, codemod, "특정 함수 호출만 골라내기", AST 패턴 탐색
+- **안 쓸 때**: 단순 문자열/주석 검색 — Grep이 빠름
+- **예시**:
+  ```bash
+  sg --pattern 'print($A)' --lang python scripts/            # print() 호출만
+  sg --pattern 'console.log($A)' --rewrite 'logger.debug($A)' -l js -U  # 일괄 치환
+  ```
+
+### mmdc (@mermaid-js/mermaid-cli) — 다이어그램 렌더
+mermaid 텍스트를 PNG/SVG로 변환. 아키텍처·플로우·시스템 구조 설명 시 선제적 사용.
+- `mmdc -i diagram.mmd -o diagram.png`
+- 복잡한 관계 설명은 텍스트 나열보다 다이어그램이 직관적일 때 이미지로 제시
+
+---
+
 ## gstack
 
 웹 브라우징은 `/browse` 스킬. `mcp__claude-in-chrome__*` 도구 사용 금지.
