@@ -5,11 +5,12 @@
 input=$(cat)
 
 # --- Extract fields using python3 (no jq dependency) ---
-model=$(echo "$input" | python -c "import sys,json; d=json.load(sys.stdin); print(d.get('model',{}).get('display_name','Unknown'))" 2>/dev/null || echo "Unknown")
-cwd=$(echo "$input" | python -c "import sys,json; d=json.load(sys.stdin); print(d.get('workspace',{}).get('current_dir') or d.get('cwd',''))" 2>/dev/null || echo "")
-ctx_pct=$(echo "$input" | python -c "import sys,json; d=json.load(sys.stdin); v=d.get('context_window',{}).get('used_percentage'); print(v) if v is not None else print('')" 2>/dev/null || echo "")
-five_hour_pct=$(echo "$input" | python -c "import sys,json; d=json.load(sys.stdin); v=d.get('rate_limits',{}).get('five_hour',{}).get('used_percentage'); print(v) if v is not None else print('')" 2>/dev/null || echo "")
-seven_day_pct=$(echo "$input" | python -c "import sys,json; d=json.load(sys.stdin); v=d.get('rate_limits',{}).get('seven_day',{}).get('used_percentage'); print(v) if v is not None else print('')" 2>/dev/null || echo "")
+PY=$(command -v python3 || command -v python)
+model=$(echo "$input" | "$PY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('model',{}).get('display_name','Unknown'))" 2>/dev/null || echo "Unknown")
+cwd=$(echo "$input" | "$PY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('workspace',{}).get('current_dir') or d.get('cwd',''))" 2>/dev/null || echo "")
+ctx_pct=$(echo "$input" | "$PY" -c "import sys,json; d=json.load(sys.stdin); v=d.get('context_window',{}).get('used_percentage'); print(v) if v is not None else print('')" 2>/dev/null || echo "")
+five_hour_pct=$(echo "$input" | "$PY" -c "import sys,json; d=json.load(sys.stdin); v=d.get('rate_limits',{}).get('five_hour',{}).get('used_percentage'); print(v) if v is not None else print('')" 2>/dev/null || echo "")
+seven_day_pct=$(echo "$input" | "$PY" -c "import sys,json; d=json.load(sys.stdin); v=d.get('rate_limits',{}).get('seven_day',{}).get('used_percentage'); print(v) if v is not None else print('')" 2>/dev/null || echo "")
 
 # --- ANSI colors ($'...' = escape chars baked in at assignment time) ---
 RESET=$'\033[0m'
