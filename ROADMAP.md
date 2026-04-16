@@ -66,6 +66,16 @@
 - [x] `bash scripts/sync.sh`로 ~/CLAUDE.md, ~/.codex/, ~/.gemini/ 재배포 (line budget 모두 통과)
 - [ ] 불필요 plugin 스킬 `/skill-toggle` 정리 (`codex:codex-cli-runtime`, `codex:gpt-5-4-prompting`, `codex:codex-result-handling`) — 사용자 대화형 실행 필요
 
+### v2.3 (완료, 2026-04-16)
+- [x] **Context injection** — `codex-dispatch.sh` / `gemini-dispatch.sh` task·explore 호출 시 git root 기준 CLAUDE.md 자동 주입 (`--no-context`로 비활성화 가능)
+- [x] **`explore` 모드** — read-only 조사. confirm 불필요. codex·gemini 양쪽 추가
+- [x] **`resume` 모드** — Codex 전용. 마지막 task thread 이어서 실행 (`codex-dispatch.sh resume`, `--resume` 플래그)
+- [x] **`last-thread` 커맨드** — resume 전 thread 정보 확인
+- [x] **`wait` 커맨드** — 잡 완료 시 `<task-notification>` 발생 (올바른 완료 감지)
+- [x] **rescue 결과 보고 후 resume 제안** — `claude_global.md`에 한 줄 규칙 추가
+- [x] Codex review로 P2(CLAUDE.md 탐색 위치 버그) 발견·수정 — dispatch → git root 기준으로 개선
+- [x] Gemini companion resume 미지원 확인 및 문서화
+
 ### v3 검토 대상 (미래)
 - [ ] Mesh 협업 복원 — 계약 정의 후
   - per-leg correlation ID
