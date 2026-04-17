@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Claude Code Status Line
-# Shows: current directory (cyan) | model (yellow) | 5h usage (green) | 7d usage (magenta)
+# Shows: project:worktree (cyan) | model (yellow) | effort (color) | ctx | 5h usage | 7d usage
 
 input=$(cat)
 
@@ -11,6 +11,14 @@ cwd=$(echo "$input" | "$PY" -c "import sys,json; d=json.load(sys.stdin); print(d
 ctx_pct=$(echo "$input" | "$PY" -c "import sys,json; d=json.load(sys.stdin); v=d.get('context_window',{}).get('used_percentage'); print(v) if v is not None else print('')" 2>/dev/null || echo "")
 five_hour_pct=$(echo "$input" | "$PY" -c "import sys,json; d=json.load(sys.stdin); v=d.get('rate_limits',{}).get('five_hour',{}).get('used_percentage'); print(v) if v is not None else print('')" 2>/dev/null || echo "")
 seven_day_pct=$(echo "$input" | "$PY" -c "import sys,json; d=json.load(sys.stdin); v=d.get('rate_limits',{}).get('seven_day',{}).get('used_percentage'); print(v) if v is not None else print('')" 2>/dev/null || echo "")
+
+# Effort level from settings.json (not passed via stdin).
+# Pipe via cat to avoid Windows Python choking on msys-style /c/... paths.
+effort=""
+settings_file="${HOME}/.claude/settings.json"
+if [ -f "$settings_file" ]; then
+  effort=$(cat "$settings_file" | "$PY" -c "import sys,json; print(json.load(sys.stdin).get('effortLevel',''))" 2>/dev/null || echo "")
+fi
 
 # --- ANSI colors ($'...' = escape chars baked in at assignment time) ---
 RESET=$'\033[0m'
@@ -79,6 +87,18 @@ fi
 
 # 2. Model name — yellow
 segments+=("${YELLOW}${model}${RESET}")
+
+# 2b. Effort level — color by level
+if [ -n "$effort" ]; then
+  case "$effort" in
+    low)    effort_color="$USAGE_OK" ;;
+    medium) effort_color="$USAGE_WARN" ;;
+    high)   effort_color="$USAGE_HIGH" ;;
+    max|maximum) effort_color="$USAGE_CRIT" ;;
+    *)      effort_color="$WHITE" ;;
+  esac
+  segments+=("${effort_color}effort:${effort}${RESET}")
+fi
 
 # 3. Context bar — model-aware thresholds
 if [ -n "$ctx_pct" ] && [ "$ctx_pct" != "None" ]; then
