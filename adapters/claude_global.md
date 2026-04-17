@@ -41,6 +41,23 @@ Telegram·JS 렌더링 크롤링·M4 실행은 `/openclaw` 스킬 경유.
 - **반영**: `git add && commit && push` → 다른 기기에서 `git pull && bash setup.sh`
 - **토글**: `/skill-toggle` — `~/.claude/skills-disabled/`로 이동. version control 대상 아님.
 
+### 스킬 파이프라인 맵 (진입점 중심)
+
+여러 스킬이 이어지는 파이프라인. **진입점만 기억**하면 됨 — 중간 단계는 진입점이 다음 단계를 제안하거나 이어받는다. 중간 단계 스킬을 단독으로 부를 수도 있지만(이미 산출물 있을 때) 기본은 진입점.
+
+- **디자인 (gstack)**: `/design-consultation` → `/design-shotgun` → `/design-html` → `/design-review`
+  - 시스템 없으면 `/design-consultation`부터, 이미 DESIGN.md 있으면 `/design-shotgun`부터, 라이브 사이트 QA는 `/design-review` 직행
+- **플랜 리뷰 (gstack)**: `/autoplan` = `/plan-ceo-review` + `/plan-eng-review` + `/plan-design-review` + `/plan-devex-review` 묶음 실행. 개별 리뷰 원하면 각 스킬 직접.
+- **배포 (gstack)**: `/qa` → `/ship` → `/land-and-deploy` → `/canary`. 리포트만 원하면 `/qa-only`, 배포 설정은 `/setup-deploy`.
+- **보안 (gstack)**: `/cso` (전체) / `/cso --skills` / `/cso --infra` / `/cso --comprehensive`. 리뷰 전용은 `/review`, `/security-review`.
+- **브라우저 (gstack)**: `/browse`(headless) ↔ `/connect-chrome`(headed + Side Panel). 쿠키 필요하면 `/setup-browser-cookies`.
+- **조사/기획 (내 커스텀)**: `/prd {이름}` (프로젝트 초기화) / `/research` (논문) / `/office-hours` (아이디어 브레인스토밍) / `/investigate` (버그 루트코즈).
+- **크리에이티브 (내 커스텀)**: `/drawing`(이미지) / `/color`(팔레트) / `/writing`(글쓰기·블로그 발행) / `/video`(유튜브 파이프라인) / `/music`(ACE-Step) / `/transcribe`(Whisper).
+- **브리핑/회고 (내 커스텀)**: `/events` / `/github-trends` / `/it-contents` / `/weekly-review` / `/retro` / `/session-end` / `/growth-review`(월간 자기평가).
+- **외부 시스템 (내 커스텀)**: `/channel`(텔레그램) / `/openclaw`(M4 cron) / `/ingredient`(식재료) / `/investment`(투자봇) / `/map`(시스템 지도).
+
+진입점 스킬이 파이프라인 다음 단계를 자동으로 호출하진 않는다 — **제안만** 하고 사용자가 다음 진입을 결정.
+
 ---
 
 ## 프로젝트 관례
