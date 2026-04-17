@@ -188,11 +188,11 @@ MCP Server (범용 저수준 인터페이스)
 
 ---
 
-### Phase A — 공유 메모리 레이어 (Agent Memory Layer) ✅ **완료 (2026-04-11)**
+### Phase A — 공유 메모리 레이어 (Agent Memory Layer) ⛔ **폐기 (2026-04-17)**
 
-> 가장 큰 구조적 공백 해소. 모든 후속 Phase의 기반.
+> 구현했으나 실사용 3건/2주로 저조. Windows WDAC이 `better_sqlite3.node`를 차단해 인프라도 불안정. 기존 엔트리는 M4 vault `10-knowledge/`로 이관하고 서버·DB·관련 스킬 제거. 대체: auto memory(프로젝트별) + vault(전역).
 
-**구현체**: [`mcp-servers/memory-mcp/`](../mcp-servers/memory-mcp/)
+**구현체**: ~~`mcp-servers/memory-mcp/`~~ (제거됨)
 
 **완료 내용**:
 - SQLite + FTS5 풀텍스트 검색 기반 (임베딩은 후속 업그레이드)

@@ -96,10 +96,6 @@ deploy_claude() {
   local claude_md_path="$BASE_DIR/CLAUDE.md"
   mkdir -p "$target_dir"
 
-  # Deploy orchestrator rules to .claude directory
-  cp "$REPO_DIR/adapters/claude.md" "$target_dir/orchestrator_rules.md"
-  echo "[OK] Claude adapter → $target_dir/orchestrator_rules.md"
-
   # Deploy global CLAUDE.md as-is. Mode-specific guard injection was removed with orchestrate/queue.
   cp "$REPO_DIR/adapters/claude_global.md" "$claude_md_path"
   echo "[OK] Global CLAUDE.md → $claude_md_path"
@@ -266,16 +262,13 @@ main() {
   echo ""
   echo "--- Injecting Shared Content ---"
   # Work on copies to keep originals clean
-  cp "$REPO_DIR/adapters/claude.md" "$REPO_DIR/adapters/claude.md.build"
   cp "$REPO_DIR/adapters/codex.md" "$REPO_DIR/adapters/codex.md.build"
   cp "$REPO_DIR/adapters/gemini.md" "$REPO_DIR/adapters/gemini.md.build"
 
-  inject_shared "$REPO_DIR/adapters/claude.md.build"
   inject_shared "$REPO_DIR/adapters/codex.md.build"
   inject_shared "$REPO_DIR/adapters/gemini.md.build"
 
   # Swap build files into adapters for deployment
-  mv "$REPO_DIR/adapters/claude.md.build" "$REPO_DIR/adapters/claude.md.deploy"
   mv "$REPO_DIR/adapters/codex.md.build" "$REPO_DIR/adapters/codex.md.deploy"
   mv "$REPO_DIR/adapters/gemini.md.build" "$REPO_DIR/adapters/gemini.md.deploy"
 
@@ -284,19 +277,15 @@ main() {
   echo "--- Deploying ---"
 
   # Temporarily swap deploy files for deployment
-  local claude_orig="$REPO_DIR/adapters/claude.md"
   local codex_orig="$REPO_DIR/adapters/codex.md"
   local gemini_orig="$REPO_DIR/adapters/gemini.md"
 
-  cp "$REPO_DIR/adapters/claude.md.deploy" "$claude_orig.bak"
   cp "$REPO_DIR/adapters/codex.md.deploy" "$codex_orig.bak"
   cp "$REPO_DIR/adapters/gemini.md.deploy" "$gemini_orig.bak"
 
   # Use deploy versions for actual deployment
   if [ "$target_agent" = "all" ] || [ "$target_agent" = "claude" ]; then
-    cp "$REPO_DIR/adapters/claude.md.deploy" "$REPO_DIR/adapters/claude.md"
     deploy_claude
-    cp "$claude_orig.bak" "$REPO_DIR/adapters/claude.md" 2>/dev/null || true
   fi
 
   if [ "$target_agent" = "all" ] || [ "$target_agent" = "codex" ]; then
@@ -340,7 +329,6 @@ main() {
   }
   # Check deployed files (after SHARED_PRINCIPLES injection)
   check_budget "$BASE_DIR/CLAUDE.md" 160 "~/CLAUDE.md"
-  check_budget "$BASE_DIR/.claude/orchestrator_rules.md" 150 "orchestrator_rules.md"
   check_budget "$BASE_DIR/.codex/AGENTS.md" 120 "AGENTS.md (Codex)"
   check_budget "$BASE_DIR/AGENTS.md" 60 "~/AGENTS.md (Codex home)"
   check_budget "$BASE_DIR/.gemini/GEMINI.md" 150 "GEMINI.md"
