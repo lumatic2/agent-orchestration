@@ -1,5 +1,7 @@
 # agent-orchestration ROADMAP
 
+> 마지막 업데이트: 2026-04-26
+
 ## proj 런처 공개 준비
 
 ### 독립 레포 분리
@@ -76,6 +78,18 @@
 - [x] Codex review로 P2(CLAUDE.md 탐색 위치 버그) 발견·수정 — dispatch → git root 기준으로 개선
 - [x] Gemini companion resume 미지원 확인 및 문서화
 
+### v2.4 — 알림 회로 인프라 회복 (완료, 2026-04-26)
+
+> 배경: `/codex` `/gemini` 스모크테스트에서 codex 완료 알림이 양쪽 채널 모두 막혀 있던 사실 발견. 추적 결과 plugin 경로 이동에 인프라가 따라가지 못해 누적된 silent failure.
+
+- [x] **`codex-dispatch.sh wait`** 1·2차 fix — 옛 `os.tmpdir()/codex-companion` → `~/.claude/plugins/data/codex-openai-codex/state/`. tail-f|grep SIGPIPE hang을 1초 폴링으로 단순화
+- [x] **`codex-dispatch.sh last-thread`** Windows 호환 — node `/dev/stdin` ENOENT 회피, JSON을 argv 전달
+- [x] **`gemini-dispatch.sh` 컨텍스트 주입 포맷** — brief 우선·CLAUDE.md를 reference로 후미 첨부. Flash 모델이 짧은 brief를 컨텍스트 셋업으로 오인하던 회귀 해결
+- [x] **proj launcher** `.ps1` shim 호환 — `Start-Process pwsh -NoLogo -NoProfile -Command <agent>` 래핑. `& <cmd>`의 fzf stdin 인헤리턴스 회귀(/codex review P2)도 동시 해결
+- [x] **`job-watcher.mjs`** codex 블라인드 해소 — `CODEX_ROOTS` 배열로 새 plugin data 경로 우선 + 옛 temp-dir fallback. `extractMeta` 프로젝트 추출 일반화
+- [x] **`scripts/sync.sh`** device 자동 배포 — `scripts/device/{job-watcher.mjs, job-watcher-inject.py}`를 `~/.claude/hooks/`에 자동 복사. 변경 감지 시 데몬 재시작 안내 출력 (강제 kill은 안 함)
+- [x] **gemini 버전 글로브** — 하드코딩 `1.0.0` 제거, `geminiJobsDir()` 함수가 매 폴링마다 최신 버전 디렉토리 picking. plugin 업그레이드 내성
+
 ### v3 검토 대상 (미래)
 - [ ] Mesh 협업 복원 — 계약 정의 후
   - per-leg correlation ID
@@ -98,3 +112,9 @@
 ## K-IFRS 개인용 RAG/MCP 시스템
 
 > **별도 프로젝트로 이전됨** → `~/projects/kifrs-rag/ROADMAP.md` (2026-04-14)
+
+---
+
+## 이어서 할 일
+
+- M4(Mac)에서 `cd ~/projects/agent-orchestration && git pull && bash scripts/sync.sh` 실행해 device 자동 배포 + job-watcher 재시작 안내가 정상 출력되는지 확인. M4의 `~/.claude/hooks/job-watcher.mjs`가 새 코드로 교체된 뒤, 데몬 수동 재시작(`kill $(cat ~/.claude/hooks/.job-watcher.pid); node ~/.claude/hooks/job-watcher.mjs --detach`)으로 codex 알림이 Windows와 동일하게 동작하는지 확인.
