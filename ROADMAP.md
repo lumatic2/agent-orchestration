@@ -109,6 +109,33 @@
 
 ---
 
+## 원격 PC 깨우기 (remote-wake-pc)
+
+> 휴대폰(셀룰러) → Telegram claude-channel → M4 매직 패킷 발사 → Windows 절전 해제 → CRD 접속. 자세한 설계와 한계는 `docs/remote-wake-pc.md` 참조.
+
+### v1 (완료, 2026-04-26)
+- [x] `scripts/wake-pc.sh` — Python 매직 패킷 발사 + ping 검증
+- [x] `docs/remote-wake-pc.md` — Windows 레지스트리·전원·방화벽 + M4 설치 + 운영 노트
+- [x] `~/.claude/commands/wake-pc.md` 슬래시 명령 + claude-channel 세션 재시작
+- [x] `/channel` 스킬의 tmux 세션명 mismatch (`telegram` → `claude-channel`) 정정
+
+### v1.1 (Codex adversarial-review 반영, 완료)
+- [x] **#4 ping 검증 의미론** — pre-check ping 추가. already-awake(ℹ️)와 newly-online(✅) 분리 표기. transition 측정 불가능한 케이스 명시
+- [x] **#2 ICMP 보안 표면** — Windows 방화벽 룰을 `RemoteAddress=192.168.200.134`(M4)로 좁힘. 게스트 Wi-Fi·다른 LAN 디바이스는 ping/스캔 불가
+- [x] **#5 하드코드 + 입력 검증** — `WAKE_MAC`/`WAKE_BROADCAST`/`WAKE_TARGET_IP` env override. MAC·IPv4 정규식 검증 후 invalid면 exit 2. 다른 PC 추가는 wrapper 한 줄
+- [x] **#3 S5 복구 한계** — 의식적 트레이드오프로 doc "알려진 한계" 섹션에 명시. 자동화 옵션(BIOS 1회 진입 / 스마트플러그) 기록
+
+### 별도 트랙 — Telegram trust boundary (Codex #1, 보류)
+
+> 우리 wake 작업이 노출시킨 기존 부채. wake와 분리된 별도 이니셔티브.
+> `claude-channel`이 wake 전용 채널이 아니라 풀 Claude 세션(`--dangerously-skip-permissions`)이라, 봇/채팅 탈취 시 wake에 그치지 않고 M4에서 임의 명령 실행 가능.
+
+- [ ] Telegram-driven 명령 인벤토리 — wake 외 어떤 작업이 채널 경유로 실행되고 있나
+- [ ] 권한 모델 재설계: `--dangerously-skip-permissions` 제거 vs wake 전용 single-purpose handler 분리 vs sender allowlist (chat_id whitelist 강제) 중 선택
+- [ ] start-claude-channel.sh 자동 동의 자동화(`tmux send-keys '2'`)도 동시 검토 — 자동 동의는 무인 데몬 운영의 일부지만, 권한 모델 재설계 시 같이 처리
+
+---
+
 ## K-IFRS 개인용 RAG/MCP 시스템
 
 > **별도 프로젝트로 이전됨** → `~/projects/kifrs-rag/ROADMAP.md` (2026-04-14)

@@ -60,9 +60,12 @@ New-Item -Path $p -Force | Out-Null
 Set-ItemProperty -Path $p -Name ACSettingIndex -Value 0 -Type DWord
 Set-ItemProperty -Path $p -Name DCSettingIndex -Value 0 -Type DWord
 
-# 4. ICMP echo 인바운드 허용 (모든 프로필) — wake-pc.sh가 ping으로 부팅 검증
+# 4. ICMP echo 인바운드 허용 — M4(WoL 발사기)에서만. RemoteAddress로 좁혀서
+#    게스트 Wi-Fi·다른 LAN 디바이스는 ping/스캔 못 하게 함.
+$M4_IP = '192.168.200.134'
 New-NetFirewallRule -DisplayName "Allow ICMPv4-In (WoL verify)" `
-  -Protocol ICMPv4 -IcmpType 8 -Direction Inbound -Action Allow -Profile Any
+  -Protocol ICMPv4 -IcmpType 8 -Direction Inbound -Action Allow `
+  -Profile Any -RemoteAddress $M4_IP
 ```
 
 NIC의 WoL은 Realtek 2.5GbE 기본값이 `WakeOnMagicPacket=Enabled`라 별도 작업 불필요.
@@ -85,7 +88,7 @@ Get-NetAdapterPowerManagement -Name '이더넷 2'  # WakeOnMagicPacket 컬럼
 이 레포가 M4의 cron으로 매일 06:00 git pull 되므로 다음 한 번만 처리:
 
 ```bash
-# scripts/wake-pc.sh를 ~/bin/에 심볼릭 링크 (권장) 또는 복사
+# scripts/wake-pc.sh를 ~/bin/에 심볼릭 링크 (git pull시 자동 반영)
 ln -sf "$HOME/projects/agent-orchestration/scripts/wake-pc.sh" "$HOME/bin/wake-pc.sh"
 chmod +x "$HOME/projects/agent-orchestration/scripts/wake-pc.sh"
 
@@ -109,6 +112,22 @@ MD
 # 새 슬래시 명령이 인식되도록 claude-channel 세션 재시작
 bash "$HOME/projects/agent-orchestration/scripts/start-claude-channel.sh"
 ```
+
+### 다른 PC로 옮길 때
+
+스크립트는 환경변수 `WAKE_MAC` / `WAKE_BROADCAST` / `WAKE_TARGET_IP` 를 읽어
+default를 override한다. 두 번째 PC 추가하려면 wrapper 하나 더 만들기:
+
+```bash
+# ~/bin/wake-laptop.sh
+#!/usr/bin/env bash
+WAKE_MAC=11:22:33:44:55:66 \
+WAKE_BROADCAST=192.168.200.255 \
+WAKE_TARGET_IP=192.168.200.50 \
+exec "$HOME/projects/agent-orchestration/scripts/wake-pc.sh"
+```
+
+스크립트 자체는 입력값 형식 검증(MAC/IPv4 정규식)을 하므로 오타 시 즉시 exit 2.
 
 ## 사용
 
@@ -138,11 +157,30 @@ sed -i.bak \
 > `commands/channel.md`는 setup.sh가 배포하지 않는 비-version-controlled 파일이라
 > 이 정정은 M4에 직접 sed로 적용되었음. 다른 기기에서는 동일 sed를 다시 실행해야 함.
 
+## 알려진 한계 (의도된 트레이드오프)
+
+Codex adversarial-review에서 식별. 의식적 선택이라 즉시 fix 안 한 항목들.
+
+- **S5(완전 종료) 복구 불가**: Windows Update 강제 재부팅·BSOD·정전 후엔
+  절전이 아닌 S5 상태로 빠짐. 이 상태에서 NIC 대기전원이 끊겨 매직 패킷이
+  NIC에 도달 못 함. 현재는 현장 수동 부팅 필요. 자동화 옵션 (미적용):
+  (a) BIOS 진입 1회 — `ErP=Disabled` + `Power On By PCI-E=Enabled`,
+  (b) 스마트플러그 + auto-boot 조합. → ROADMAP 참조.
+- **"이미 깨어있음" 케이스의 의미론적 한계**: pre-check ping으로 `ℹ️
+  already responsive` 출력해 transition 미관측을 명시하지만, 여전히 "확실히
+  wake가 일어났다"는 강한 신호는 아님. 강화 신호 (CRD host service health,
+  Tailscale agent ping 등)는 v2 검토.
+- **Telegram trust boundary**: `claude-channel`이 wake 전용 채널이 아니라
+  풀 Claude 세션(`--dangerously-skip-permissions`)이라, 봇 탈취 시 wake에
+  그치지 않고 임의 명령 실행 가능. 이건 wake 자체와 분리된 별도 이니셔티브
+  → ROADMAP 참조.
+
 ## 트러블슈팅
 
 | 증상 | 원인 | 해결 |
 |---|---|---|
-| `📨 sent` 후 `⚠️ no ICMP after 120s` | 이미 깨어 있는데 ping 차단 | ICMP 룰 확인 (`Get-NetFirewallRule -DisplayName 'Allow ICMPv4-In (WoL verify)'`) |
-| `📨 sent` 후 응답 무, 화면도 켜지지 않음 | 완전 종료(S5) 상태 | 현장 부팅 1회 후 BIOS 진입 → ErP=Disabled, Power On By PCI-E=Enabled |
+| `📨 sent` 후 `⚠️ no ICMP after 120s` (exit 3) | wake 실패 또는 S5 상태 | "알려진 한계" 의 S5 항목 참조 |
+| ping 차단 의심 | ICMP 룰이 RemoteAddress=M4_IP만 허용 | `Get-NetFirewallRule -DisplayName 'Allow ICMPv4-In (WoL verify)' \| Get-NetFirewallAddressFilter` 로 확인 |
+| `❌ invalid MAC/BROADCAST/TARGET_IP` (exit 2) | env override 오타 | 환경변수 형식 재확인 (MAC `xx:xx:...`, IPv4 dotted) |
 | CRD 연결되는데 화면이 잠금 상태 | CONSOLELOCK 설정이 안 먹음 | `powercfg -q SCHEME_CURRENT SUB_NONE 0e796bdb-100d-47d6-a2d5-f7d2daa51f51` 로 AC/DC=0 확인 |
 | 슬래시 `/wake-pc` 인식 안 됨 | claude-channel 세션이 옛날 인덱스 보유 | `bash ~/projects/agent-orchestration/scripts/start-claude-channel.sh` |
