@@ -90,13 +90,22 @@ Telegram·JS 렌더링 크롤링·M4 실행은 `/openclaw` 스킬 경유.
 
 ---
 
+## 로컬 데이터 자료실
+
+- **위치**: `D:\datasets\` — 한국어/한국 데이터셋 모음 (총 ~6.3 GB)
+- **인덱스**: `D:\datasets\INDEX.md` — 메인 페르소나(Nemotron-Personas-Korea 100만), KMMLU·KLUE·CLIcK 평가, lbox-open 판례, KOSIS API 추출 CSV 등 전체 카탈로그·로드 코드·라이선스
+- **세션 시작 규칙**: 데이터 분석·페르소나 시뮬·통계 비교 작업 요청 시 먼저 `INDEX.md` 1회 읽고 진행
+- **API 키**: `KOSIS_API_KEY`는 `D:\datasets\.env`, `DART_API_KEY`는 Windows User env (`os.environ['DART_API_KEY']`)에서 직접 로드
+
+---
+
 ## 외부 도구 역할 분리
 
 ### Obsidian Vault — 개인 지식 저장소 (나만 봄)
-- **위치**: `m4:~/vault/` (MCP: `obsidian-vault`)
+- **위치**: `m4:~/vault/` (MCP: `obsidian-vault`). PARA × Johnny Decimal 구조, 깊이 ≤5단계
 - **용도**: 리서치 원본, 세션 로그, 아이디어 메모, 학습 노트
-- **경로**: 리서치→`10-knowledge/` / 전문가→`20-experts/` / 프로젝트→`30-projects/` / 임시→`00-inbox/` / 로그→`40-log/YYYY-MM-DD.md`
-- **쓰기**: MCP 또는 M4 직접. 로컬 clone 금지. Frontmatter 필수 (type, domain, source, date, status)
+- **경로**: 임시→`05-Inbox/` / 도메인 지식→`10-Resources/10.0X-{Cat}/` / 전문가→`20-Areas/` / 프로젝트→`30-Projects/` / 로그→`40-Logs/YYYY-MM-DD.md` / 종료→`90-Archives/`. 카테고리 매핑은 vault `00-System/VAULT_INDEX.md` (JDex)
+- **쓰기**: MCP 또는 M4 직접. 로컬 clone 금지. **Area·Category 폴더에 파일 직접 저장 금지** (ID 폴더 안에만). Frontmatter 필수 (type, domain, source, date, status)
 
 ### Notion — 외부 공유용 대시보드 (남에게 보여줌)
 - **용도**: 포트폴리오, 프로젝트 소개, 정리된 문서, 팀/외부 공유 자료
