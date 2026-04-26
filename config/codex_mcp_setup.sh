@@ -57,7 +57,7 @@ fi
 
 # 4. Obsidian vault (SSH 경유, 토큰 불필요)
 codex mcp add obsidian-vault \
-  -- ssh m1 "source ~/.nvm/nvm.sh && npx -y @bitbonsai/mcpvault@latest ~/vault"
+  -- ssh m4 "source ~/.nvm/nvm.sh && npx -y @bitbonsai/mcpvault@latest ~/vault"
 echo "[OK] obsidian-vault"
 
 # 5. Google Workspace (gws auth login 별도 필요)
