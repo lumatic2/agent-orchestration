@@ -1,6 +1,6 @@
 # agent-orchestration ROADMAP
 
-> 마지막 업데이트: 2026-04-26
+> 마지막 업데이트: 2026-04-27
 
 ## proj 런처 공개 준비
 
@@ -144,4 +144,7 @@
 
 ## 이어서 할 일
 
-- M4(Mac)에서 `cd ~/projects/agent-orchestration && git pull && bash scripts/sync.sh` 실행해 device 자동 배포 + job-watcher 재시작 안내가 정상 출력되는지 확인. M4의 `~/.claude/hooks/job-watcher.mjs`가 새 코드로 교체된 뒤, 데몬 수동 재시작(`kill $(cat ~/.claude/hooks/.job-watcher.pid); node ~/.claude/hooks/job-watcher.mjs --detach`)으로 codex 알림이 Windows와 동일하게 동작하는지 확인.
+- 원격 wake 한 사이클 실전 검증: 휴대폰 Wi-Fi 끄고 셀룰러 → Windows PC를 절전 진입(`Win+X` → 종료 또는 로그아웃 → 절전) → 텔레그램 claude-channel 봇에 `/wake-pc` 또는 "내 PC 깨워줘" → 5–30초 후 `✅ newly online` 회신 확인 → CRD 앱(같은 Google 계정)에서 "유성" 선택 → PIN 입력 → 데스크톱 진입까지 완주.
+- 결과에 따라 후속:
+  - 정상 동작 시: `docs/remote-wake-pc.md` "사용" 섹션을 실측 시간으로 다듬기 (현재는 "5–30초"로 표기)
+  - 실패 시: 어느 단계에서 멈췄는지에 따라 `docs/remote-wake-pc.md` "트러블슈팅" 표 보강
