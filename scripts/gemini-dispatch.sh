@@ -61,8 +61,10 @@ build_project_context() {
     claude_md="$(pwd)/CLAUDE.md"
   fi
 
+  # Gemini Flash는 긴 prepended context가 짧은 brief를 압도하는 경향.
+  # → brief를 앞에 두고 CLAUDE.md는 뒤에 reference로 첨부 (Option D).
   if [ -n "$claude_md" ]; then
-    printf "=== 프로젝트 컨벤션 (%s) ===\n%s\n\n=== 작업 지시 ===\n" "$claude_md" "$(cat "$claude_md")"
+    printf "%s" "$claude_md"
   else
     printf ""
   fi
@@ -70,10 +72,11 @@ build_project_context() {
 
 inject_context() {
   local brief="$1"
-  local ctx
-  ctx="$(build_project_context)"
-  if [ -n "$ctx" ]; then
-    printf "%s%s" "$ctx" "$brief"
+  local claude_md
+  claude_md="$(build_project_context)"
+  if [ -n "$claude_md" ]; then
+    printf "%s\n\n---\n[참고: 프로젝트 컨벤션 — %s. 위 작업과 직접 관련 없으면 무시하라.]\n%s" \
+      "$brief" "$claude_md" "$(cat "$claude_md")"
   else
     printf "%s" "$brief"
   fi

@@ -171,11 +171,18 @@ case "$CMD" in
       echo "ERROR: wait requires a job-id" >&2
       exit 1
     fi
-    LOG_BASE="$HOME/AppData/Local/Temp/codex-companion"
+    # Plugin state dir (current layout — codex plugin >= 2025-Q4)
+    LOG_BASE="$HOME/.claude/plugins/data/codex-openai-codex/state"
     LOG=$(ls -1 "$LOG_BASE"/*/jobs/"$JOB_ID".log 2>/dev/null | head -1 || true)
+    # Legacy temp-dir layout (older codex plugin builds)
+    LEGACY_BASE="$HOME/AppData/Local/Temp/codex-companion"
+    if [ -z "$LOG" ]; then
+      LOG=$(ls -1 "$LEGACY_BASE"/*/jobs/"$JOB_ID".log 2>/dev/null | head -1 || true)
+    fi
     if [ -z "$LOG" ]; then
       echo "ERROR: log not found for '$JOB_ID'" >&2
       echo "       Searched: $LOG_BASE/*/jobs/$JOB_ID.log" >&2
+      echo "                 $LEGACY_BASE/*/jobs/$JOB_ID.log" >&2
       exit 1
     fi
     # 이미 완료된 경우 즉시 통과, 아니면 tail -f | grep -m1으로 sleep 없이 대기
