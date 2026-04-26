@@ -1,4 +1,4 @@
-# PowerShell Profile - yusun
+﻿# PowerShell Profile - yusun
 
 # ─── Python 3.12 PATH ────────────────────────────────────────────────────────
 $py312 = "$env:LOCALAPPDATA\Programs\Python\Python312"
@@ -105,8 +105,8 @@ function proj {
         $cmd = ($pick -split '\s+')[0]
         switch ($cmd) {
             "claude" { Start-Process claude -NoNewWindow -Wait }
-            "codex"  { Start-Process codex  -NoNewWindow -Wait }
-            "gemini" { Start-Process gemini -NoNewWindow -Wait }
+            "codex"  { Start-Process pwsh -NoNewWindow -Wait -ArgumentList '-NoLogo','-NoProfile','-Command','codex' }
+            "gemini" { Start-Process pwsh -NoNewWindow -Wait -ArgumentList '-NoLogo','-NoProfile','-Command','gemini' }
             default  { }
         }
     }

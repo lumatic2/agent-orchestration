@@ -114,10 +114,14 @@ case "$CMD" in
     ;;
 
   last-thread)
-    # 마지막 저장된 task thread ID·이름 출력 (resume 전 확인용)
-    tail -1 "$HOME/.codex/session_index.jsonl" 2>/dev/null \
-      | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log('id:  '+d.id+'\nname:'+d.thread_name+'\nupdated:'+d.updated_at)" \
-      || echo "no task threads found"
+    # 마지막 저장된 task thread ID·이름 출력 (resume 전 확인용).
+    # Windows node는 /dev/stdin을 C:\dev\stdin으로 오역해 ENOENT → JSON을 argv로 전달.
+    LINE=$(tail -1 "$HOME/.codex/session_index.jsonl" 2>/dev/null || true)
+    if [ -z "$LINE" ]; then
+      echo "no task threads found"
+    else
+      node -e "const d=JSON.parse(process.argv[1]); console.log('id:      '+d.id+'\nname:    '+d.thread_name+'\nupdated: '+d.updated_at)" "$LINE"
+    fi
     ;;
 
   task|rescue)
@@ -185,10 +189,11 @@ case "$CMD" in
       echo "                 $LEGACY_BASE/*/jobs/$JOB_ID.log" >&2
       exit 1
     fi
-    # 이미 완료된 경우 즉시 통과, 아니면 tail -f | grep -m1으로 sleep 없이 대기
-    if ! grep -q "Final output\|Turn completion inferred" "$LOG" 2>/dev/null; then
-      tail -f "$LOG" | grep -m 1 "Final output\|Turn completion inferred" >/dev/null 2>&1 || true
-    fi
+    # Git Bash의 tail -f는 grep -m 1 종료 시 SIGPIPE 전파가 늦어 hang됨.
+    # → 1초 폴링으로 단순화. job 길이는 보통 10s+라 부담 없음.
+    while ! grep -q "Final output\|Turn completion inferred" "$LOG" 2>/dev/null; do
+      sleep 1
+    done
     echo "=== Codex job $JOB_ID completed ==="
     node "$COMPANION" result "$JOB_ID" 2>/dev/null \
       || grep -A 500 "\] Final output" "$LOG" | head -150
