@@ -63,6 +63,7 @@ Telegram·JS 렌더링 크롤링·M4 실행은 `/openclaw` 스킬 경유.
 ## 프로젝트 관례
 
 - **위치**: `~/projects/{이름}/` — 명시 없으면 항상 여기
+- **분류 메모**: `~/projects/INDEX.md` — Active/Maintained/Archive 분류 + 한 줄 설명. 새 프로젝트 만들면 Active에 추가, 1주+ 미수정 시 Maintained 검토. 폴더 이동 X (절대경로 의존성 보존)
 - **초기화**: `/prd {이름}` 스킬
 - **필수 파일** (프로젝트 **루트**에만 둔다 — worktree·하위폴더에 복제 금지):
   - `CLAUDE.md` — 기술 스택, 컨벤션, Claude에게 주는 지시
