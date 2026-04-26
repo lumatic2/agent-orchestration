@@ -17,7 +17,12 @@ const HOOK_DIR = path.join(os.homedir(), ".claude", "hooks");
 const PID_FILE = path.join(HOOK_DIR, ".job-watcher.pid");
 const LOG_FILE = path.join(HOOK_DIR, "job-watcher.log");
 const QUEUE_FILE = path.join(HOOK_DIR, "job-watcher-queue.jsonl");
-const CODEX_ROOT = path.join(os.tmpdir(), "codex-companion");
+// Codex companion state moved from os.tmpdir()/codex-companion to plugin data dir
+// (codex plugin >= 2025-Q4). Legacy path kept as fallback for older builds.
+const CODEX_ROOTS = [
+  path.join(os.homedir(), ".claude", "plugins", "data", "codex-openai-codex", "state"),
+  path.join(os.tmpdir(), "codex-companion"),
+];
 const GEMINI_JOBS_DIR = path.join(
   os.homedir(),
   ".claude", "plugins", "cache", "claude-gemini-plugin", "gemini", "1.0.0", "jobs",
@@ -78,10 +83,8 @@ function extractMeta(kind, job) {
   const icon = ok ? "✅" : "❌";
   const dur = fmtDuration(job.startedAt, job.completedAt || job.cancelledAt);
   let project = "";
-  if (kind === "codex") {
-    const root = job.workspaceRoot || job.request?.cwd || "";
-    project = root ? path.basename(root.replace(/[\\/]+$/, "")) : "";
-  }
+  const root = job.workspaceRoot || job.request?.cwd || job.cwd || "";
+  project = root ? path.basename(root.replace(/[\\/]+$/, "")) : "";
   const req = job.request || {};
   const model = req.model || job.model || "(default)";
   const effort = req.effort || null;
@@ -165,22 +168,24 @@ function notify(kind, job) {
 }
 
 function scanCodex(prime, seen) {
-  let entries;
-  try { entries = fs.readdirSync(CODEX_ROOT, { withFileTypes: true }); }
-  catch { return; }
-  for (const e of entries) {
-    if (!e.isDirectory()) continue;
-    const statePath = path.join(CODEX_ROOT, e.name, "state.json");
-    let state;
-    try { state = JSON.parse(fs.readFileSync(statePath, "utf8")); }
+  for (const root of CODEX_ROOTS) {
+    let entries;
+    try { entries = fs.readdirSync(root, { withFileTypes: true }); }
     catch { continue; }
-    for (const job of state.jobs || []) {
-      if (!job.id || !TERMINAL.has(job.status)) continue;
-      const key = `codex:${job.id}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      if (prime) continue;
-      notify("codex", job);
+    for (const e of entries) {
+      if (!e.isDirectory()) continue;
+      const statePath = path.join(root, e.name, "state.json");
+      let state;
+      try { state = JSON.parse(fs.readFileSync(statePath, "utf8")); }
+      catch { continue; }
+      for (const job of state.jobs || []) {
+        if (!job.id || !TERMINAL.has(job.status)) continue;
+        const key = `codex:${job.id}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (prime) continue;
+        notify("codex", job);
+      }
     }
   }
 }
