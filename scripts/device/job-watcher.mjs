@@ -23,10 +23,23 @@ const CODEX_ROOTS = [
   path.join(os.homedir(), ".claude", "plugins", "data", "codex-openai-codex", "state"),
   path.join(os.tmpdir(), "codex-companion"),
 ];
-const GEMINI_JOBS_DIR = path.join(
+// Gemini plugin nests jobs under a version dir (e.g. .../gemini/1.0.0/jobs/).
+// Resolve the latest version each scan so plugin upgrades are followed without restart.
+const GEMINI_PARENT = path.join(
   os.homedir(),
-  ".claude", "plugins", "cache", "claude-gemini-plugin", "gemini", "1.0.0", "jobs",
+  ".claude", "plugins", "cache", "claude-gemini-plugin", "gemini",
 );
+function geminiJobsDir() {
+  let versions;
+  try {
+    versions = fs.readdirSync(GEMINI_PARENT, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+  } catch { return null; }
+  if (!versions.length) return null;
+  return path.join(GEMINI_PARENT, versions[versions.length - 1], "jobs");
+}
 const TELEGRAM_SCRIPT = path.join(os.homedir(), ".claude", "telegram-notify.sh");
 const POLL_MS = 1500;
 const TERMINAL = new Set(["completed", "failed", "cancelled", "error"]);
@@ -191,12 +204,14 @@ function scanCodex(prime, seen) {
 }
 
 function scanGemini(prime, seen) {
+  const jobsDir = geminiJobsDir();
+  if (!jobsDir) return;
   let entries;
-  try { entries = fs.readdirSync(GEMINI_JOBS_DIR); }
+  try { entries = fs.readdirSync(jobsDir); }
   catch { return; }
   for (const name of entries) {
     if (!name.endsWith(".json")) continue;
-    const jsonPath = path.join(GEMINI_JOBS_DIR, name);
+    const jsonPath = path.join(jobsDir, name);
     let job;
     try { job = JSON.parse(fs.readFileSync(jsonPath, "utf8")); }
     catch { continue; }

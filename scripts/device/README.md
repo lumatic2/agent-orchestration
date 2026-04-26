@@ -3,6 +3,10 @@
 기기별 수동 설치 파일. 여러 기기에 동일하게 필요하지만 sync.sh로 자동 배포하기엔
 기기 의존성(경로·설치 방식)이 강한 것들을 템플릿으로 보관한다.
 
+> **자동 배포 예외**: `job-watcher.mjs`, `job-watcher-inject.py`는 경로 하드코딩이
+> 없어 `sync.sh`가 `~/.claude/hooks/`로 자동 복사한다. `.mjs`가 갱신되면 sync.sh가
+> 데몬 재시작 안내를 출력한다 (강제 kill은 안 함 — in-flight 잡 알림 손실 방지).
+
 ## codex-wrapper.sh.template
 
 Codex CLI에 `--dangerously-bypass-approvals-and-sandbox` 플래그를 자동으로 붙이는 래퍼.

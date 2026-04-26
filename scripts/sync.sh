@@ -136,6 +136,27 @@ deploy_claude() {
     done
   fi
 
+  # Auto-deploy machine-independent device files (path-free runtime scripts).
+  # codex-wrapper / *.plist는 절대경로·플랫폼 의존성이 강해 README 수동 가이드.
+  local device_dir="$REPO_DIR/scripts/device"
+  local device_auto_files=("job-watcher.mjs" "job-watcher-inject.py")
+  local watcher_changed=0
+  for f in "${device_auto_files[@]}"; do
+    local src="$device_dir/$f"
+    local dst="$claude_hooks_dir/$f"
+    [ -f "$src" ] || continue
+    if [ ! -f "$dst" ] || ! cmp -s "$src" "$dst"; then
+      cp "$src" "$dst"
+      echo "[OK] device hook → $dst"
+      [[ "$f" == "job-watcher.mjs" ]] && watcher_changed=1
+    fi
+  done
+  if [ "$watcher_changed" = "1" ]; then
+    echo "[NOTE] job-watcher.mjs 코드가 갱신됨. 적용하려면 데몬 재시작:"
+    echo "       kill \$(cat ~/.claude/hooks/.job-watcher.pid 2>/dev/null) 2>/dev/null;" \
+         "node ~/.claude/hooks/job-watcher.mjs --detach"
+  fi
+
   # 커스텀 스킬은 ~/projects/custom-skills/ 레포에서 관리 (2026-03-29 이전)
   # 배포: bash ~/projects/custom-skills/setup.sh
 
