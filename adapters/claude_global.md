@@ -107,6 +107,7 @@ Telegram·JS 렌더링 크롤링·M4 실행은 `/openclaw` 스킬 경유.
 - **용도**: 리서치 원본, 세션 로그, 아이디어 메모, 학습 노트
 - **경로**: 임시→`05-Inbox/` / 도메인 지식→`10-Resources/10.0X-{Cat}/` / 전문가→`20-Areas/` / 프로젝트→`30-Projects/` / 로그→`40-Logs/YYYY-MM-DD.md` / 종료→`90-Archives/`. 카테고리 매핑은 vault `00-System/VAULT_INDEX.md` (JDex)
 - **쓰기**: MCP 또는 M4 직접. 로컬 clone 금지. **Area·Category 폴더에 파일 직접 저장 금지** (ID 폴더 안에만). Frontmatter 필수 (type, domain, source, date, status)
+- **검증 우선**: vault 경로를 코드 변수·옛 로그에서 가져오지 말 것 — 옛 폴더(예: 사라진 `10-knowledge/`)가 박혀 있을 수 있다. 새 vault 작업 전 `ssh m4 'ls <경로>'`로 존재 검증 + 카테고리 매핑은 항상 `~/vault/00-System/VAULT_INDEX.md`(JDex)에서 확인
 
 ### Notion — 외부 공유용 대시보드 (남에게 보여줌)
 - **용도**: 포트폴리오, 프로젝트 소개, 정리된 문서, 팀/외부 공유 자료
