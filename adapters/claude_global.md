@@ -88,6 +88,18 @@ Telegram·JS 렌더링 크롤링·M4 실행은 `/openclaw` 스킬 경유.
 ## Windows 로컬 도구
 
 - **파일 검색**: `es "검색어"` — Everything CLI. 예: `es "*.py"` / `es ext:mp4 -sort size-descending`
+  - `Error 8: Everything IPC not found` 시 본체가 user 세션에 안 떠 있는 것: `cmd //c start "" "C:\Program Files\Everything\Everything.exe" -startup`
+
+---
+
+## Google Workspace 로컬 도구
+
+- **`gws`** — 비공식 Google Workspace CLI (`~/AppData/Roaming/npm/gws`, 2026-03 출시, OAuth 완료)
+- **Gmail/Drive/Calendar 조회는 `mcp__claude_ai_*` connector보다 `gws` 우선** — 스크립트화·필터링·MCP 토큰 절약
+- 패턴: `gws <service> <resource> [sub] <method> --params '<JSON>' [--format json|table|yaml|csv]`
+- 서비스: drive · gmail · calendar · sheets · docs · tasks · slides · people · keep · meet · classroom · forms · chat · script · admin-reports · workflow
+- 예: `gws gmail users messages list --params '{"userId":"me","maxResults":3}' --format table`
+- 스키마 조회: `gws schema gmail.users.messages.list` · 페이지네이션: `--page-all` (NDJSON)
 
 ---
 
