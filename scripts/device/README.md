@@ -7,6 +7,35 @@
 > 없어 `sync.sh`가 `~/.claude/hooks/`로 자동 복사한다. `.mjs`가 갱신되면 sync.sh가
 > 데몬 재시작 안내를 출력한다 (강제 kill은 안 함 — in-flight 잡 알림 손실 방지).
 
+## gws-helpers/gwx
+
+`gws` (Google Workspace CLI) 자주 쓰는 helper 들을 짧은 alias 로 묶은 멀티툴.
+`gws gmail +triage`, `gws calendar +agenda --today`, `gws workflow +standup-report` 같은
+긴 호출을 `gwx unread`, `gwx today`, `gwx standup` 으로 줄여준다.
+
+**전제**: `gws` 가 설치돼 있고 OAuth 인증 완료 상태 (`gws auth status` 로 확인).
+
+**설치 방법**:
+
+```bash
+# 1. ~/bin 이 PATH 에 있는지 확인
+echo $PATH | tr ':' '\n' | grep -F "$HOME/bin"
+
+# 2. 복사 + 실행 권한
+mkdir -p ~/bin
+cp ~/projects/agent-orchestration/scripts/device/gws-helpers/gwx ~/bin/gwx
+chmod +x ~/bin/gwx
+
+# 3. 검증
+gwx help
+gwx today
+```
+
+**현재 상태**:
+- Windows (1): 설치됨 (2026-04-27)
+- M4 (luma3): 미설치
+- Mac Air (luma2): 미설치
+
 ## codex-wrapper.sh.template
 
 Codex CLI에 `--dangerously-bypass-approvals-and-sandbox` 플래그를 자동으로 붙이는 래퍼.

@@ -94,12 +94,10 @@ Telegram·JS 렌더링 크롤링·M4 실행은 `/openclaw` 스킬 경유.
 
 ## Google Workspace 로컬 도구
 
-- **`gws`** — 비공식 Google Workspace CLI (`~/AppData/Roaming/npm/gws`, 2026-03 출시, OAuth 완료)
-- **Gmail/Drive/Calendar 조회는 `mcp__claude_ai_*` connector보다 `gws` 우선** — 스크립트화·필터링·MCP 토큰 절약
-- 패턴: `gws <service> <resource> [sub] <method> --params '<JSON>' [--format json|table|yaml|csv]`
-- 서비스: drive · gmail · calendar · sheets · docs · tasks · slides · people · keep · meet · classroom · forms · chat · script · admin-reports · workflow
-- 예: `gws gmail users messages list --params '{"userId":"me","maxResults":3}' --format table`
-- 스키마 조회: `gws schema gmail.users.messages.list` · 페이지네이션: `--page-all` (NDJSON)
+- **`gwx`** (`~/bin/gwx`) — Gmail/Drive/Calendar 일상 조회용 짧은 alias. `gwx mail [N]` (받은편지함) · `gwx unread` · `gwx today/tomorrow/week/upcoming` · `gwx find <q>` · `gwx read <id>` · `gwx send <to> <subj> <body>` · `gwx standup/digest/prep`. `gwx help`로 전체
+- **`gws`** — 비공식 Google Workspace CLI (npm, 2026-03 출시, OAuth 완료). `mcp__claude_ai_*` connector보다 우선
+  - **Helper 컨벤션**: `gws <svc> +<helper> [flags]` — gmail (`+triage` `+read` `+send` `+watch` `+reply`), calendar (`+agenda --today/--week/--days N`, `+insert`), drive (`+upload`), sheets (`+read` `+append`), docs (`+write`), workflow (`+standup-report` `+weekly-digest` `+meeting-prep` `+email-to-task`)
+  - **Raw API**: `gws <svc> <res> <method> --params '<JSON>' [--format table|json|yaml|csv]` · 스키마: `gws schema <svc>.<res>.<method>` · `--dry-run` · `--page-all` (NDJSON)
 
 ---
 

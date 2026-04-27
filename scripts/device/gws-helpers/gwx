@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# gwx — gws (Google Workspace CLI) shortcuts
+#
+# 설치: cp ~/projects/agent-orchestration/scripts/device/gws-helpers/gwx ~/bin/gwx && chmod +x ~/bin/gwx
+# 사용: gwx <subcommand> [args]
+#
+# 기본은 모두 `gws` 1차 helper(`+...`)로 위임. 날짜 계산·쿼리 escaping이 필요한
+# 부분만 셸에서 처리. 더 복잡한 건 `gws <service> <resource> <method>` 직접 사용.
+
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+gwx — gws shortcuts
+
+MAIL
+  gwx mail [N]              받은편지함 최신 N개 (기본 10, snippet 포함)
+  gwx unread [N]            안 읽은 메일 N개 (기본 20)
+  gwx read <ID>             메일 본문 + 헤더 출력
+  gwx send <to> <subj> <body>      평문 메일 보내기
+  gwx draft <to> <subj> <body>     초안으로 저장
+
+CALENDAR
+  gwx today                 오늘 일정
+  gwx tomorrow              내일 일정
+  gwx week                  이번 주 일정
+  gwx upcoming [DAYS]       앞으로 DAYS일 (기본 7)
+
+DRIVE
+  gwx find <query>          파일명에 query 포함 검색 (최근 수정 20개)
+  gwx recent [N]            최근 수정 파일 N개 (기본 10)
+
+WORKFLOWS
+  gwx standup               오늘 회의 + 열린 task 요약
+  gwx digest                이번 주 회의 + 안 읽은 메일 카운트
+  gwx prep                  다음 회의 준비 (안건·참석자·문서)
+
+기타
+  gwx auth                  현재 인증 상태
+  gwx help                  이 도움말
+EOF
+}
+
+cmd="${1:-help}"
+shift || true
+
+case "$cmd" in
+  mail)
+    n="${1:-10}"
+    gws gmail +triage --query "in:inbox" --max "$n" --format table
+    ;;
+  unread)
+    n="${1:-20}"
+    gws gmail +triage --max "$n" --format table
+    ;;
+  read)
+    [[ -z "${1:-}" ]] && { echo "usage: gwx read <message-id>" >&2; exit 2; }
+    gws gmail +read --id "$1" --headers
+    ;;
+  send)
+    [[ $# -lt 3 ]] && { echo "usage: gwx send <to> <subject> <body>" >&2; exit 2; }
+    gws gmail +send --to "$1" --subject "$2" --body "$3"
+    ;;
+  draft)
+    [[ $# -lt 3 ]] && { echo "usage: gwx draft <to> <subject> <body>" >&2; exit 2; }
+    gws gmail +send --to "$1" --subject "$2" --body "$3" --draft
+    ;;
+  today)    gws calendar +agenda --today --format table ;;
+  tomorrow) gws calendar +agenda --tomorrow --format table ;;
+  week)     gws calendar +agenda --week --format table ;;
+  upcoming)
+    days="${1:-7}"
+    gws calendar +agenda --days "$days" --format table
+    ;;
+  find)
+    [[ -z "${1:-}" ]] && { echo "usage: gwx find <query>" >&2; exit 2; }
+    q="${1//\'/}"  # Drive q literal은 single-quote escape 불가 — 그냥 제거
+    json=$(printf '{"q":"name contains %s%s%s and trashed=false","pageSize":20,"orderBy":"modifiedTime desc","fields":"files(id,name,mimeType,modifiedTime,webViewLink)"}' "'" "$q" "'")
+    gws drive files list --params "$json" --format table
+    ;;
+  recent)
+    n="${1:-10}"
+    json=$(printf '{"q":"trashed=false","pageSize":%s,"orderBy":"modifiedTime desc","fields":"files(id,name,mimeType,modifiedTime,webViewLink)"}' "$n")
+    gws drive files list --params "$json" --format table
+    ;;
+  standup) gws workflow +standup-report ;;
+  digest)  gws workflow +weekly-digest ;;
+  prep)    gws workflow +meeting-prep ;;
+  auth)    gws auth status ;;
+  help|--help|-h|"") usage ;;
+  *)
+    echo "unknown subcommand: $cmd" >&2
+    echo "" >&2
+    usage >&2
+    exit 2
+    ;;
+esac
