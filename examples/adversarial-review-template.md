@@ -23,7 +23,7 @@ Claude는 아래 단계를 자동으로 수행해야 한다.
 
 - `mcp__codex-mcp__codex_run` / `mcp__gemini-mcp__gemini_run` 도구 노출 확인
 - 타겟 경로가 `C:/Users/1/Projects/agent-orchestration/` 내부 (Codex workspace-write sandbox)
-- Infrastructure File Protection 목록(`scripts/sync.sh`, `adapters/claude_global.md`, `SHARED_PRINCIPLES.md` 등)을 건드리지 않는 작업
+- Infrastructure File Protection 목록(`scripts/sync.sh`, `adapters/claude_global.md` 등 — repo 의 `CLAUDE.md` 참조)을 건드리지 않는 작업
 
 ## 단계
 

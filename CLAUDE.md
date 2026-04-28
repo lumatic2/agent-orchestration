@@ -7,7 +7,7 @@
 - Bash 운영 스크립트 (`scripts/*.sh`)
 - Python 파이프라인/대시보드 코드 (`pipeline/`, `dashboard/`)
 - Python 3.9 타겟 린트 (`pyproject.toml`의 `ruff` 설정)
-- Markdown 기반 운영 문서/규칙 (`README.md`, `SHARED_PRINCIPLES.md` 등)
+- Markdown 기반 운영 문서/규칙 (`README.md` 등)
 
 ## 프로젝트 구조
 
@@ -40,5 +40,17 @@ bash ~/projects/agent-orchestration/scripts/init-project-agents.sh
 
 - 새 기능 → 항상 계획 먼저, 구현 나중
 - Codex/Gemini 위임 규칙은 글로벌 `~/CLAUDE.md`의 Self-Execution Guard 참조 (이 repo의 `adapters/claude_global.md`가 원본)
-- 인프라 보호 파일(`scripts/sync.sh`, `scripts/guard.sh`, `adapters/claude_global.md` 등) 변경은 별도 승인 후 진행
 - adapter 수정 후 반드시 `bash scripts/sync.sh` 실행하여 ~/CLAUDE.md에 배포
+
+## 인프라 보호 파일 (read-only)
+
+다음 파일은 **read-only**다. 어떤 에이전트(Claude/Codex/Gemini)든 "고치자" "디버그하자" 같은 동기로도 수정 금지. 수정 필요 시 사용자에게 별도 승인 요청 후 진행한다:
+
+- `scripts/sync.sh`
+- `scripts/guard.sh`
+- `scripts/orchestrate.sh` (폐기 경로 — 보존 목적)
+- `adapters/claude_global.md`
+- `adapters/codex.md`, `adapters/codex_home.md`, `adapters/gemini.md`
+- `agent_config.yaml`, `ROUTING_TABLE.md` (있을 경우)
+
+이 룰을 위반해야 할 것 같으면 **중단하고 보고**.

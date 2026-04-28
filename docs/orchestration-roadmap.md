@@ -6,8 +6,8 @@
 ## 현재 상태 (2026-04-08 기준)
 
 - **구조**: Claude Code가 유일한 오케스트레이터. Codex/Gemini는 Skill 플러그인(`codex:rescue`, `gemini:rescue`)을 통해 1회성 위임만 받는 워커
-- **통신**: 파일 기반 (SHARED_PRINCIPLES.md, adapters/*, ~/AGENTS.md, ~/CLAUDE.md) + Skill CLI 래퍼
-- **공통 원칙 통일**: `sync.sh`가 SHARED_PRINCIPLES를 Claude/Codex/Gemini 설정 파일에 정적 주입. 세 기기(Windows/Mac Air/M4) 배포 완료
+- **통신**: 파일 기반 (adapters/*, ~/AGENTS.md, ~/CLAUDE.md) + Skill CLI 래퍼
+- **공통 원칙 통일**: `sync.sh`가 adapters/*를 Claude/Codex/Gemini 설정 파일에 직접 배포. 세 기기(Windows/Mac Air/M4) 배포 완료
 - **한계**: 1차원 위임만 됨 — Claude가 Codex한테 일 시키고, Codex는 결과만 돌려줌. 에이전트 간 대화, 병렬 작업, 장시간 자율 루프, 적대적 협업 등의 고차 패턴 없음
 
 ## 업그레이드 공간 4개 축

@@ -97,7 +97,6 @@ mcp-servers/
   gemini-mcp/            Gemini CLI을 감싼 MCP 서버 (legacy 경로)
 
 agent_config.yaml        모델 티어, 복잡도 분류, 폴백 체인
-SHARED_PRINCIPLES.md     모든 에이전트 공통 행동 규칙
 ROUTING_TABLE.md         작업 → 에이전트 라우팅 결정표
 ROADMAP.md               마일스톤과 설계 의사결정 이력
 

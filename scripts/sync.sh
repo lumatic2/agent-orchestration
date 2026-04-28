@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 # ============================================================
-# sync.sh — Deploy shared files to each agent's config format
+# sync.sh — Deploy adapters to each agent's config format
 #
 # What it does:
 #   1. Detects OS (Windows / macOS)
-#   2. Reads SHARED_PRINCIPLES.md
-#   3. Injects into each adapter (claude.md, codex.md, gemini.md)
-#   4. Copies adapters to each agent's expected config location
-#   5. Verifies each agent CLI is installed and compatible
+#   2. Copies adapters as-is to each agent's expected config location
+#   3. Verifies each agent CLI is installed and compatible
 #
 # Usage:
 #   bash sync.sh              (sync all)
@@ -56,38 +54,6 @@ check_agent() {
     echo "[WARN] $agent not found in PATH"
     return 1
   fi
-}
-
-# --- Inject shared content into adapter ---
-inject_shared() {
-  local adapter_file="$1"
-  local tmp_file="${adapter_file}.tmp"
-  local principles_path="$REPO_DIR/SHARED_PRINCIPLES.md"
-
-  # Replace the placeholder sections.
-  # macOS /usr/bin/awk (BSD awk) doesn't accept multi-line strings passed via -v,
-  # so pass file paths and print file contents from inside awk instead.
-  awk -v principles_file="$principles_path" '
-    function print_file(f, line) {
-      while ((getline line < f) > 0) print line
-      close(f)
-    }
-    /<!-- BEGIN SHARED_PRINCIPLES -->/{
-      print
-      print_file(principles_file)
-      in_block=1
-      next
-    }
-    /<!-- END SHARED_PRINCIPLES -->/{
-      in_block=0
-      print
-      next
-    }
-    !in_block { print }
-  ' "$adapter_file" > "$tmp_file"
-
-  mv "$tmp_file" "$adapter_file"
-  echo "[OK] Injected shared content into $(basename "$adapter_file")"
 }
 
 # --- Deploy to agent config location ---
@@ -202,8 +168,7 @@ deploy_codex() {
 
 deploy_codex_home() {
   # Codex reads ~/AGENTS.md globally at session start (home-scope).
-  # This file carries home-scope rules (Notion helper, response preferences).
-  # SHARED_PRINCIPLES is intentionally NOT duplicated here — already loaded from ~/.codex/AGENTS.md.
+  # This file carries home-scope rules (session start, Notion helper, response preferences).
   local target_path="$BASE_DIR/AGENTS.md"
   if [ -f "$target_path" ] && [ ! -f "$target_path.bak" ]; then
     cp "$target_path" "$target_path.bak"
@@ -279,53 +244,24 @@ main() {
     exit 0
   fi
 
-  # Inject shared content into adapters (work on copies)
-  echo ""
-  echo "--- Injecting Shared Content ---"
-  # Work on copies to keep originals clean
-  cp "$REPO_DIR/adapters/codex.md" "$REPO_DIR/adapters/codex.md.build"
-  cp "$REPO_DIR/adapters/gemini.md" "$REPO_DIR/adapters/gemini.md.build"
-
-  inject_shared "$REPO_DIR/adapters/codex.md.build"
-  inject_shared "$REPO_DIR/adapters/gemini.md.build"
-
-  # Swap build files into adapters for deployment
-  mv "$REPO_DIR/adapters/codex.md.build" "$REPO_DIR/adapters/codex.md.deploy"
-  mv "$REPO_DIR/adapters/gemini.md.build" "$REPO_DIR/adapters/gemini.md.deploy"
-
   # Deploy
   echo ""
   echo "--- Deploying ---"
 
-  # Temporarily swap deploy files for deployment
-  local codex_orig="$REPO_DIR/adapters/codex.md"
-  local gemini_orig="$REPO_DIR/adapters/gemini.md"
-
-  cp "$REPO_DIR/adapters/codex.md.deploy" "$codex_orig.bak"
-  cp "$REPO_DIR/adapters/gemini.md.deploy" "$gemini_orig.bak"
-
-  # Use deploy versions for actual deployment
   if [ "$target_agent" = "all" ] || [ "$target_agent" = "claude" ]; then
     deploy_claude
   fi
 
   if [ "$target_agent" = "all" ] || [ "$target_agent" = "codex" ]; then
-    cp "$REPO_DIR/adapters/codex.md.deploy" "$REPO_DIR/adapters/codex.md"
     deploy_codex
     deploy_codex_home
-    cp "$codex_orig.bak" "$REPO_DIR/adapters/codex.md" 2>/dev/null || true
   fi
 
   if [ "$target_agent" = "all" ] || [ "$target_agent" = "gemini" ]; then
-    cp "$REPO_DIR/adapters/gemini.md.deploy" "$REPO_DIR/adapters/gemini.md"
     deploy_gemini
-    cp "$gemini_orig.bak" "$REPO_DIR/adapters/gemini.md" 2>/dev/null || true
   fi
 
   deploy_codex_main
-
-  # Cleanup
-  rm -f "$REPO_DIR/adapters/"*.deploy "$REPO_DIR/adapters/"*.bak
 
   # MCP setup
   echo ""
@@ -348,13 +284,11 @@ main() {
       fi
     fi
   }
-  # Check deployed files (after SHARED_PRINCIPLES injection)
+  # Check deployed files
   check_budget "$BASE_DIR/CLAUDE.md" 160 "~/CLAUDE.md"
   check_budget "$BASE_DIR/.codex/AGENTS.md" 120 "AGENTS.md (Codex)"
-  check_budget "$BASE_DIR/AGENTS.md" 60 "~/AGENTS.md (Codex home)"
+  check_budget "$BASE_DIR/AGENTS.md" 120 "~/AGENTS.md (Codex home)"
   check_budget "$BASE_DIR/.gemini/GEMINI.md" 150 "GEMINI.md"
-  # Check source files
-  check_budget "$REPO_DIR/SHARED_PRINCIPLES.md" 50 "SHARED_PRINCIPLES.md (source)"
 
   echo ""
   echo "========================================"
