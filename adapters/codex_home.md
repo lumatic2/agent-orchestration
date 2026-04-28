@@ -7,11 +7,12 @@
 
 (SHARED_PRINCIPLES 본문은 `~/.codex/AGENTS.md` 에서 로드됨. 중복 주입 방지를 위해 여기서는 생략.)
 
-## Role in Verification-First Orchestration
+## Session Start
 
-Claude Code는 주 실행자다. Codex는 주로 **리뷰어**로 호출된다 (`/codex:review`, `/codex:adversarial-review`). 코드 *작성*은 예외적 유스케이스 (대규모 boilerplate 등).
+세션 시작 시 현재 작업 디렉토리에 다음 파일이 있으면 먼저 읽고 작업에 착수한다:
 
-리뷰 시: 구현 결함뿐 아니라 **설계 가정·트레이드오프·실패 경로**까지 도전할 것. "LGTM"으로 끝내지 말고 의심되는 지점은 명시적으로 지적할 것.
+- `./CLAUDE.md` 또는 `./AGENTS.md` — 프로젝트 기술 스택·구조·관례
+- `./ROADMAP.md` — 진행 상태와 다음 할 일 (체크리스트)
 
 ## Memory — Cross-Verified 사실 저장
 

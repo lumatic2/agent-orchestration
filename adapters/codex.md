@@ -17,6 +17,7 @@
 
 ## Codex-specific Rules
 
+- **Session Start (협업 모드)**: cwd 에 `./CLAUDE.md`(또는 `./AGENTS.md`) 와 `./ROADMAP.md` 가 있으면 먼저 읽고 현재 진행 상황을 파악한 뒤 작업에 착수한다. 워커 모드(task brief 수신)에서는 brief 가 우선이며 이 규칙은 적용하지 않는다.
 - **apply_patch 사용**: 파일 수정은 `apply_patch` 로 수행. 최소 diff 원칙 — 변경과 무관한 라인은 건드리지 않는다.
 - **출력 형식**: commentary(짧은 진행 설명) → 필요한 도구 호출 → final(결과 요약). commentary 는 간결하게, final 은 변경 파일과 검증 결과를 중심으로.
 - **Sandbox 제약**: workspace-write 모드에서는 현재 cwd 내부 경로만 수정 가능. cwd 바깥 경로 수정이 필요하면 사용자에게 "workspace 외부입니다" 라고 알리고 중단.
