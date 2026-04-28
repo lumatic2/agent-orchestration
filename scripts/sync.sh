@@ -163,6 +163,10 @@ deploy_codex() {
   mkdir -p "$target_dir"
   cp "$REPO_DIR/adapters/codex.md" "$target_dir/AGENTS.md"
   echo "[OK] Codex adapter → $target_dir/AGENTS.md"
+
+  # Custom Commands 인덱스 + 공유 스킬 본문 동기화
+  bash "$REPO_DIR/scripts/sync-codex-skills.sh" "$target_dir/AGENTS.md"
+
   echo "[NOTE] Symlink to project roots: ln -s $target_dir/AGENTS.md /path/to/project/AGENTS.md"
 }
 
