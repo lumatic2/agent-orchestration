@@ -1,0 +1,236 @@
+#!/usr/bin/env bash
+# channel — Manage the Claude Channel (Telegram) tmux session.
+# Single source of truth, called by Claude (via ssh) and OpenClaw (locally on M4).
+#
+# Usage: channel <command>
+#   status    tmux/MCP/rate-limit health
+#   logs      recent screen capture (~100 lines)
+#   attach    print attach instructions
+#   clear     send /clear (keeps session/MCP/pairing, wipes context)
+#   new       send /new (fresh conversation thread)
+#   restart   restart tmux session via start-claude-channel.sh
+#   update    claude CLI update + session restart
+#   fix       full diagnostic + recovery
+#   help      this message
+
+set -uo pipefail
+
+# Ensure tools are findable regardless of how we were invoked (ssh non-login,
+# launchd, OpenClaw subprocess, etc.)
+export PATH="/opt/homebrew/bin:$HOME/.bun/bin:$HOME/.nvm/versions/node/v24.14.0/bin:$PATH"
+
+SESSION="claude-channel"
+START_SCRIPT="$HOME/projects/agent-orchestration/scripts/start-claude-channel.sh"
+
+require_session() {
+  if ! tmux has-session -t "$SESSION" 2>/dev/null; then
+    echo "❌ session DEAD — run: channel restart" >&2
+    exit 1
+  fi
+}
+
+cmd_status() {
+  local tmux_state mcp_state rate_state="OK" reset_time=""
+
+  tmux has-session -t "$SESSION" 2>/dev/null && tmux_state="ALIVE" || tmux_state="DEAD"
+  pgrep -f "bun.*telegram" >/dev/null && mcp_state="OK" || mcp_state="DOWN"
+
+  if [ "$tmux_state" = "ALIVE" ]; then
+    if tmux capture-pane -t "$SESSION" -p 2>/dev/null \
+       | grep -qE "rate-limit-options|Stop and wait for limit|out of extra usage"; then
+      rate_state="LIMITED"
+      reset_time=$(tmux capture-pane -t "$SESSION" -p -S -100 2>/dev/null \
+                   | grep -oE "resets [0-9]+:[0-9]+(am|pm)?( \(Asia/Seoul\))?" | tail -1)
+    fi
+  fi
+
+  echo "📡 Claude Channel"
+  echo "  tmux: $tmux_state"
+  echo "  mcp:  $mcp_state"
+  if [ "$rate_state" = "LIMITED" ]; then
+    echo "  rate: LIMITED — ${reset_time:-unknown}"
+  else
+    echo "  rate: $rate_state"
+  fi
+}
+
+cmd_logs() {
+  require_session
+  tmux capture-pane -t "$SESSION" -p -S -100
+}
+
+cmd_attach() {
+  cat <<'EOF'
+# From another machine:
+ssh m4 -t 'export PATH=/opt/homebrew/bin:$PATH && tmux attach -t claude-channel'
+
+# On M4 directly:
+tmux attach -t claude-channel
+
+# Detach: Ctrl+B then D
+EOF
+}
+
+cmd_clear() {
+  require_session
+  tmux send-keys -t "$SESSION" "/clear" Enter
+  echo "✅ /clear sent"
+}
+
+cmd_new() {
+  require_session
+  tmux send-keys -t "$SESSION" "/new" Enter
+  echo "✅ /new sent"
+}
+
+cmd_restart() {
+  bash "$START_SCRIPT"
+}
+
+cmd_update() {
+  echo "=== current version ==="
+  claude --version
+  echo ""
+  echo "=== updating ==="
+  npm install -g @anthropic-ai/claude-code@latest
+  echo ""
+  echo "=== new version ==="
+  claude --version
+  echo ""
+  echo "=== restart ==="
+  bash "$START_SCRIPT"
+}
+
+cmd_fix() {
+  echo "=== 1. tmux ==="
+  if ! command -v tmux >/dev/null; then
+    echo "❌ tmux not found. Install: brew install tmux"
+    exit 1
+  fi
+  echo "✅ ok"
+
+  echo ""
+  echo "=== 2. bun ==="
+  if ! [ -x "$HOME/.bun/bin/bun" ]; then
+    echo "❌ bun not found. Install: curl -fsSL https://bun.sh/install | bash"
+    exit 1
+  fi
+  echo "✅ ok"
+
+  echo ""
+  echo "=== 3. claude OAuth ==="
+  if tmux has-session -t "$SESSION" 2>/dev/null \
+     && tmux capture-pane -t "$SESSION" -p -S -30 2>/dev/null \
+        | grep -qi "channels ignored\|require claude"; then
+    echo "⚠️  '--channels ignored' detected — token problem"
+    echo "    1) rm ~/.claude/.credentials.json"
+    echo "    2) pkill -9 -f 'claude.*channels'"
+    echo "    3) bash $START_SCRIPT"
+    echo "    4) tmux attach + /login + Ctrl+B D"
+    echo "    5) channel restart"
+    exit 1
+  fi
+  if [ -f "$HOME/.claude/.credentials.json" ]; then
+    python3 - <<'PY' || exit 1
+import json, time, sys, os
+p = os.path.expanduser('~/.claude/.credentials.json')
+d = json.load(open(p))
+oauth = d.get('claudeAiOauth', {})
+exp = oauth.get('expiresAt', 0) / 1000
+now = time.time()
+if exp == 0:
+    print('⚠️  no claudeAiOauth key — need claude.ai /login')
+    sys.exit(1)
+elif now > exp:
+    print('❌ token EXPIRED')
+    sys.exit(1)
+else:
+    print(f'✅ token ok (expires in {int((exp-now)/3600)}h)')
+PY
+  else
+    echo "⚠️  no credentials file — need /login"
+  fi
+
+  echo ""
+  echo "=== 4. telegram plugin ==="
+  local plugin_status
+  plugin_status=$(claude plugin list 2>&1 | grep -A2 telegram || true)
+  if echo "$plugin_status" | grep -q "disabled"; then
+    echo "⚠️  plugin disabled — enabling"
+    claude plugin enable telegram@claude-plugins-official
+  fi
+  echo "✅ ok"
+
+  echo ""
+  echo "=== 5. token conflicts ==="
+  local conflicts
+  conflicts=$(ps -ef | grep -v grep | grep -iE "bot\.py|investment|ingredient" || true)
+  if [ -n "$conflicts" ]; then
+    echo "⚠️  other bot-like processes (check token sharing):"
+    echo "$conflicts" | head -5
+  else
+    echo "✅ no conflicts"
+  fi
+
+  echo ""
+  echo "=== 6. pairing ==="
+  if [ -f "$HOME/.claude/channels/telegram/access.json" ]; then
+    if grep -qE '"allowFrom"\s*:\s*\[\s*\]' "$HOME/.claude/channels/telegram/access.json"; then
+      echo "⚠️  allowFrom is empty — pair via Telegram /start"
+    else
+      echo "✅ paired"
+    fi
+  else
+    echo "⚠️  access.json missing — start session first"
+  fi
+
+  echo ""
+  echo "=== 7. cleanup + restart ==="
+  pkill -9 -f 'bun.*telegram' 2>/dev/null || true
+  pkill -9 -f 'claude.*channels' 2>/dev/null || true
+  bash "$START_SCRIPT"
+
+  echo ""
+  echo "=== 8. final ==="
+  cmd_status
+}
+
+cmd_help() {
+  cat <<'EOF'
+channel — Manage the Claude Channel (Telegram) tmux session
+
+Usage: channel <command>
+
+  status     tmux/MCP/rate-limit health
+  logs       recent screen capture (~100 lines)
+  attach     print attach instructions
+  clear      send /clear (wipes context, keeps session/MCP/pairing)
+  new        send /new (fresh conversation thread)
+  restart    restart tmux session
+  update     claude CLI update + restart
+  fix        full diagnostic + recovery
+  help       this message
+
+Callers:
+  Windows Claude:   ssh m4 'bash ~/projects/agent-orchestration/scripts/channel <cmd>'
+  M4 OpenClaw:      bash ~/projects/agent-orchestration/scripts/channel <cmd>
+EOF
+}
+
+cmd="${1:-help}"
+case "$cmd" in
+  status)         cmd_status ;;
+  logs)           cmd_logs ;;
+  attach)         cmd_attach ;;
+  clear)          cmd_clear ;;
+  new)            cmd_new ;;
+  restart)        cmd_restart ;;
+  update)         cmd_update ;;
+  fix)            cmd_fix ;;
+  help|-h|--help) cmd_help ;;
+  *)
+    echo "❌ unknown command: $cmd" >&2
+    cmd_help
+    exit 1
+    ;;
+esac
