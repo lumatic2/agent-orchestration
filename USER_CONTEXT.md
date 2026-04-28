@@ -49,3 +49,14 @@
 - **용도**: 포트폴리오, 프로젝트 소개, 정리된 문서, 팀/외부 공유 자료
 - **도구**: `notion-ext-mcp` MCP (Claude) 또는 `~/notion_db.py` 헬퍼 (Codex). 환경에 `NOTION_TOKEN`, `NOTION_DATABASE_ID` 존재 가정 (출력 금지)
 - **원칙**: publish-ready 콘텐츠만. 작업 중인 초안은 프로젝트 폴더 또는 vault에
+
+---
+
+## M4 ↔ Windows SSH
+
+Tailscale 망에서 양방향 SSH 동작. alias 등록돼 있어 평소엔 `ssh m4` / `ssh windows`로 바로 사용.
+
+- **Windows → M4**: `ssh m4` (`100.100.79.12`, user `luma3`)
+- **M4 → Windows**: `ssh windows` (`100.67.186.13`, user `yusun`, **PowerShell 7 셸, UTF-8**)
+- **키 위치 함정**: Windows의 `yusun`은 administrators 그룹이라 sshd가 `~/.ssh/authorized_keys`를 무시하고 `C:\ProgramData\ssh\administrators_authorized_keys`를 본다. 새 기기 등록 시 거기에 추가
+- **한글 출력**: pwsh cmdlet (`Get-Date`, `Get-Service`)이나 `$env:COMPUTERNAME` 같은 env 변수는 UTF-8 정상. `hostname.exe` 등 native exe는 OEM codepage로 깨질 수 있음 — cmdlet으로 우회
