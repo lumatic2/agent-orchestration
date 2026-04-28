@@ -62,9 +62,9 @@ deploy_claude() {
   local claude_md_path="$BASE_DIR/CLAUDE.md"
   mkdir -p "$target_dir"
 
-  # Deploy global CLAUDE.md as-is. Mode-specific guard injection was removed with orchestrate/queue.
-  cp "$REPO_DIR/adapters/claude_global.md" "$claude_md_path"
-  echo "[OK] Global CLAUDE.md → $claude_md_path"
+  # Deploy global CLAUDE.md = claude_global.md + USER_CONTEXT.md (concatenated)
+  cat "$REPO_DIR/adapters/claude_global.md" "$REPO_DIR/USER_CONTEXT.md" > "$claude_md_path"
+  echo "[OK] Global CLAUDE.md → $claude_md_path (with USER_CONTEXT)"
 
   # Deploy settings.json
   # - 없을 때: settings_common.json (크로스플랫폼) 으로 초기화
@@ -168,14 +168,14 @@ deploy_codex() {
 
 deploy_codex_home() {
   # Codex reads ~/AGENTS.md globally at session start (home-scope).
-  # This file carries home-scope rules (session start, Notion helper, response preferences).
+  # ~/AGENTS.md = codex_home.md + USER_CONTEXT.md (concatenated).
   local target_path="$BASE_DIR/AGENTS.md"
   if [ -f "$target_path" ] && [ ! -f "$target_path.bak" ]; then
     cp "$target_path" "$target_path.bak"
     echo "[OK] Backed up existing ~/AGENTS.md → ~/AGENTS.md.bak"
   fi
-  cp "$REPO_DIR/adapters/codex_home.md" "$target_path"
-  echo "[OK] Codex home adapter → $target_path"
+  cat "$REPO_DIR/adapters/codex_home.md" "$REPO_DIR/USER_CONTEXT.md" > "$target_path"
+  echo "[OK] Codex home adapter → $target_path (with USER_CONTEXT)"
 }
 
 deploy_gemini() {
