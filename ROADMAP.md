@@ -1,6 +1,6 @@
 # agent-orchestration ROADMAP
 
-> 마지막 업데이트: 2026-04-28
+> 마지막 업데이트: 2026-04-30
 
 ## proj 런처 공개 준비
 
