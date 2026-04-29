@@ -15,6 +15,7 @@
 
 - **파일 검색**: `es "검색어"` — Everything CLI. 예: `es "*.py"` / `es ext:mp4 -sort size-descending`
   - `Error 8: Everything IPC not found` 시 본체가 user 세션에 안 떠 있는 것: `cmd //c start "" "C:\Program Files\Everything\Everything.exe" -startup`
+- **한국 웹 검색**: `ncli search <blog|news|kin|local|shop> --json '{"query":"...","display":5}'` — Naver Open API. 한국 인물·블로그는 WebSearch보다 우월. `NAVER_CLIENT_ID`/`SECRET` User env 등록됨
 
 ---
 

@@ -1,6 +1,6 @@
 # agent-orchestration ROADMAP
 
-> 마지막 업데이트: 2026-04-27
+> 마지막 업데이트: 2026-04-28
 
 ## proj 런처 공개 준비
 
@@ -90,6 +90,16 @@
 - [x] **`scripts/sync.sh`** device 자동 배포 — `scripts/device/{job-watcher.mjs, job-watcher-inject.py}`를 `~/.claude/hooks/`에 자동 복사. 변경 감지 시 데몬 재시작 안내 출력 (강제 kill은 안 함)
 - [x] **gemini 버전 글로브** — 하드코딩 `1.0.0` 제거, `geminiJobsDir()` 함수가 매 폴링마다 최신 버전 디렉토리 picking. plugin 업그레이드 내성
 
+### v2.5 — Codex 독립 모드 + 어댑터 구조 정리 (완료, 2026-04-28)
+
+> 배경: Codex 앱 업데이트로 독립 사용 가능. 기존 "Claude orchestrator + Codex worker" 가정과 SHARED_PRINCIPLES 추상화가 폐기된 자동 dispatch 모델의 유물로 남아 일관성 깨짐. 콘텐츠 scope 4분할로 정리 + Codex 도 사용자 환경 지식 가지도록 USER_CONTEXT 분리.
+
+- [x] **Codex 독립 모드 지원** — `codex_home.md` "리뷰어 only" framing 제거 → Session Start 룰 신설 (cwd `./CLAUDE.md`/`./AGENTS.md` + `./ROADMAP.md` 자동 로드). `codex.md` 협업 모드 세션 시작 룰 추가. `init-project-agents.sh` stub 이 ROADMAP.md 도 명시
+- [x] **SHARED_PRINCIPLES.md 폐기 + 4분할 재배치** — Behavioral Rules → 각 adapter inline / Infra Protection → repo CLAUDE.md (project-scope) / Worker Rules → codex+gemini inline / Identity → 삭제. sync.sh 의 awk inject 곡예 + .build/.deploy 임시파일 곡예 함께 제거 (-158줄)
+- [x] **USER_CONTEXT.md 분리** — 사용자 환경 (위치, es, gws, datasets, vault/Notion) 별도 파일. sync.sh 가 cat 으로 `~/CLAUDE.md` + `~/AGENTS.md` 양쪽 끝에 append. Vault/Notion 은 두 에이전트 도구 옵션 병기
+- [x] **스킬 공유 하네스 PoC** — SKILL.md frontmatter `codex: true` 플래그 → `~/.codex/skills/{name}.md` 복사 + `~/.codex/AGENTS.md` 끝에 Custom Commands 인덱스 자동 append. `scripts/sync-codex-skills.sh` 신설, sync.sh 의 deploy_codex 에서 자동 호출
+- [x] **`/session-end` 첫 케이스 적용** — Codex CLI 독립 실행 시 `/session-end` 정상 동작 확인 (실측)
+
 ### v3 검토 대상 (미래)
 - [ ] Mesh 협업 복원 — 계약 정의 후
   - per-leg correlation ID
@@ -144,7 +154,6 @@
 
 ## 이어서 할 일
 
-- 원격 wake 한 사이클 실전 검증: 휴대폰 Wi-Fi 끄고 셀룰러 → Windows PC를 절전 진입(`Win+X` → 종료 또는 로그아웃 → 절전) → 텔레그램 claude-channel 봇에 `/wake-pc` 또는 "내 PC 깨워줘" → 5–30초 후 `✅ newly online` 회신 확인 → CRD 앱(같은 Google 계정)에서 "유성" 선택 → PIN 입력 → 데스크톱 진입까지 완주.
-- 결과에 따라 후속:
-  - 정상 동작 시: `docs/remote-wake-pc.md` "사용" 섹션을 실측 시간으로 다듬기 (현재는 "5–30초"로 표기)
-  - 실패 시: 어느 단계에서 멈췄는지에 따라 `docs/remote-wake-pc.md` "트러블슈팅" 표 보강
+- 다음 codex 공유 스킬 추가 (점진): `~/projects/custom-skills/{push,roadmap-update,openclaw}/SKILL.md` 의 frontmatter 에 `codex: true` 한 줄 추가 → `bash ~/projects/agent-orchestration/scripts/sync.sh` 1회 → Codex CLI 에서 `/push` 등 호출해 동작 검증. 한 번에 하나씩, 동작 확인 후 다음으로.
+- (별도 트랙) 원격 wake 한 사이클 실전 검증: 휴대폰 Wi-Fi 끄고 셀룰러 → Windows PC를 절전 진입 → 텔레그램 claude-channel 봇에 `/wake-pc` → 5–30초 후 `✅ newly online` 회신 확인 → CRD 앱에서 "유성" 선택 → PIN 입력 → 데스크톱 진입까지 완주. 결과에 따라 `docs/remote-wake-pc.md` "사용"/"트러블슈팅" 섹션 보강
+- (검토) `agent_config.yaml`, `ROUTING_TABLE.md` — 자동 dispatch 시절 유물. 현재 사용처 없으면 폐기 가능
