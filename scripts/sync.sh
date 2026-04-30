@@ -156,23 +156,9 @@ deploy_claude() {
 
 }
 
-deploy_codex() {
-  # Codex reads AGENTS.md from project root.
-  # We deploy to a global location; user symlinks per project.
-  local target_dir="$BASE_DIR/.codex"
-  mkdir -p "$target_dir"
-  cp "$REPO_DIR/adapters/codex.md" "$target_dir/AGENTS.md"
-  echo "[OK] Codex adapter → $target_dir/AGENTS.md"
-
-  # Custom Commands 인덱스 + 공유 스킬 본문 동기화
-  bash "$REPO_DIR/scripts/sync-codex-skills.sh" "$target_dir/AGENTS.md"
-
-  echo "[NOTE] Symlink to project roots: ln -s $target_dir/AGENTS.md /path/to/project/AGENTS.md"
-}
-
 deploy_codex_home() {
   # Codex reads ~/AGENTS.md globally at session start (home-scope).
-  # ~/AGENTS.md = codex_home.md + USER_CONTEXT.md (concatenated).
+  # ~/AGENTS.md = codex_home.md + USER_CONTEXT.md (concatenated) + Custom Commands index.
   local target_path="$BASE_DIR/AGENTS.md"
   if [ -f "$target_path" ] && [ ! -f "$target_path.bak" ]; then
     cp "$target_path" "$target_path.bak"
@@ -180,6 +166,41 @@ deploy_codex_home() {
   fi
   cat "$REPO_DIR/adapters/codex_home.md" "$REPO_DIR/USER_CONTEXT.md" > "$target_path"
   echo "[OK] Codex home adapter → $target_path (with USER_CONTEXT)"
+
+  # Custom Commands 인덱스 + 공유 스킬 본문 동기화 (~/AGENTS.md 끝에 append)
+  bash "$REPO_DIR/scripts/sync-codex-skills.sh" "$target_path"
+}
+
+# Migrate legacy project-scope Codex config (~/.codex/AGENTS.md + project symlinks).
+# Idempotent — safe to run on devices that already migrated or never had legacy state.
+migrate_codex_legacy() {
+  local legacy_agents="$BASE_DIR/.codex/AGENTS.md"
+  local cleaned=0
+
+  if [ -f "$legacy_agents" ]; then
+    rm -f "$legacy_agents"
+    echo "[MIGRATE] Removed legacy $legacy_agents (now superseded by ~/AGENTS.md)"
+    cleaned=1
+  fi
+  # Note: ~/.codex/skills/ is NOT legacy — it's still where shared skill bodies live.
+  # Only the AGENTS.md location moved (project-scope → ~/AGENTS.md).
+
+  # Find and remove project AGENTS.md symlinks pointing at the legacy file
+  if [ -d "$BASE_DIR/projects" ]; then
+    while IFS= read -r link; do
+      local target
+      target="$(readlink "$link" 2>/dev/null || true)"
+      case "$target" in
+        *.codex/AGENTS.md|*"/.codex/AGENTS.md")
+          rm -f "$link"
+          echo "[MIGRATE] Removed stale symlink $link → $target"
+          cleaned=1
+          ;;
+      esac
+    done < <(find "$BASE_DIR/projects" -maxdepth 3 -name AGENTS.md -type l 2>/dev/null)
+  fi
+
+  [ "$cleaned" = "0" ] && return 0 || return 0
 }
 
 deploy_gemini() {
@@ -257,7 +278,7 @@ main() {
   fi
 
   if [ "$target_agent" = "all" ] || [ "$target_agent" = "codex" ]; then
-    deploy_codex
+    migrate_codex_legacy
     deploy_codex_home
   fi
 
@@ -290,7 +311,6 @@ main() {
   }
   # Check deployed files
   check_budget "$BASE_DIR/CLAUDE.md" 160 "~/CLAUDE.md"
-  check_budget "$BASE_DIR/.codex/AGENTS.md" 120 "AGENTS.md (Codex)"
   check_budget "$BASE_DIR/AGENTS.md" 120 "~/AGENTS.md (Codex home)"
   check_budget "$BASE_DIR/.gemini/GEMINI.md" 150 "GEMINI.md"
 

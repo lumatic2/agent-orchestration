@@ -81,9 +81,8 @@ bash scripts/init-project-agents.sh
 ```
 adapters/
   claude_global.md       ~/CLAUDE.md 원본 (sync.sh가 배포)
-  claude.md              오케스트레이터 규칙
-  codex.md / codex_home.md   Codex 설정
-  gemini.md              Gemini 설정
+  codex_home.md          ~/AGENTS.md 원본 (Codex 홈 스코프, 전역 로드)
+  gemini.md              ~/.gemini/GEMINI.md 원본
 
 scripts/
   sync.sh                adapter → 각 에이전트 홈으로 배포

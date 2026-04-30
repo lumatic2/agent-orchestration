@@ -50,7 +50,7 @@ bash ~/projects/agent-orchestration/scripts/init-project-agents.sh
 - `scripts/guard.sh`
 - `scripts/orchestrate.sh` (폐기 경로 — 보존 목적)
 - `adapters/claude_global.md`
-- `adapters/codex.md`, `adapters/codex_home.md`, `adapters/gemini.md`
+- `adapters/codex_home.md`, `adapters/gemini.md`
 - `agent_config.yaml`, `ROUTING_TABLE.md` (있을 경우)
 
 이 룰을 위반해야 할 것 같으면 **중단하고 보고**.
