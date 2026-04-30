@@ -25,8 +25,7 @@
 
 ```bash
 bash scripts/sync.sh --check     # adapter 동기화 검증
-bash scripts/sync.sh             # adapter → ~/CLAUDE.md, ~/.codex/, ~/.gemini/ 배포
-bash dashboard/run.sh            # 대시보드 실행
+bash scripts/sync.sh             # adapter → ~/CLAUDE.md, ~/AGENTS.md, ~/.gemini/ 배포
 
 # 다른 프로젝트 루트에서 Codex용 AGENTS.md stub 생성 (CLAUDE.md 자동 참조)
 bash ~/projects/agent-orchestration/scripts/init-project-agents.sh
@@ -34,7 +33,9 @@ bash ~/projects/agent-orchestration/scripts/init-project-agents.sh
 
 > 기기별 수동 설치 파일(codex 래퍼 등)은 `scripts/device/` 참조.
 
-> `scripts/orchestrate.sh`는 폐기 경로 (이전 큐잉 시스템). 현재는 글로벌 CLAUDE.md의 Self-Execution Guard 사용.
+## 폴더·파일 배치
+
+새 파일·폴더를 추가하거나 옮길 때는 `docs/REPO_LAYOUT.md`를 먼저 확인. 폴더 역할·SoT 배포 매핑·라이프사이클·vault 규칙과의 관계가 명문화돼 있다.
 
 ## 작업 방식
 
