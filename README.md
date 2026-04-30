@@ -79,33 +79,33 @@ bash scripts/init-project-agents.sh
 ## 구조
 
 ```
-adapters/
-  claude_global.md       ~/CLAUDE.md 원본 (sync.sh가 배포)
-  codex_home.md          ~/AGENTS.md 원본 (Codex 홈 스코프, 전역 로드)
-  gemini.md              ~/.gemini/GEMINI.md 원본
+adapters/                  에이전트 설정 SoT (sync.sh가 각 에이전트 홈으로 배포)
+  claude_global.md         → ~/CLAUDE.md
+  codex_home.md            → ~/AGENTS.md (Codex 홈 스코프, 전역 로드)
+  gemini.md                → ~/.gemini/GEMINI.md
+USER_CONTEXT.md            사용자 환경 SoT (~/CLAUDE.md + ~/AGENTS.md 끝에 append)
 
-scripts/
-  sync.sh                adapter → 각 에이전트 홈으로 배포
-  codex-dispatch.sh      Codex 호출 안정화 래퍼
-  gemini-dispatch.sh     Gemini 호출 안정화 래퍼
-  guard.sh               파괴적 명령 차단 훅
-  init-project-agents.sh 타 프로젝트용 AGENTS.md stub 생성
+scripts/                   오케스트레이션 스크립트
+  sync.sh                  adapter → 에이전트 홈으로 배포
+  codex-dispatch.sh        Codex 호출 안정화 래퍼
+  gemini-dispatch.sh       Gemini 호출 안정화 래퍼
+  guard.sh                 파괴적 명령 차단 훅
+  sync-codex-skills.sh     codex:true 스킬 → ~/.codex/skills/
+  init-project-agents.sh   타 프로젝트용 AGENTS.md stub 생성
+  hooks/                   Claude Code hook 스크립트
+  device/                  기기별 수동 설치 (codex 래퍼·plist 등)
 
-mcp-servers/
-  codex-mcp/             Codex CLI을 감싼 MCP 서버 (legacy 경로)
-  gemini-mcp/            Gemini CLI을 감싼 MCP 서버 (legacy 경로)
+config/                    환경/도구 설정 (settings_common.json, statusline.sh, mcp_setup.sh, …)
+docs/                      운영 문서 (orchestration-roadmap, remote-wake-pc, …)
+context/                   로컬 상세 컨텍스트 (notion-rules, statusline)
+examples/                  재사용 가능한 템플릿 + 프롬프트
 
-agent_config.yaml        모델 티어, 복잡도 분류, 폴백 체인
-ROUTING_TABLE.md         작업 → 에이전트 라우팅 결정표
-ROADMAP.md               마일스톤과 설계 의사결정 이력
-
-examples/
-  adversarial-review-template.md
-  deep-research-template.md
-  openclaw-browser-template.md
+agent_config.yaml          모델 티어, 복잡도 분류, 폴백 체인
+ROUTING_TABLE.md           작업 → 에이전트 라우팅 결정표
+ROADMAP.md                 마일스톤과 설계 의사결정 이력
 ```
 
-> MCP 서버는 초기 구조의 잔재다. 현재 표준은 `/codex`, `/gemini` 스킬 + dispatch wrapper이며, MCP tool 직접 호출은 권장하지 않는다.
+폴더 정리 규칙·라이프사이클은 [`docs/REPO_LAYOUT.md`](./docs/REPO_LAYOUT.md) 참조.
 
 ## 모델 티어
 
