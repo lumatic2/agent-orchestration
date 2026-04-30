@@ -173,14 +173,17 @@ function proj {
         $key = $fzfOutLines[0]
         $sel = if ($fzfOutLines.Count -gt 1) { $fzfOutLines[1] } else { "" }
 
-        # 선택된 프로젝트 이름 추출 (핀 마커 제거)
+        # 선택된 프로젝트 이름 추출 (핀 마커·앞뒤 공백 제거)
         $selName = ""
         if ($sel) {
-            if ($sel -match '^\*\s+(\S+)') {
+            $selTrim = $sel.TrimStart()
+            if ($selTrim -match '^\*\s+(\S+)') {
                 $selName = $Matches[1]
             } else {
-                $selName = ($sel -split '\s+')[0]
+                $selName = ($selTrim -split '\s+')[0]
             }
+            # 안전망: '*'만 잡히는 경우는 무시
+            if ($selName -eq '*') { $selName = "" }
         }
 
         # 관리 액션 판별
