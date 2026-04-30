@@ -1,21 +1,8 @@
-# REPO_LAYOUT — 폴더 정리 규칙
+# REPO_LAYOUT — agent-orchestration 레포 전용 규칙
 
-> 이 레포의 폴더 의도와 라이프사이클. 새 파일·폴더 추가 시 여기 규칙에 맞춰 배치.
-
-## 공통 원칙 — vault와의 관계
-
-vault(`~/vault/`)는 **PARA × Johnny Decimal** 하이브리드(`~/vault/00-System/VAULT_INDEX.md`)로 운영. 이 레포는 그 규칙을 통째 차용하지 않는다 — 코드는 *기능* 으로 분류, vault는 *의도(active/reference)* 로 분류라는 축이 다르기 때문.
-
-vault에서 가져와 양쪽 다 적용하는 원칙:
-- **깊이 ≤ 5단계** — 어디든 적용
-- **각 레벨 ≤ 10개 항목** — 11개 넘으면 하위 분류 검토 신호
-- **카테고리 폴더 직접 저장 금지** — 루트에 `tmp_*.py` 같은 stray 파일 X. 적절한 폴더(`tmp/`, `scripts/`)에 둔다
-- **큰 폴더는 진입점 인덱스** — `archive/README.md` 같은 패턴
-
-vault에서 차용하지 않는 것:
-- 숫자 prefix(`10-Resources/`, `20-Areas/`) — 코드 관습(`src/`, `tests/`, `docs/`) 깸
-- PARA의 Project/Area/Resource 분류 — 코드 분류축과 안 맞음
-- wrapper 폴더 — 카테고리 충돌 회피용, 코드엔 불필요
+> 이 레포의 폴더 역할·SoT 배포 매핑·라이프사이클. 새 파일·폴더 추가 시 여기 규칙에 맞춰 배치.
+>
+> **모든 레포 공통 규칙**(깊이 한계, stray 금지, archive/tmp 처리, 코드 관습 등)은 글로벌 `~/CLAUDE.md`의 "레포 폴더·파일 정리" 섹션 참조. 이 문서는 그 위에 얹는 **이 레포 전용** 규칙만 다룬다.
 
 ## 추적되는 폴더 (committed)
 

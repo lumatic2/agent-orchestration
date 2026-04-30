@@ -76,4 +76,15 @@ Telegram·JS 렌더링 크롤링·M4 실행은 `/openclaw` 스킬 경유.
   3. `git branch -d {브랜치명}`
   - 충돌 시 사용자에게 보고 후 해결. 병렬 워크트리는 서로 다른 파일을 수정하도록 권장
 
+## 레포 폴더·파일 정리 (모든 프로젝트 공통)
+
+- **깊이 ≤ 5단계** / **각 레벨 ≤ 10개 항목** (11개 넘으면 하위 분류 신호)
+- **루트에 stray 파일 금지** — 임시는 `tmp/`, 카테고리에 맞는 폴더(`scripts/`, `docs/`, `config/`)로
+- **legacy → `archive/`** (gitignored, 로컬 보관). `git mv` 아닌 **shell `mv`** 사용 (archive는 git 추적 X — 다른 기기에선 클린 삭제, 로컬엔 사본 보존)
+- **임시 → `tmp/`** (gitignored). `.tmp/` 같은 평행 폴더 만들지 말 것
+- **gitignore 표준**: `archive/`, `tmp/`, `data/`, `outputs/`, `reports/`, `.venv*/`, `node_modules/`
+- **큰 폴더는 진입점 인덱스** — `README.md` 또는 `00-INDEX.md`
+- **코드 관습 존중** — `src/`, `tests/`, `docs/`, `scripts/`, `config/` 같은 이름. 숫자 prefix 금지 (vault PARA×JD 규칙은 vault에만)
+- **레포별 추가 규칙은 그 레포 `docs/REPO_LAYOUT.md`** (있으면 작업 전 확인)
+
 <!-- 사용자 환경 정보(위치, 로컬 도구, 데이터, 외부 시스템)는 sync.sh가 USER_CONTEXT.md를 여기에 append 한다. 직접 편집은 USER_CONTEXT.md 에서. -->
